@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
+import { ArenaPage } from './features/arena/ArenaPage';
 import { FeedPage } from './features/feed/FeedPage';
 import { DetailPage } from './features/detail/DetailPage';
 import { DrawWizard } from './features/draw/DrawWizard';
@@ -23,7 +24,9 @@ export function App() {
             />
           }
         >
-          <Route index element={<FeedPage currentDateStr={currentDateStr} />} />
+          <Route index element={<ArenaPage currentDateStr={currentDateStr} />} />
+          <Route path="arena/:ticker" element={<ArenaPage currentDateStr={currentDateStr} />} />
+          <Route path="stream" element={<FeedPage currentDateStr={currentDateStr} />} />
           <Route path="f/:id" element={<DetailPage currentDateStr={currentDateStr} />} />
           <Route path="draw" element={<DrawWizard currentDateStr={currentDateStr} />} />
           <Route path="u/:handle" element={<ProfilePage currentDateStr={currentDateStr} />} />

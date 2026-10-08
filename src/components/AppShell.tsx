@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home, PenTool, User as UserIcon, Bell, Calendar, TrendingUp, Sparkles, LogOut, Sun, Moon } from 'lucide-react';
+import { Flame, Radio, PenTool, User as UserIcon, Bell, Calendar, TrendingUp, Sparkles, LogOut, Sun, Moon } from 'lucide-react';
 import { getCurrentUser, subscribeSession, logout } from '../data/session';
 import { repository } from '../data/localRepository';
 import { STOCKS } from '../data/market';
@@ -49,7 +49,7 @@ export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
   }, [currentUser]);
 
   const handleStockClick = (ticker: string) => {
-    navigate(`/?stock=${ticker}`);
+    navigate(`/?ticker=${ticker}`);
   };
 
   const isDrawPath = location.pathname.startsWith('/draw');
@@ -58,7 +58,7 @@ export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
 
   return (
     <div className="app-layout">
-      {/* 1. Desktop Left Sidebar (X / Twitter Style) */}
+      {/* 1. Desktop Left Sidebar */}
       <aside className="desktop-nav">
         <div>
           {/* Brand Logo */}
@@ -73,8 +73,14 @@ export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
           <ul className="nav-menu">
             <li>
               <NavLink to="/" end className={({ isActive }) => `nav-item-link ${isActive ? 'active' : ''}`}>
-                <Home size={22} />
-                <span>홈 (Feed)</span>
+                <Flame size={22} className="text-amber-400" />
+                <span>배틀 아레나 (Arenas)</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/stream" className={({ isActive }) => `nav-item-link ${isActive ? 'active' : ''}`}>
+                <Radio size={22} className="text-sky-400" />
+                <span>실시간 스트림 (Stream)</span>
               </NavLink>
             </li>
             <li>
@@ -108,7 +114,7 @@ export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
             </li>
           </ul>
 
-          {/* Primary Action Button: 나도 그리기 (§3.4, §4) */}
+          {/* Primary Action Button: 나도 그리기 */}
           <button
             onClick={() => navigate('/draw')}
             className="nav-draw-cta"
@@ -261,7 +267,7 @@ export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
         </div>
       </aside>
 
-      {/* 4. Mobile Bottom 3-Tab Navigation (Feed · (+) Draw · Profile) */}
+      {/* 4. Mobile Bottom Navigation (Arena · Stream · (+) Draw · Profile) */}
       {!hideMobileNav && (
         <nav className="mobile-nav">
           <NavLink
@@ -269,17 +275,25 @@ export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
             end
             className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
           >
-            <Home size={22} />
-            <span>Feed</span>
+            <Flame size={20} />
+            <span>Arena</span>
           </NavLink>
 
-          {/* 중앙 강조 FAB 버튼 (§4 Draw는 하단 중앙의 Primary Action) */}
+          <NavLink
+            to="/stream"
+            className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <Radio size={20} />
+            <span>Stream</span>
+          </NavLink>
+
+          {/* 중앙 강조 FAB 버튼 */}
           <NavLink
             to="/draw"
             className="mobile-nav-item draw-btn-center"
           >
             <div className="fab">
-              <PenTool size={20} className="stroke-[2.5]" />
+              <PenTool size={18} className="stroke-[2.5]" />
             </div>
             <span>Draw</span>
           </NavLink>
@@ -288,7 +302,7 @@ export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
             to={currentUser ? `/u/${currentUser.handle}` : '/u/me'}
             className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
           >
-            <UserIcon size={22} />
+            <UserIcon size={20} />
             <span>Profile</span>
           </NavLink>
         </nav>

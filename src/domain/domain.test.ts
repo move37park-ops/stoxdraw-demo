@@ -162,3 +162,72 @@ describe('Crowd Aggregation & Cold Start (§22, §24)', () => {
     expect(crowd.consensusPath?.[0].price).toBe(106);
   });
 });
+
+describe('Arena Domain Metrics', () => {
+  const arenaForecasts: Forecast[] = [
+    {
+      id: 'f_bull_1',
+      authorId: 'u_1',
+      anonId: 'anon_1',
+      ticker: 'NVDA',
+      horizon: '5D',
+      mode: 'path',
+      comment: '',
+      lockedAt: '2026-10-02T10:00:00Z',
+      basePrice: 100,
+      baseDate: '2026-10-02',
+      evalDates: ['2026-10-05'],
+      path: [{ date: '2026-10-05', price: 110 }], // +10% Bull
+      rulesVersion: 'v1',
+    },
+    {
+      id: 'f_bull_2',
+      authorId: 'u_2',
+      anonId: 'anon_2',
+      ticker: 'NVDA',
+      horizon: '5D',
+      mode: 'path',
+      comment: '',
+      lockedAt: '2026-10-02T11:00:00Z',
+      basePrice: 100,
+      baseDate: '2026-10-02',
+      evalDates: ['2026-10-05'],
+      path: [{ date: '2026-10-05', price: 120 }], // +20% Bull
+      rulesVersion: 'v1',
+    },
+    {
+      id: 'f_bear_1',
+      authorId: 'u_3',
+      anonId: 'anon_3',
+      ticker: 'NVDA',
+      horizon: '5D',
+      mode: 'path',
+      comment: '',
+      lockedAt: '2026-10-02T12:00:00Z',
+      basePrice: 100,
+      baseDate: '2026-10-02',
+      evalDates: ['2026-10-05'],
+      path: [{ date: '2026-10-05', price: 90 }], // -10% Bear
+      rulesVersion: 'v1',
+    },
+  ];
+
+  it('computes bull and bear percentage and counts correctly', async () => {
+    const { computeArenaSummary } = await import('./arena');
+    const summary = computeArenaSummary('NVDA', arenaForecasts, '2026-10-05', '5D', 'path');
+    expect(summary.participantsCount).toBe(3);
+    expect(summary.bullCount).toBe(2);
+    expect(summary.bearCount).toBe(1);
+    expect(summary.bullPct).toBe(67);
+    expect(summary.bearPct).toBe(33);
+  });
+
+  it('computes price distribution buckets correctly', async () => {
+    const { computePriceDistribution } = await import('./arena');
+    const buckets = computePriceDistribution('NVDA', arenaForecasts, 100, '5D');
+    expect(buckets.length).toBe(6);
+    const totalCount = buckets.reduce((acc, b) => acc + b.count, 0);
+    expect(totalCount).toBe(3);
+  });
+});
+
