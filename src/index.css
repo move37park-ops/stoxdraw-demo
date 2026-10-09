@@ -91,8 +91,24 @@ html.light .bg-zinc-800 {
   background-color: var(--bg-overlay) !important;
 }
 
-html.light .text-white {
+html.light .text-white:not([class*="bg-"]):not([class*="from-"]):not([class*="gradient"]):not(button):not(a) {
   color: var(--text-primary) !important;
+}
+
+html.light .bg-zinc-900,
+html.light .bg-zinc-900 * {
+  color: #ffffff !important;
+}
+
+html.light [class*="from-"],
+html.light [class*="from-"] * {
+  color: #ffffff !important;
+}
+
+html.light button.bg-zinc-900,
+html.light a.bg-zinc-900 {
+  background-color: #18181b !important;
+  color: #ffffff !important;
 }
 
 /* Invert solid dark-mode white buttons, but preserve black text on gradient/colored CTAs */

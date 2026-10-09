@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { EditorialHomePage } from './features/showcase/EditorialHomePage';
 import { AppShell } from './components/AppShell';
 import { ArenaPage } from './features/arena/ArenaPage';
 import { FeedPage } from './features/feed/FeedPage';
@@ -15,8 +16,19 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* 1. Master Home: OpenAI / Apple Editorial Showcase */}
         <Route
           path="/"
+          element={
+            <EditorialHomePage
+              currentDateStr={currentDateStr}
+              onDateChange={setCurrentDateStr}
+            />
+          }
+        />
+
+        {/* 2. Interactive App Tools & Subpages */}
+        <Route
           element={
             <AppShell
               currentDateStr={currentDateStr}
@@ -24,7 +36,7 @@ export function App() {
             />
           }
         >
-          <Route index element={<ArenaPage currentDateStr={currentDateStr} />} />
+          <Route path="arena" element={<ArenaPage currentDateStr={currentDateStr} />} />
           <Route path="arena/:ticker" element={<ArenaPage currentDateStr={currentDateStr} />} />
           <Route path="stream" element={<FeedPage currentDateStr={currentDateStr} />} />
           <Route path="f/:id" element={<DetailPage currentDateStr={currentDateStr} />} />
