@@ -40,7 +40,7 @@ export function PathCanvas({
   }, [pointsMap, evalDates, onPathChange]);
 
   // Price Scale Bounds (Fixed to past bars + base price ±15%, stable while drawing!)
-  const pastPrices = pastBars.map(b => b.close);
+  const pastPrices = pastBars.flatMap(b => [b.high, b.low, b.close]);
   const baselinePrices = pastPrices.length > 0 ? [...pastPrices, basePrice] : [basePrice];
   const rawMin = Math.min(...baselinePrices);
   const rawMax = Math.max(...baselinePrices);
@@ -111,17 +111,34 @@ export function PathCanvas({
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 3. Past Bars Line
-    ctx.strokeStyle = isLight ? '#64748b' : '#525866';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
+    // 3. Past Stock Candlesticks (캔들스틱 형식)
+    const slotWidth = getXForIndex(1) - getXForIndex(0);
+    const candleWidth = Math.max(3.5, Math.min(8, slotWidth * 0.65));
+
     pastBars.forEach((bar, i) => {
       const x = getXForIndex(i);
-      const y = getYForPrice(bar.close);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      const isUp = bar.close >= bar.open;
+      const candleColor = isUp ? '#10b981' : '#f43f5e';
+
+      const yHigh = getYForPrice(bar.high);
+      const yLow = getYForPrice(bar.low);
+      const yOpen = getYForPrice(bar.open);
+      const yClose = getYForPrice(bar.close);
+
+      // Wick (심지)
+      ctx.strokeStyle = candleColor;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x, yHigh);
+      ctx.lineTo(x, yLow);
+      ctx.stroke();
+
+      // Body (몸통)
+      const bodyTop = Math.min(yOpen, yClose);
+      const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
+      ctx.fillStyle = candleColor;
+      ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
     });
-    ctx.stroke();
 
     // 4. Base Point
     ctx.fillStyle = isLight ? '#0f1419' : '#ffffff';

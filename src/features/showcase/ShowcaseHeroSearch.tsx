@@ -82,27 +82,63 @@ export function ShowcaseHeroSearch({}: ShowcaseHeroSearchProps) {
             <line x1="0" y1="60" x2="500" y2="60" stroke="#181a24" strokeDasharray="3 3" />
             <line x1="200" y1="10" x2="200" y2="110" stroke="#252a38" strokeDasharray="4 4" />
 
-            {/* Past Trend Line */}
-            <path
-              d="M 10 75 Q 80 50 120 70 T 200 60"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="2.5"
-            />
+            {/* Past Stock Candlesticks (캔들스틱 형식) */}
+            <g className="past-candlesticks">
+              <line x1="25" y1="65" x2="25" y2="85" stroke="#10b981" strokeWidth="1.2" />
+              <rect x="22" y="70" width="6" height="10" fill="#10b981" rx="0.5" />
+
+              <line x1="50" y1="58" x2="50" y2="78" stroke="#10b981" strokeWidth="1.2" />
+              <rect x="47" y="62" width="6" height="11" fill="#10b981" rx="0.5" />
+
+              <line x1="75" y1="50" x2="75" y2="72" stroke="#f43f5e" strokeWidth="1.2" />
+              <rect x="72" y="54" width="6" height="12" fill="#f43f5e" rx="0.5" />
+
+              <line x1="100" y1="62" x2="100" y2="82" stroke="#10b981" strokeWidth="1.2" />
+              <rect x="97" y="66" width="6" height="9" fill="#10b981" rx="0.5" />
+
+              <line x1="125" y1="55" x2="125" y2="76" stroke="#f43f5e" strokeWidth="1.2" />
+              <rect x="122" y="58" width="6" height="11" fill="#f43f5e" rx="0.5" />
+
+              <line x1="150" y1="48" x2="150" y2="68" stroke="#10b981" strokeWidth="1.2" />
+              <rect x="147" y="52" width="6" height="10" fill="#10b981" rx="0.5" />
+
+              <line x1="175" y1="52" x2="175" y2="72" stroke="#10b981" strokeWidth="1.2" />
+              <rect x="172" y="56" width="6" height="8" fill="#10b981" rx="0.5" />
+            </g>
 
             {/* Forecast Area Band */}
             <path
-              d="M 200 60 Q 280 40 380 30 T 490 25 L 490 65 Q 380 65 280 70 Z"
+              d="M 200 60 L 260 48 L 330 38 L 410 32 L 490 22 L 490 58 L 410 65 L 330 68 L 260 68 Z"
               fill="url(#heroConsensusGrad)"
             />
 
-            {/* Consensus Path */}
-            <path
-              d="M 200 60 Q 280 48 380 42 T 490 35"
-              fill="none"
-              stroke="#10b981"
-              strokeWidth="2.5"
-            />
+            {/* Forecast Polyline (폴리라인) */}
+            <g className="forecast-polyline">
+              <path
+                d="M 200 60 L 260 48 L 330 40 L 410 44 L 490 30"
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="2.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {[
+                { x: 260, y: 48 },
+                { x: 330, y: 40 },
+                { x: 410, y: 44 },
+                { x: 490, y: 30 },
+              ].map((pt, i) => (
+                <circle
+                  key={i}
+                  cx={pt.x}
+                  cy={pt.y}
+                  r="3.5"
+                  fill="#10b981"
+                  stroke="#ffffff"
+                  strokeWidth="1.5"
+                />
+              ))}
+            </g>
 
             {/* Current Price Pin */}
             <circle cx="200" cy="60" r="5" fill="#ffffff" />

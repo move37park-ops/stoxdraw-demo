@@ -43,7 +43,7 @@ export function ArenaHeroStage({
   const basePrice = arenaSummary.currentPrice;
 
   // Compute all prices for vertical scale
-  const allPrices: number[] = [...pastBars.map(b => b.close), basePrice];
+  const allPrices: number[] = [...pastBars.flatMap(b => [b.high, b.low, b.close]), basePrice];
 
   if (crowd.consensusPath) {
     crowd.consensusPath.forEach(p => allPrices.push(p.price));
@@ -293,18 +293,42 @@ export function ArenaHeroStage({
             NOW (기준 시점)
           </text>
 
-          {/* Past Market Area & Line */}
-          {pastAreaD && <path d={pastAreaD} fill="url(#arenaPastGrad)" />}
-          {pastPathD && (
-            <path
-              d={pastPathD}
-              fill="none"
-              stroke="#64748b"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
+          {/* Past Market Candlesticks (캔들스틱) */}
+          {pastBars.map((bar) => {
+            const x = getX(bar.date);
+            const isUp = bar.close >= bar.open;
+            const color = isUp ? '#10b981' : '#f43f5e';
+            const yHigh = getY(bar.high);
+            const yLow = getY(bar.low);
+            const yOpen = getY(bar.open);
+            const yClose = getY(bar.close);
+            const bodyTop = Math.min(yOpen, yClose);
+            const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
+            const candleW = 6.5;
+
+            return (
+              <g key={bar.date}>
+                {/* Wick */}
+                <line
+                  x1={x}
+                  y1={yHigh}
+                  x2={x}
+                  y2={yLow}
+                  stroke={color}
+                  strokeWidth={1.3}
+                />
+                {/* Body */}
+                <rect
+                  x={x - candleW / 2}
+                  y={bodyTop}
+                  width={candleW}
+                  height={bodyHeight}
+                  fill={color}
+                  rx={0.5}
+                />
+              </g>
+            );
+          })}
 
           {/* Crowd Consensus Area & Line */}
           {consensusAreaD && <path d={consensusAreaD} fill="url(#arenaConsensusGrad)" />}

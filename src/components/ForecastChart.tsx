@@ -42,7 +42,7 @@ export function ForecastChart({
 
   // 4. 가격 범위 계산 (Min & Max Price)
   const allPrices: number[] = [
-    ...pastBars.map(b => b.close),
+    ...pastBars.flatMap(b => [b.high, b.low, b.close]),
     forecast.basePrice,
   ];
 
@@ -159,18 +159,42 @@ export function ForecastChart({
           strokeDasharray="3 3"
         />
 
-        {/* 과거 시세 라인 */}
-        {pastPathD && (
-          <path
-            d={pastPathD}
-            fill="none"
-            stroke="var(--text-muted, #525866)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity="0.8"
-          />
-        )}
+        {/* 과거 시세 캔들스틱 (Candlesticks) */}
+        {pastBars.map((bar) => {
+          const x = getX(bar.date);
+          const isUp = bar.close >= bar.open;
+          const color = isUp ? '#10b981' : '#f43f5e';
+          const yHigh = getY(bar.high);
+          const yLow = getY(bar.low);
+          const yOpen = getY(bar.open);
+          const yClose = getY(bar.close);
+          const bodyTop = Math.min(yOpen, yClose);
+          const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
+          const candleW = 5.5;
+
+          return (
+            <g key={bar.date}>
+              {/* Wick (심지) */}
+              <line
+                x1={x}
+                y1={yHigh}
+                x2={x}
+                y2={yLow}
+                stroke={color}
+                strokeWidth={1.2}
+              />
+              {/* Body (몸통) */}
+              <rect
+                x={x - candleW / 2}
+                y={bodyTop}
+                width={candleW}
+                height={bodyHeight}
+                fill={color}
+                rx={0.5}
+              />
+            </g>
+          );
+        })}
 
         {/* Breakout Target Horizontal Line */}
         {forecast.mode === 'breakout' && forecast.breakout && (
