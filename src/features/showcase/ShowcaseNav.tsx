@@ -125,10 +125,10 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
             </button>
           )}
 
-          {/* Primary CTA (Black pill button like OpenAI!) */}
+          {/* Primary Signature DRAW CTA */}
           <NavLink
             to="/draw"
-            className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 tracking-wide"
+            className="btn-signature-draw px-5 py-2 rounded-full text-xs sm:text-sm tracking-wide"
           >
             DRAW
           </NavLink>

@@ -293,9 +293,9 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
 
           <button
             onClick={handleDrawResponse}
-            className="px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-md transition active:scale-95"
+            className="btn-signature-draw px-5 py-2.5 rounded-full text-xs sm:text-sm tracking-wide"
           >
-            이 예측에 반박선 긋기 (Duel)
+            DRAW
           </button>
         </div>
       </div>

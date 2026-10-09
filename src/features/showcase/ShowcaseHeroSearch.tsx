@@ -25,12 +25,15 @@ export function ShowcaseHeroSearch({
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 pt-12 pb-8 sm:pt-16 sm:pb-12 text-center">
-      {/* Editorial Headline (Matches "무엇을 도와드릴까요?" in OpenAI design) */}
+      {/* Editorial Headline */}
+      <div className="text-xs font-mono font-bold tracking-widest text-emerald-600 dark:text-emerald-500 uppercase mb-3">
+        STOXDRAW
+      </div>
       <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-3">
-        무엇을 예측하시겠습니까?
+        다음 주가, 당신은 어떻게 보나요?
       </h1>
-      <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto mb-8 font-normal">
-        주식 시장의 미래 궤적을 직접 손으로 그리고, 집단 지성 컨센서스와 대결하세요.
+      <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8 font-normal">
+        당신의 예측을 그리고 다른 사람들의 전망과 비교해 보세요.
       </p>
 
       {/* Pill-shaped Search Input */}
@@ -38,7 +41,7 @@ export function ShowcaseHeroSearch({
         <div
           className={`flex items-center w-full px-5 py-3.5 sm:py-4 rounded-full bg-white dark:bg-[#12141c] border transition-all duration-200 shadow-sm ${
             isFocused
-              ? 'border-zinc-900 dark:border-sky-400 shadow-lg ring-2 ring-zinc-900/5 dark:ring-sky-400/20'
+              ? 'border-emerald-600 dark:border-emerald-500 shadow-lg ring-2 ring-emerald-600/10 dark:ring-emerald-500/20'
               : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
           }`}
         >

@@ -245,10 +245,10 @@ export function ForecastCard({
           </button>
         </div>
 
-        {/* Primary Action Button: [나도 그리기] or [다시 그리기] (§3.4, §7) */}
+        {/* Primary Action Button: DRAW */}
         <button
           onClick={handleDrawResponse}
-          className="px-4 py-1.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs hover:opacity-90 active:scale-95 transition-all shadow-sm tracking-wide"
+          className="btn-signature-draw px-4 py-1.5 rounded-full text-xs tracking-wide"
         >
           DRAW
         </button>

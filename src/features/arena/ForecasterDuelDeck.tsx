@@ -125,7 +125,7 @@ export function ForecasterDuelDeck({
           <button
             type="button"
             onClick={onDrawFirst}
-            className="px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold text-xs shadow-md transition"
+            className="btn-signature-draw px-6 py-2.5 rounded-full text-xs tracking-wide"
           >
             DRAW
           </button>
