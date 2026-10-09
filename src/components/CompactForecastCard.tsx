@@ -16,7 +16,7 @@ interface CompactForecastCardProps {
 export function CompactForecastCard({
   forecast,
   isActiveLayer = false,
-  layerColor = '#38bdf8',
+  layerColor = '#0284c7',
   onToggleLayer,
   onDuel,
 }: CompactForecastCardProps) {
@@ -42,7 +42,6 @@ export function CompactForecastCard({
   // Mini sparkline SVG generator
   const renderSparkline = () => {
     if (forecast.mode !== 'path' || !forecast.path || forecast.path.length === 0) {
-      // Simple direct vector for breakout
       return (
         <svg width="84" height="28" viewBox="0 0 84 28" className="overflow-visible">
           <line
@@ -50,7 +49,7 @@ export function CompactForecastCard({
             y1={isBull ? 22 : 6}
             x2="80"
             y2={isBull ? 6 : 22}
-            stroke={isBull ? '#34d399' : '#f43f5e'}
+            stroke={isBull ? '#10b981' : '#f43f5e'}
             strokeWidth="2.5"
             strokeLinecap="round"
           />
@@ -58,7 +57,7 @@ export function CompactForecastCard({
             cx="80"
             cy={isBull ? 6 : 22}
             r="3.5"
-            fill={isBull ? '#34d399' : '#f43f5e'}
+            fill={isBull ? '#10b981' : '#f43f5e'}
           />
         </svg>
       );
@@ -89,7 +88,7 @@ export function CompactForecastCard({
         <path
           d={d}
           fill="none"
-          stroke={isActiveLayer ? layerColor : (isBull ? '#34d399' : '#f43f5e')}
+          stroke={isActiveLayer ? layerColor : (isBull ? '#10b981' : '#f43f5e')}
           strokeWidth={isActiveLayer ? "2.5" : "2"}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -98,7 +97,7 @@ export function CompactForecastCard({
           cx={lastX}
           cy={lastY}
           r="3"
-          fill={isActiveLayer ? layerColor : (isBull ? '#34d399' : '#f43f5e')}
+          fill={isActiveLayer ? layerColor : (isBull ? '#10b981' : '#f43f5e')}
         />
       </svg>
     );
@@ -130,16 +129,16 @@ export function CompactForecastCard({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+      className={`group relative flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
         isActiveLayer
-          ? 'bg-[#0f1422] border-sky-500/50 shadow-md shadow-sky-500/10'
-          : 'bg-[#0d0f14] border-[#1f222b] hover:border-[#2f3545] hover:bg-[#12151d]'
+          ? 'bg-sky-50/70 dark:bg-[#0f1424] border-sky-400 dark:border-sky-500/60 shadow-md ring-1 ring-sky-400/20'
+          : 'bg-white dark:bg-[#0e1017] border-zinc-200/90 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-md'
       }`}
     >
       {/* Active Layer Indicator Line */}
       {isActiveLayer && (
         <span
-          className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
+          className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full"
           style={{ backgroundColor: layerColor }}
         />
       )}
@@ -149,34 +148,34 @@ export function CompactForecastCard({
         <img
           src={author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
           alt={author?.name || '익명'}
-          className="w-8 h-8 rounded-full object-cover border border-[#272a33] flex-shrink-0"
+          className="w-9 h-9 rounded-full object-cover border border-zinc-200 dark:border-zinc-700 flex-shrink-0"
         />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-semibold text-white truncate max-w-[100px] sm:max-w-[130px]">
+            <span className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate max-w-[100px] sm:max-w-[130px]">
               {author?.name || '익명 예측가'}
             </span>
             {author && (
-              <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
+              <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
                 @{author.handle}
               </span>
             )}
             {author && author.completedCount > 5 && (
-              <CheckCircle2 size={12} className="text-sky-400 flex-shrink-0" />
+              <CheckCircle2 size={13} className="text-sky-500 flex-shrink-0" />
             )}
           </div>
 
           <div className="flex items-center gap-2 mt-0.5">
             <span
-              className={`text-[11px] font-mono font-bold px-1.5 py-0.2 rounded ${
+              className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${
                 isBull
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60'
+                  : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60'
               }`}
             >
               {isBull ? '▲' : '▼'} {formatPct(changePct)}
             </span>
-            <span className="text-[11px] text-[#8e95a5] font-mono">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono font-medium">
               ${targetPrice.toFixed(1)}
             </span>
           </div>
@@ -188,7 +187,7 @@ export function CompactForecastCard({
         {renderSparkline()}
       </div>
 
-      {/* Right: Actions (Layer Toggle + Duel + Like) */}
+      {/* Right: Actions */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {/* Layer View Toggle Button */}
         {onToggleLayer && forecast.mode === 'path' && (
@@ -196,13 +195,13 @@ export function CompactForecastCard({
             type="button"
             onClick={handleToggle}
             title={isActiveLayer ? "메인 차트에서 숨기기" : "메인 차트에 오버레이하기"}
-            className={`p-1.5 rounded-lg text-xs flex items-center gap-1 transition ${
+            className={`px-2.5 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 transition ${
               isActiveLayer
-                ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
-                : 'bg-[#161922] text-zinc-400 hover:text-white border border-[#242836]'
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
             }`}
           >
-            {isActiveLayer ? <Eye size={14} /> : <EyeOff size={14} />}
+            {isActiveLayer ? <Eye size={13} /> : <EyeOff size={13} />}
             <span className="text-[11px] hidden sm:inline">
               {isActiveLayer ? '차트 On' : '오버레이'}
             </span>
@@ -214,9 +213,9 @@ export function CompactForecastCard({
           type="button"
           onClick={handleDuelClick}
           title="이 예측에 반박선 긋기"
-          className="p-1.5 rounded-lg bg-[#161922] text-zinc-400 hover:text-amber-400 hover:border-amber-500/30 border border-[#242836] text-xs flex items-center gap-1 transition"
+          className="p-1.5 px-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-amber-600 text-xs flex items-center gap-1 transition font-medium"
         >
-          <Swords size={14} />
+          <Swords size={13} />
           <span className="text-[11px] hidden md:inline">반박</span>
         </button>
 
@@ -224,14 +223,14 @@ export function CompactForecastCard({
         <button
           type="button"
           onClick={handleLike}
-          className={`px-2 py-1.5 rounded-lg text-xs flex items-center gap-1 border transition ${
+          className={`px-2.5 py-1.5 rounded-full text-xs font-mono flex items-center gap-1 border transition ${
             isLiked
-              ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
-              : 'bg-[#161922] text-zinc-400 hover:text-white border-[#242836]'
+              ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800'
+              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900'
           }`}
         >
-          <ThumbsUp size={12} className={isLiked ? 'fill-sky-400' : ''} />
-          <span className="text-[11px] font-mono">{likesCount}</span>
+          <ThumbsUp size={12} className={isLiked ? 'fill-sky-500' : ''} />
+          <span className="text-[11px] font-bold">{likesCount}</span>
         </button>
       </div>
     </div>

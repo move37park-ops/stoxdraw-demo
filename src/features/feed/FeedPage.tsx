@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { repository } from '../../data/localRepository';
-import { ForecastCard } from '../../components/ForecastCard';
+import { CompactForecastCard } from '../../components/CompactForecastCard';
 import type { FeedTab } from '../../data/repository';
 import type { Forecast } from '../../domain/types';
-import { Sparkles, X, Search } from 'lucide-react';
+import { Search, X, Radio } from 'lucide-react';
 
 interface FeedPageProps {
   currentDateStr: string;
@@ -13,12 +13,10 @@ interface FeedPageProps {
 export function FeedPage({ currentDateStr }: FeedPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = (searchParams.get('tab') as FeedTab) || 'all';
-  const filterStock = searchParams.get('stock') || '';
+  const filterStock = searchParams.get('stock') || searchParams.get('ticker') || '';
 
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState(() => !localStorage.getItem('hide-intro-banner'));
 
   const loadFeed = () => {
     let list = repository.listFeed(currentTab, currentDateStr);
@@ -29,7 +27,8 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
       const q = searchQuery.toLowerCase();
       list = list.filter(f =>
         f.ticker.toLowerCase().includes(q) ||
-        f.comment.toLowerCase().includes(q)
+        f.comment.toLowerCase().includes(q) ||
+        (f.authorId && f.authorId.toLowerCase().includes(q))
       );
     }
     setForecasts(list);
@@ -51,142 +50,101 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
   const handleClearStock = () => {
     const params = new URLSearchParams(searchParams);
     params.delete('stock');
+    params.delete('ticker');
     setSearchParams(params);
   };
 
   return (
     <div className="w-full">
-      {/* 1. Header Sticky Tabs (All · Following · Results) — §6 Feed */}
-      <div className="sticky top-0 lg:top-0 z-20 bg-black/90 backdrop-blur-md border-b border-[#1b1e26]">
-        <div className="flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-1 sm:gap-2">
-            {[
-              { id: 'all', label: 'All' },
-              { id: 'following', label: 'Following' },
-              { id: 'results', label: 'Results' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id as FeedTab)}
-                className={`relative px-3 sm:px-4 py-2 text-[14px] font-semibold transition ${
-                  currentTab === tab.id
-                    ? 'text-white'
-                    : 'text-[#71767b] hover:text-[#e4e4e7]'
-                }`}
-              >
-                {tab.label}
-                {currentTab === tab.id && (
-                  <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-white rounded-full" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Quick Search Toggle */}
-          <button
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className={`p-2 rounded-full transition ${
-              isSearchOpen ? 'bg-zinc-800 text-white' : 'text-[#71767b] hover:text-white'
-            }`}
-          >
-            <Search size={18} />
-          </button>
+      {/* Header Banner */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 text-xs font-semibold text-sky-600 dark:text-sky-400 mb-1">
+          <Radio size={15} />
+          <span>REALTIME FEED</span>
         </div>
-
-        {/* Search Bar Collapsible */}
-        {isSearchOpen && (
-          <div className="px-4 pb-3 pt-1">
-            <input
-              type="text"
-              placeholder="종목명 또는 예측 키워드 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-[#14161f] border border-[#272b38] text-white text-[13px] placeholder-[#71767b] focus:outline-none focus:border-[#38bdf8]"
-              autoFocus
-            />
-          </div>
-        )}
-
-        {/* Selected Stock Filter Pill */}
-        {filterStock && (
-          <div className="flex items-center gap-2 px-4 pb-2.5">
-            <span className="text-xs text-[#71767b]">필터:</span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#181a24] border border-[#2e3344] text-xs font-mono text-white">
-              {filterStock.toUpperCase()}
-              <button onClick={handleClearStock} className="text-[#71767b] hover:text-white">
-                <X size={12} />
-              </button>
-            </span>
-          </div>
-        )}
+        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2">
+          실시간 예측 스트림
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          모든 참여자의 미래 주가 궤적과 검증 완료 기록이 실시간으로 동기화됩니다.
+        </p>
       </div>
 
-      {/* Platform Intro Banner */}
-      {showIntro && (
-        <div className="mx-4 mt-3 mb-1 p-3.5 rounded-2xl bg-gradient-to-r from-[#0d1527] via-[#101426] to-[#1a1329] border border-sky-500/20 shadow-md flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-sky-400 mb-1">
-              <Sparkles size={13} />
-              <span>STOXDRAW 소셜 포캐스팅</span>
-            </div>
-            <p className="text-[13px] text-zinc-100 font-medium leading-snug">
-              미래 주가를 직접 그리고, Crowd 합의와 비교하세요.
-            </p>
-            <p className="text-[11px] text-[#9aa0a6] mt-0.5">
-              실제 시장 결과로 검증되는 나만의 예측 Record가 투명하게 축적됩니다.
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setShowIntro(false);
-              localStorage.setItem('hide-intro-banner', 'true');
-            }}
-            className="text-zinc-500 hover:text-white p-1 rounded transition"
-            title="닫기"
-          >
-            <X size={15} />
-          </button>
+      {/* Filter Tabs & Search Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+        {/* Pill Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {[
+            { id: 'all', label: '전체 스트림' },
+            { id: 'following', label: '팔로잉' },
+            { id: 'results', label: '검증 완료 결과' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id as FeedTab)}
+              className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
+                currentTab === tab.id
+                  ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* 2. Forecast Feed Cards List */}
-      <div>
-        {forecasts.length > 0 ? (
-          forecasts.map(forecast => (
-            <ForecastCard
-              key={forecast.id}
-              forecast={forecast}
-              currentDateStr={currentDateStr}
-            />
-          ))
-        ) : (
-          <div className="p-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-zinc-900 text-[#71767b] flex items-center justify-center mx-auto mb-3">
-              <Sparkles size={20} />
+        {/* Search input */}
+        <div className="flex items-center gap-2">
+          {filterStock && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs font-mono text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
+              <span>${filterStock.toUpperCase()}</span>
+              <button onClick={handleClearStock} className="hover:text-rose-500">
+                <X size={12} />
+              </button>
             </div>
-            <h4 className="font-semibold text-white mb-1">
-              {currentTab === 'following'
-                ? '팔로우 중인 사용자의 Forecast가 없습니다.'
-                : currentTab === 'results'
-                ? '검증 완료된 Forecast가 없습니다.'
-                : '등록된 Forecast가 없습니다.'}
-            </h4>
-            <p className="text-[13px] text-[#71767b] max-w-xs mx-auto mb-4">
-              {currentTab === 'following'
-                ? '다른 예측가를 팔로우하거나 All 탭에서 새로운 예측을 만나보세요.'
-                : '가장 먼저 나만의 미래 주가 궤적을 그려보세요!'}
-            </p>
-            {currentTab !== 'all' && (
+          )}
+
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="종목 또는 코멘트 검색"
+              className="pl-8 pr-4 py-1.5 rounded-full text-xs sm:text-sm bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white w-48 sm:w-60"
+            />
+            {searchQuery && (
               <button
-                onClick={() => handleTabChange('all')}
-                className="px-4 py-1.5 rounded-full bg-zinc-800 text-white text-xs font-medium hover:bg-zinc-700"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
               >
-                전체 Feed 보기
+                <X size={12} />
               </button>
             )}
           </div>
-        )}
+        </div>
       </div>
+
+      {/* Stream Cards Grid */}
+      {forecasts.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          {forecasts.map(f => (
+            <CompactForecastCard
+              key={f.id}
+              forecast={f}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20 px-4 rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800">
+          <p className="text-sm text-zinc-500 mb-1">
+            해당 조건의 예측 데이터가 없습니다.
+          </p>
+          <p className="text-xs text-zinc-400">
+            검색어를 변경하거나 다른 탭을 선택해 보세요.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

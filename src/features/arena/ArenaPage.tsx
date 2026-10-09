@@ -57,7 +57,6 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
         return prev.filter(id => id !== forecastId);
       }
       if (prev.length >= 3) {
-        // Replace oldest
         return [...prev.slice(1), forecastId];
       }
       return [...prev, forecastId];
@@ -68,12 +67,10 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
     setActiveLayerIds(prev => prev.filter(id => id !== forecastId));
   };
 
-  // Direct Draw CTA
   const handleDrawClick = () => {
     navigate(`/draw?ticker=${ticker}&horizon=${horizon}&mode=${mode}`);
   };
 
-  // Duel CTA
   const handleDuel = (targetForecast: Forecast) => {
     navigate(`/draw?parent=${targetForecast.id}&ticker=${targetForecast.ticker}&horizon=${targetForecast.horizon}&mode=${targetForecast.mode}`);
   };
@@ -99,14 +96,13 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
     [forecasts, activeLayerIds]
   );
 
-  // Resolved forecasts for this ticker
   const resolvedForecasts = useMemo(
     () => forecasts.filter(f => f.ticker === ticker && deriveForecastStatus(f, currentDateStr) === 'RESOLVED'),
     [forecasts, ticker, currentDateStr]
   );
 
   return (
-    <div className="w-full flex flex-col min-h-screen bg-[#07080b]">
+    <div className="w-full flex flex-col">
       {/* 1. Hot Arenas Carousel Header */}
       <ArenaHeader
         hotArenas={hotArenas}
@@ -130,45 +126,45 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
       />
 
       {/* 3. Sub-Tab Navigator & Deck */}
-      <div className="w-full max-w-4xl mx-auto px-3 sm:px-5 py-4">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 border-b border-[#1b1f2b] pb-2 mb-4">
+      <div className="w-full mt-4">
+        {/* Navigation Tabs - Pill Buttons */}
+        <div className="flex items-center gap-2 mb-6">
           <button
             type="button"
             onClick={() => setActiveTab('duel')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'duel'
-                ? 'bg-[#151926] text-white border border-[#252b3d]'
-                : 'text-zinc-400 hover:text-white hover:bg-[#10121a]'
+                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
             }`}
           >
-            <Swords size={15} className="text-amber-400" />
+            <Swords size={15} className="text-amber-500" />
             <span>궤적 배틀 덱 ({arenaSummary.topForecasts.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('distribution')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'distribution'
-                ? 'bg-[#151926] text-white border border-[#252b3d]'
-                : 'text-zinc-400 hover:text-white hover:bg-[#10121a]'
+                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
             }`}
           >
-            <BarChart3 size={15} className="text-sky-400" />
+            <BarChart3 size={15} className="text-sky-500" />
             <span>군중 기대치 분포</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('resolved')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'resolved'
-                ? 'bg-[#151926] text-white border border-[#252b3d]'
-                : 'text-zinc-400 hover:text-white hover:bg-[#10121a]'
+                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
             }`}
           >
-            <CheckCircle2 size={15} className="text-emerald-400" />
+            <CheckCircle2 size={15} className="text-emerald-500" />
             <span>검증 결과 아카이브 ({resolvedForecasts.length})</span>
           </button>
         </div>
@@ -196,7 +192,7 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
 
         {/* Tab 3: Resolved Archive */}
         {activeTab === 'resolved' && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {resolvedForecasts.length > 0 ? (
               resolvedForecasts.map(f => (
                 <CompactForecastCard
@@ -206,8 +202,8 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
                 />
               ))
             ) : (
-              <div className="text-center py-12 px-4 rounded-2xl bg-[#0c0e14] border border-[#1b1e28]">
-                <p className="text-xs text-zinc-400">
+              <div className="text-center py-12 px-4 rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800">
+                <p className="text-xs sm:text-sm text-zinc-500">
                   아직 {ticker} 종목의 검증 완료된 예측이 없습니다.
                 </p>
               </div>

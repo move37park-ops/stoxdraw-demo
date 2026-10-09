@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
 import { repository } from '../../data/localRepository';
 import { getCurrentUser } from '../../data/session';
 import { deriveForecastStatus } from '../../domain/lifecycle';
 import { resolveForecast } from '../../domain/resolution';
 import { getStockHistory } from '../../data/market';
-import { ForecastCard } from '../../components/ForecastCard';
+import { CompactForecastCard } from '../../components/CompactForecastCard';
 import { ConnectModal } from '../auth/ConnectModal';
 import type { User, Forecast } from '../../domain/types';
 
@@ -54,26 +54,26 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
 
   if (!user) {
     return (
-      <div className="p-12 text-center text-[#71767b] max-w-sm mx-auto">
-        <div className="w-12 h-12 rounded-full bg-zinc-900 text-sky-400 flex items-center justify-center mx-auto mb-3 border border-zinc-800">
-          <Sparkles size={22} />
+      <div className="py-20 text-center max-w-sm mx-auto">
+        <div className="w-14 h-14 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sky-500 flex items-center justify-center mx-auto mb-4 border border-zinc-200 dark:border-zinc-700">
+          <Sparkles size={24} />
         </div>
-        <h3 className="text-white font-bold mb-1.5 text-base">로그인이 필요합니다</h3>
-        <p className="text-xs mb-5 text-[#9aa0a6] leading-relaxed">
+        <h3 className="text-zinc-900 dark:text-white font-bold mb-2 text-lg">로그인이 필요합니다</h3>
+        <p className="text-xs sm:text-sm text-zinc-500 mb-6 leading-relaxed">
           내 Forecast와 검증된 적중률 Record를 확인하려면 계정을 연결하세요.
         </p>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           <button
             onClick={() => setIsConnectOpen(true)}
-            className="w-full py-2.5 rounded-full bg-gradient-to-r from-[#4facfe] to-[#a18cd1] text-black font-bold text-xs hover:brightness-110 transition shadow-sm"
+            className="w-full py-3 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-bold text-xs sm:text-sm transition shadow-sm"
           >
             계정 연결 / 로그인
           </button>
           <button
             onClick={() => navigate('/')}
-            className="w-full py-2.5 rounded-full bg-[#14161f] border border-[#272b38] text-white font-semibold text-xs hover:bg-[#1a1d28] transition"
+            className="w-full py-3 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold text-xs sm:text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
           >
-            피드로 돌아가기
+            홈으로 돌아가기
           </button>
         </div>
 
@@ -114,37 +114,45 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
   const displayedList = activeTab === 'results' ? resolvedForecasts : forecasts;
 
   return (
-    <div className="w-full pb-20">
-      {/* Top Header */}
-      <div className="sticky top-0 z-20 flex items-center gap-3 px-4 py-3 bg-black/85 backdrop-blur-md border-b border-[#1b1e26]">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-1 rounded-full text-[#71767b] hover:text-white transition"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <div className="font-bold text-white text-[15px]">{user.name}</div>
-          <div className="text-[11px] text-[#71767b]">{forecasts.length} Forecasts</div>
-        </div>
-      </div>
+    <div className="w-full max-w-4xl mx-auto py-2">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white mb-6 transition"
+      >
+        <ArrowLeft size={16} />
+        <span>돌아가기</span>
+      </button>
 
-      {/* Profile Header (Instagram / X style) */}
-      <div className="p-4 border-b border-[#1b1e26]">
-        <div className="flex items-start justify-between mb-3">
-          <img
-            src={user.avatarUrl}
-            alt={user.name}
-            className="w-16 h-16 rounded-full object-cover border-2 border-[#272a33]"
-          />
+      {/* Profile Header Card */}
+      <div className="rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/90 dark:border-zinc-800 p-6 sm:p-9 shadow-sm mb-6">
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex items-center gap-4">
+            <img
+              src={user.avatarUrl}
+              alt={user.name}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-zinc-200 dark:border-zinc-700 shadow-sm"
+            />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {user.name}
+                </h1>
+                <CheckCircle2 size={18} className="text-sky-500" />
+              </div>
+              <div className="text-xs sm:text-sm text-zinc-400 font-mono">
+                @{user.handle}
+              </div>
+            </div>
+          </div>
 
           {!isMe && (
             <button
               onClick={handleFollowToggle}
-              className={`px-4 py-1.5 rounded-full font-semibold text-xs transition ${
+              className={`px-5 py-2 rounded-full font-semibold text-xs sm:text-sm transition ${
                 isFollowing
-                  ? 'bg-zinc-800 text-white border border-zinc-700'
-                  : 'bg-white text-black hover:bg-zinc-200'
+                  ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700'
+                  : 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:opacity-90 shadow-sm'
               }`}
             >
               {isFollowing ? '팔로잉' : '팔로우'}
@@ -152,83 +160,73 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
           )}
         </div>
 
-        <h2 className="text-lg font-bold text-white">{user.name}</h2>
-        <div className="text-xs text-[#71767b] mb-2 font-mono">@{user.handle}</div>
-
         {user.bio && (
-          <p className="text-[13px] text-[#d1d5db] mb-3 leading-relaxed">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-6 leading-relaxed">
             {user.bio}
           </p>
         )}
 
-        {/* Verified Track Record Stats Card */}
-        <div className="grid grid-cols-3 gap-2 mt-4 p-3 rounded-xl bg-[#0e0f14] border border-[#1f222b]">
+        {/* Verified Track Record Stats Grid */}
+        <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-[#12141c] border border-zinc-200/70 dark:border-zinc-800">
           <div className="text-center">
-            <div className="text-[11px] text-[#71767b] mb-0.5">전체 Forecast</div>
-            <div className="font-mono font-bold text-white text-base">{forecasts.length}</div>
+            <div className="text-[11px] text-zinc-400 mb-0.5">전체 Forecast</div>
+            <div className="font-mono font-bold text-zinc-900 dark:text-white text-lg sm:text-xl">
+              {forecasts.length}
+            </div>
           </div>
-          <div className="text-center border-x border-[#1f222b]">
-            <div className="text-[11px] text-[#71767b] mb-0.5">검증 완료 (Record)</div>
-            <div className="font-mono font-bold text-white text-base">{resolvedForecasts.length}</div>
+          <div className="text-center border-x border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] text-zinc-400 mb-0.5">검증 완료 (Record)</div>
+            <div className="font-mono font-bold text-zinc-900 dark:text-white text-lg sm:text-xl">
+              {resolvedForecasts.length}
+            </div>
           </div>
           <div className="text-center">
-            <div className="text-[11px] text-[#71767b] mb-0.5">적중률 (Hit Rate)</div>
-            <div className="font-mono font-bold text-base text-[#38bdf8]">
+            <div className="text-[11px] text-zinc-400 mb-0.5">적중률 (Hit Rate)</div>
+            <div className="font-mono font-bold text-lg sm:text-xl text-emerald-600 dark:text-emerald-400">
               {hitRate !== null ? `${hitRate}%` : '—'}
             </div>
-            {resolvedForecasts.length > 0 && (
-              <div className="text-[10px] text-[#71767b] font-mono mt-0.5">
-                {hitCount}/{resolvedForecasts.length} 적중
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Tabs: [Forecasts] [Results] */}
-      <div className="flex border-b border-[#1b1e26]">
+      {/* Tabs: Pill Buttons */}
+      <div className="flex items-center gap-2 mb-6">
         <button
           onClick={() => setActiveTab('forecasts')}
-          className={`flex-1 py-3 text-center text-xs font-semibold transition relative ${
-            activeTab === 'forecasts' ? 'text-white' : 'text-[#71767b] hover:text-white'
+          className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
+            activeTab === 'forecasts'
+              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
-          Forecasts ({forecasts.length})
-          {activeTab === 'forecasts' && (
-            <span className="absolute bottom-0 left-8 right-8 h-0.5 bg-white rounded-full" />
-          )}
+          전체 예측 ({forecasts.length})
         </button>
 
         <button
           onClick={() => setActiveTab('results')}
-          className={`flex-1 py-3 text-center text-xs font-semibold transition relative ${
-            activeTab === 'results' ? 'text-white' : 'text-[#71767b] hover:text-white'
+          className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
+            activeTab === 'results'
+              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
-          Results ({resolvedForecasts.length})
-          {activeTab === 'results' && (
-            <span className="absolute bottom-0 left-8 right-8 h-0.5 bg-white rounded-full" />
-          )}
+          검증 완료 아카이브 ({resolvedForecasts.length})
         </button>
       </div>
 
-      {/* Forecast Feed List in Profile */}
-      <div>
+      {/* Forecasts List */}
+      <div className="space-y-3">
         {displayedList.length > 0 ? (
-          displayedList.map(forecast => (
-            <ForecastCard
-              key={forecast.id}
-              forecast={forecast}
-              currentDateStr={currentDateStr}
+          displayedList.map(f => (
+            <CompactForecastCard
+              key={f.id}
+              forecast={f}
             />
           ))
         ) : (
-          <div className="p-12 text-center text-[#71767b]">
-            <Sparkles size={20} className="mx-auto mb-2 opacity-50" />
-            <p className="text-xs">
-              {activeTab === 'results'
-                ? '아직 검증 완료된 Forecast가 없습니다.'
-                : '작성한 Forecast가 없습니다.'}
+          <div className="text-center py-16 px-4 rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800">
+            <p className="text-xs sm:text-sm text-zinc-500">
+              {activeTab === 'results' ? '아직 검증 완료된 결과가 없습니다.' : '등록된 예측이 없습니다.'}
             </p>
           </div>
         )}

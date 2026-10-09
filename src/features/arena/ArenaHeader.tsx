@@ -23,13 +23,13 @@ export function ArenaHeader({
   };
 
   return (
-    <div className="w-full bg-[#07080b] border-b border-[#1b1e26] py-2 px-3 sm:px-4">
+    <div className="w-full bg-white dark:bg-[#0c0e14] border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-3.5 mb-6 shadow-sm">
       {/* Title & Quick Info */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
-          <Flame size={15} className="text-amber-400 fill-amber-400/20" />
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-900 dark:text-white">
+          <Flame size={15} className="text-amber-500 fill-amber-500" />
           <span>HOT FORECAST ARENAS</span>
-          <span className="text-[10px] text-zinc-400 font-normal hidden sm:inline">
+          <span className="text-[11px] text-zinc-400 font-normal hidden sm:inline">
             · 실시간 예측 배틀 종목
           </span>
         </div>
@@ -39,7 +39,7 @@ export function ArenaHeader({
           <button
             type="button"
             onClick={() => scroll('left')}
-            className="p-1 rounded-md bg-[#13151c] text-zinc-400 hover:text-white border border-[#222634] transition"
+            className="p-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
             title="이전 종목"
           >
             <ChevronLeft size={14} />
@@ -47,7 +47,7 @@ export function ArenaHeader({
           <button
             type="button"
             onClick={() => scroll('right')}
-            className="p-1 rounded-md bg-[#13151c] text-zinc-400 hover:text-white border border-[#222634] transition"
+            className="p-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
             title="다음 종목"
           >
             <ChevronRight size={14} />
@@ -58,10 +58,10 @@ export function ArenaHeader({
       {/* Horizontal Carousel */}
       <div
         ref={scrollContainerRef}
-        className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-1"
+        className="flex items-center gap-2.5 overflow-x-auto no-scrollbar scroll-smooth pb-0.5"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {hotArenas.map(arena => {
+        {hotArenas.map((arena) => {
           const isSelected = arena.ticker === selectedTicker;
 
           return (
@@ -69,53 +69,57 @@ export function ArenaHeader({
               key={arena.ticker}
               type="button"
               onClick={() => onSelectTicker(arena.ticker)}
-              className={`flex-shrink-0 text-left p-2.5 rounded-xl border transition-all duration-150 min-w-[145px] sm:min-w-[160px] ${
+              className={`flex-shrink-0 text-left p-3 rounded-xl border transition-all duration-150 min-w-[155px] sm:min-w-[170px] ${
                 isSelected
-                  ? 'bg-gradient-to-b from-[#11192e] to-[#0c101c] border-sky-500 shadow-md shadow-sky-500/15 ring-1 ring-sky-500/50'
-                  : 'bg-[#0d0f14] border-[#1e222c] hover:border-[#2f3545] hover:bg-[#12151d]'
+                  ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 border-zinc-900 dark:border-white shadow-md ring-2 ring-zinc-900/10 dark:ring-white/20'
+                  : 'bg-zinc-50 dark:bg-[#12141c] text-zinc-900 dark:text-white border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-[#171a24]'
               }`}
             >
               {/* Top row: Ticker + Live Count */}
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
                   <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: arena.logoColor }}
                   />
-                  <span className="font-bold text-[13px] text-white font-mono">
+                  <span className="font-bold text-sm font-mono tracking-tight">
                     ${arena.ticker}
                   </span>
                 </div>
-                <span className="text-[10px] text-zinc-400 font-mono">
+                <span className={`text-[10px] font-mono ${isSelected ? 'opacity-75' : 'text-zinc-400'}`}>
                   {arena.participantsCount}명
                 </span>
               </div>
 
               {/* Price & Name */}
-              <div className="flex items-center justify-between text-[11px] mb-1.5">
-                <span className="text-zinc-400 truncate max-w-[80px]">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className={`truncate max-w-[85px] ${isSelected ? 'opacity-80' : 'text-zinc-500 dark:text-zinc-400'}`}>
                   {arena.name}
                 </span>
-                <span className="font-mono text-white font-medium">
+                <span className="font-mono font-semibold">
                   ${arena.currentPrice.toFixed(1)}
                 </span>
               </div>
 
               {/* Bull vs Bear Mini Sentiment Bar */}
               <div className="w-full">
-                <div className="w-full h-1.5 rounded-full bg-zinc-800 flex overflow-hidden">
+                <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 flex overflow-hidden">
                   <div
-                    className="h-full bg-emerald-400 transition-all duration-300"
+                    className="h-full bg-emerald-500 transition-all duration-300"
                     style={{ width: `${arena.bullPct}%` }}
                   />
                   <div
-                    className="h-full bg-rose-400 transition-all duration-300"
+                    className="h-full bg-rose-500 transition-all duration-300"
                     style={{ width: `${arena.bearPct}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[9px] font-mono mt-0.5 text-zinc-400">
-                  <span className="text-emerald-400">Bull {arena.bullPct}%</span>
-                  <span className="text-rose-400">Bear {arena.bearPct}%</span>
+                <div className={`flex items-center justify-between text-[9px] font-mono mt-1 ${isSelected ? 'opacity-85' : 'text-zinc-500'}`}>
+                  <span className={isSelected ? 'text-emerald-300 dark:text-emerald-700 font-bold' : 'text-emerald-600 dark:text-emerald-400'}>
+                    Bull {arena.bullPct}%
+                  </span>
+                  <span className={isSelected ? 'text-rose-300 dark:text-rose-700 font-bold' : 'text-rose-600 dark:text-rose-400'}>
+                    Bear {arena.bearPct}%
+                  </span>
                 </div>
               </div>
             </button>
