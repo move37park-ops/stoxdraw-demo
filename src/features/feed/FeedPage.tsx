@@ -4,7 +4,7 @@ import { repository } from '../../data/localRepository';
 import { CompactForecastCard } from '../../components/CompactForecastCard';
 import type { FeedTab } from '../../data/repository';
 import type { Forecast } from '../../domain/types';
-import { Search, X, Radio } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface FeedPageProps {
   currentDateStr: string;
@@ -58,9 +58,8 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
     <div className="w-full">
       {/* Header Banner */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-xs font-semibold text-sky-600 dark:text-sky-400 mb-1">
-          <Radio size={15} />
-          <span>REALTIME FEED</span>
+        <div className="text-xs font-mono font-bold text-sky-600 dark:text-sky-400 mb-1">
+          REALTIME FEED
         </div>
         <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2">
           실시간 예측 스트림

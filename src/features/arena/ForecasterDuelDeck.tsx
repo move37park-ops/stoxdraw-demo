@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { Forecast } from '../../domain/types';
 import { CompactForecastCard } from '../../components/CompactForecastCard';
-import { Swords, TrendingUp, TrendingDown, Users } from 'lucide-react';
 
 interface ForecasterDuelDeckProps {
   forecasts: Forecast[];
@@ -69,32 +68,29 @@ export function ForecasterDuelDeck({
           <button
             type="button"
             onClick={() => setStanceFilter('bull')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
               stanceFilter === 'bull'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800/40'
             }`}
           >
-            <TrendingUp size={13} />
-            <span>Bull 진영 ({bullForecasts.length})</span>
+            Bull 진영 ({bullForecasts.length})
           </button>
           <button
             type="button"
             onClick={() => setStanceFilter('bear')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
               stanceFilter === 'bear'
                 ? 'bg-rose-600 text-white shadow-sm'
                 : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-800/40'
             }`}
           >
-            <TrendingDown size={13} />
-            <span>Bear 진영 ({bearForecasts.length})</span>
+            Bear 진영 ({bearForecasts.length})
           </button>
         </div>
 
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
-          <Swords size={14} className="text-amber-500" />
-          <span>반박 버튼으로 1:1 결투</span>
+        <div className="hidden sm:flex items-center text-xs text-zinc-500 font-medium">
+          반박 버튼으로 1:1 결투
         </div>
       </div>
 
@@ -120,9 +116,6 @@ export function ForecasterDuelDeck({
         </div>
       ) : (
         <div className="text-center py-16 px-4 rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800">
-          <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sky-500 flex items-center justify-center mx-auto mb-3">
-            <Users size={22} />
-          </div>
           <h3 className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
             아직 이 조건의 예측이 없습니다
           </h3>

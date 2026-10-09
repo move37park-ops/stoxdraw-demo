@@ -10,7 +10,6 @@ import { ForecasterDuelDeck } from './ForecasterDuelDeck';
 import { CrowdDistributionView } from './CrowdDistributionView';
 import { CompactForecastCard } from '../../components/CompactForecastCard';
 import type { Forecast, Horizon, Mode } from '../../domain/types';
-import { Swords, BarChart3, CheckCircle2 } from 'lucide-react';
 
 interface ArenaPageProps {
   currentDateStr: string;
@@ -132,40 +131,37 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
           <button
             type="button"
             onClick={() => setActiveTab('duel')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
+            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'duel'
                 ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
             }`}
           >
-            <Swords size={15} className="text-amber-500" />
-            <span>궤적 배틀 덱 ({arenaSummary.topForecasts.length})</span>
+            궤적 배틀 덱 ({arenaSummary.topForecasts.length})
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('distribution')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
+            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'distribution'
                 ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
             }`}
           >
-            <BarChart3 size={15} className="text-sky-500" />
-            <span>군중 기대치 분포</span>
+            군중 기대치 분포
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('resolved')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
+            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'resolved'
                 ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
             }`}
           >
-            <CheckCircle2 size={15} className="text-emerald-500" />
-            <span>검증 결과 아카이브 ({resolvedForecasts.length})</span>
+            검증 결과 아카이브 ({resolvedForecasts.length})
           </button>
         </div>
 

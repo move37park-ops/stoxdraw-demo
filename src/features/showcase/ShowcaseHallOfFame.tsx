@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ArrowRight, ShieldCheck, TrendingUp } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { deriveForecastStatus } from '../../domain/lifecycle';
 import { repository } from '../../data/localRepository';
 
@@ -24,12 +24,9 @@ export function ShowcaseHallOfFame({ currentDateStr }: ShowcaseHallOfFameProps) 
       {/* Section Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} className="text-emerald-500" />
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              명예의 전당 (검증 완료 궤적)
-            </h2>
-          </div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+            명예의 전당 (검증 완료 궤적)
+          </h2>
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
             예측 기간이 만료되어 실제 시장 가격과 100% 대조 검증된 레코드
           </p>
@@ -69,9 +66,8 @@ export function ShowcaseHallOfFame({ currentDateStr }: ShowcaseHallOfFameProps) 
                   </span>
                 </div>
 
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
-                  <ShieldCheck size={12} />
-                  <span>적중 {score}점</span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                  적중 {score}점
                 </span>
               </div>
 
@@ -79,8 +75,7 @@ export function ShowcaseHallOfFame({ currentDateStr }: ShowcaseHallOfFameProps) 
               <div className="my-3 py-3 px-4 rounded-xl bg-zinc-50 dark:bg-[#08090e] border border-zinc-100 dark:border-zinc-800/80">
                 <div className="flex items-center justify-between text-[11px] font-mono mb-2">
                   <span className="text-zinc-400">기준가: ${forecast.basePrice.toFixed(1)}</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                    <TrendingUp size={12} />
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                     방향 일치 (Hit)
                   </span>
                 </div>

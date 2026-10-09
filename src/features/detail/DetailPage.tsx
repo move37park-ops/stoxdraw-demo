@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, MessageSquare, Share2, PenTool, Lock, Users, Send, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Heart, MessageSquare, Share2, Lock, Send, CheckCircle2 } from 'lucide-react';
 import { repository } from '../../data/localRepository';
 import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
 import { getStockHistory } from '../../data/market';
@@ -238,7 +238,6 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
         <div className="my-5 p-4 rounded-2xl bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/40">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users size={16} className="text-sky-600 dark:text-sky-400" />
               <span className="text-xs font-bold text-zinc-900 dark:text-white">
                 군중 컨센서스 (Crowd Consensus)
               </span>
@@ -294,10 +293,9 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
 
           <button
             onClick={handleDrawResponse}
-            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-md transition active:scale-95"
+            className="px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-md transition active:scale-95"
           >
-            <PenTool size={14} className="stroke-[2.5]" />
-            <span>이 예측에 반박선 긋기 (Duel)</span>
+            이 예측에 반박선 긋기 (Duel)
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Trophy, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { SEED_USERS } from '../../data/seed';
 
 export function ShowcaseForecasterSection() {
@@ -34,12 +34,9 @@ export function ShowcaseForecasterSection() {
       {/* Section Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <Trophy size={18} className="text-amber-500" />
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              검증된 탑 포캐스터
-            </h2>
-          </div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+            검증된 탑 포캐스터
+          </h2>
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
             수십 번의 예측과 결과를 통해 증명된 최고의 예측가들과 그들의 트랙 레코드
           </p>
@@ -68,10 +65,9 @@ export function ShowcaseForecasterSection() {
               <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
                 RANK #{idx + 1}
               </span>
-              <div className="flex items-center gap-1 text-xs font-mono font-bold text-sky-600 dark:text-sky-400">
-                <ShieldCheck size={14} />
-                <span>Score {user.score}</span>
-              </div>
+              <span className="text-xs font-mono font-bold text-sky-600 dark:text-sky-400">
+                Score {user.score}
+              </span>
             </div>
 
             {/* Profile Avatar & Info */}

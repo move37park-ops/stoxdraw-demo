@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Flame, Users, CheckCircle2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface ShowcaseBentoGridProps {
   currentDateStr?: string;
@@ -22,16 +22,14 @@ export function ShowcaseBentoGrid({ currentDateStr: _currentDateStr }: ShowcaseB
           {/* Top Header Tags */}
           <div className="flex items-center justify-between mb-6 z-10">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5">
-                <Flame size={13} className="text-amber-500 fill-amber-500" />
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700">
                 실시간 최대 격전지
               </span>
               <span className="text-xs font-mono text-zinc-400 dark:text-zinc-500">
                 NVDA · 5D Horizon
               </span>
             </div>
-            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 px-2.5 py-1 rounded-full flex items-center gap-1">
-              <Users size={12} />
+            <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 px-2.5 py-1 rounded-full">
               1,420명 참여
             </span>
           </div>
@@ -185,8 +183,7 @@ export function ShowcaseBentoGrid({ currentDateStr: _currentDateStr }: ShowcaseB
             className="group relative rounded-[28px] p-6 bg-zinc-100 dark:bg-[#12141c] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white overflow-hidden shadow-sm hover:shadow-xl hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-300 cursor-pointer min-h-[140px] flex flex-col justify-between"
           >
             <div className="flex items-center justify-between">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
-                <CheckCircle2 size={12} className="text-sky-500" />
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                 100% 투명한 검증
               </span>
               <span className="text-xs font-mono text-zinc-400">Track Record</span>

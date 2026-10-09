@@ -8,12 +8,12 @@ interface ShowcaseHeroSearchProps {
 }
 
 const POPULAR_TAGS = [
-  { label: '🔥 NVDA 실적 변곡점', query: 'NVDA' },
-  { label: '⚡ TSLA 30D 스윙', query: 'TSLA' },
-  { label: '🍎 AAPL 전고점', query: 'AAPL' },
-  { label: '🏆 1위 @alpha_seeker', query: 'alpha_seeker' },
-  { label: '🚀 PLTR 모멘텀', query: 'PLTR' },
-  { label: '📊 빅테크 AI 배틀', query: 'MSFT' },
+  { label: 'NVDA 실적 변곡점', query: 'NVDA' },
+  { label: 'TSLA 30D 스윙', query: 'TSLA' },
+  { label: 'AAPL 전고점', query: 'AAPL' },
+  { label: 'PLTR 모멘텀', query: 'PLTR' },
+  { label: '1위 @alpha_seeker', query: 'alpha_seeker' },
+  { label: '빅테크 AI 배틀', query: 'MSFT' },
 ];
 
 export function ShowcaseHeroSearch({

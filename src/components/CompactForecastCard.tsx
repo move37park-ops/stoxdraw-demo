@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Swords, ThumbsUp, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, ThumbsUp, CheckCircle2 } from 'lucide-react';
 import type { Forecast } from '../domain/types';
 import { repository } from '../data/localRepository';
 import { formatPct } from '../domain/format';
@@ -214,10 +214,9 @@ export function CompactForecastCard({
           type="button"
           onClick={handleDuelClick}
           title="이 예측에 반박선 긋기"
-          className="p-1.5 px-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-amber-600 text-xs flex items-center gap-1 transition font-medium"
+          className="px-2.5 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-amber-600 text-xs transition font-medium"
         >
-          <Swords size={13} />
-          <span className="text-[11px] hidden md:inline">반박</span>
+          반박
         </button>
 
         {/* Agree / Like Button */}

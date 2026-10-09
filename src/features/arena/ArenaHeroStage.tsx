@@ -1,4 +1,4 @@
-import { PenTool, Users, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { CrowdAggregate, Forecast, Horizon, Mode } from '../../domain/types';
 import type { ArenaSummary } from '../../domain/arena';
 import { getStockHistory } from '../../data/market';
@@ -141,8 +141,7 @@ export function ArenaHeroStage({
           </div>
 
           <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            <span className="flex items-center gap-1 font-medium">
-              <Users size={13} className="text-sky-500" />
+            <span className="font-medium">
               {arenaSummary.participantsCount}명 참여 중
             </span>
             <span>·</span>
@@ -384,10 +383,9 @@ export function ArenaHeroStage({
           <button
             type="button"
             onClick={onDrawClick}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-xl active:scale-95 transition"
+            className="px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-xl active:scale-95 transition"
           >
-            <PenTool size={15} />
-            <span>이 아레나에 내 선 얹기</span>
+            이 아레나에 내 선 얹기
           </button>
         </div>
       </div>

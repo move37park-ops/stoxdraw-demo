@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { PenTool, Sun, Moon, LogOut, Flame, Radio, Trophy } from 'lucide-react';
+import { Sun, Moon, LogOut } from 'lucide-react';
 import { getCurrentUser, subscribeSession, logout } from '../../data/session';
 import { ConnectModal } from '../auth/ConnectModal';
 import type { User } from '../../domain/types';
@@ -52,37 +52,34 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
             <NavLink
               to="/arena"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-white transition ${
+                `hover:text-zinc-900 dark:hover:text-white transition ${
                   isActive ? 'text-zinc-900 dark:text-white font-semibold' : ''
                 }`
               }
             >
-              <Flame size={15} className="text-amber-500" />
-              <span>배틀 아레나</span>
+              배틀 아레나
             </NavLink>
 
             <NavLink
               to="/stream"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-white transition ${
+                `hover:text-zinc-900 dark:hover:text-white transition ${
                   isActive ? 'text-zinc-900 dark:text-white font-semibold' : ''
                 }`
               }
             >
-              <Radio size={15} className="text-sky-500" />
-              <span>실시간 스트림</span>
+              실시간 스트림
             </NavLink>
 
             <NavLink
               to="/u/alpha_seeker"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-white transition ${
+                `hover:text-zinc-900 dark:hover:text-white transition ${
                   isActive ? 'text-zinc-900 dark:text-white font-semibold' : ''
                 }`
               }
             >
-              <Trophy size={15} className="text-yellow-500" />
-              <span>명예의 전당</span>
+              명예의 전당
             </NavLink>
           </nav>
         </div>
@@ -153,10 +150,9 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
           {/* Primary CTA (Black pill button like OpenAI!) */}
           <NavLink
             to="/draw"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs sm:text-sm font-semibold shadow-sm transition active:scale-95"
+            className="px-4 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs sm:text-sm font-semibold shadow-sm transition active:scale-95"
           >
-            <PenTool size={14} className="stroke-[2.5]" />
-            <span>예측 시작하기</span>
+            예측 시작하기
           </NavLink>
         </div>
       </div>

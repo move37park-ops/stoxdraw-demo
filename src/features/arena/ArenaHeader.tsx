@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Flame, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ArenaSummary } from '../../domain/arena';
 
 interface ArenaHeaderProps {
@@ -26,11 +26,10 @@ export function ArenaHeader({
     <div className="w-full bg-white dark:bg-[#0c0e14] border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-3.5 mb-6 shadow-sm">
       {/* Title & Quick Info */}
       <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-900 dark:text-white">
-          <Flame size={15} className="text-amber-500 fill-amber-500" />
-          <span>HOT FORECAST ARENAS</span>
-          <span className="text-[11px] text-zinc-400 font-normal hidden sm:inline">
-            · 실시간 예측 배틀 종목
+        <div className="flex items-center gap-2 text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">
+          <span>주요 예측 종목</span>
+          <span className="text-[11px] text-zinc-400 font-normal lowercase">
+            · 실시간 아레나
           </span>
         </div>
 

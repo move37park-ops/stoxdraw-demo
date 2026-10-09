@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Swords, ThumbsUp, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowRight, ThumbsUp } from 'lucide-react';
 import type { Forecast } from '../../domain/types';
 import { repository } from '../../data/localRepository';
 import { formatPct } from '../../domain/format';
@@ -106,14 +106,13 @@ export function ShowcaseBattleSection({
                 </div>
 
                 <span
-                  className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${
                     isBull
                       ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60'
                       : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60'
                   }`}
                 >
-                  {isBull ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                  <span>{formatPct(changePct)}</span>
+                  {isBull ? '▲' : '▼'} {formatPct(changePct)}
                 </span>
               </div>
 
@@ -169,10 +168,9 @@ export function ShowcaseBattleSection({
                       navigate(`/draw?parent=${forecast.id}&ticker=${forecast.ticker}&horizon=${forecast.horizon}&mode=${forecast.mode}`);
                     }}
                     title="반박선 긋기"
-                    className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-amber-500 transition text-xs flex items-center gap-1"
+                    className="px-2.5 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-amber-600 transition text-[11px] font-medium"
                   >
-                    <Swords size={12} />
-                    <span className="text-[10px] font-semibold">반박</span>
+                    반박
                   </button>
 
                   <button
