@@ -1,14 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { repository } from '../../data/localRepository';
 import { ShowcaseNav } from './ShowcaseNav';
 import { ShowcaseHeroSearch } from './ShowcaseHeroSearch';
-import { ShowcaseBentoGrid } from './ShowcaseBentoGrid';
-import { ShowcaseBattleSection } from './ShowcaseBattleSection';
-import { ShowcaseForecasterSection } from './ShowcaseForecasterSection';
-import { ShowcaseHallOfFame } from './ShowcaseHallOfFame';
+import { ShowcaseTickerStrip } from './ShowcaseTickerStrip';
+import { ShowcaseStorySpotlight } from './ShowcaseStorySpotlight';
+import { Showcase4FeatureCards } from './Showcase4FeatureCards';
 import { ShowcaseBottomCTA } from './ShowcaseBottomCTA';
 import { ShowcaseFooter } from './ShowcaseFooter';
-import type { Forecast } from '../../domain/types';
 
 interface EditorialHomePageProps {
   currentDateStr: string;
@@ -19,68 +15,32 @@ export function EditorialHomePage({
   currentDateStr,
   onDateChange,
 }: EditorialHomePageProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [forecasts, setForecasts] = useState<Forecast[]>(() =>
-    repository.listFeed('all', currentDateStr)
-  );
-
-  const loadData = useCallback(() => {
-    setForecasts(repository.listFeed('all', currentDateStr));
-  }, [currentDateStr]);
-
-  useEffect(() => {
-    loadData();
-    const unsub = repository.subscribe(loadData);
-    return () => unsub();
-  }, [loadData]);
-
-  const handleTagSelect = (tagQuery: string) => {
-    setSearchQuery(tagQuery);
-    // Smooth scroll down to the battle section if searching
-    const section = document.getElementById('battle-section');
-    if (section) {
-      section.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   return (
-    <div className="min-h-screen w-full bg-[#fbfbfd] dark:bg-[#07080b] text-zinc-900 dark:text-white transition-colors duration-200">
-      {/* 1. Sticky Editorial Nav */}
+    <div className="min-h-screen w-full bg-black text-white transition-colors duration-200">
+      {/* 1. Sticky Nav (Pure Black) */}
       <ShowcaseNav
         currentDateStr={currentDateStr}
         onDateChange={onDateChange}
       />
 
       <main className="w-full">
-        {/* 2. Headline & Pill Search Bar */}
-        <ShowcaseHeroSearch
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onTagSelect={handleTagSelect}
-        />
+        {/* 2. Hero: Glowing pill, Headline, Centered DRAW Button, Floating Chart Showcase */}
+        <ShowcaseHeroSearch />
 
-        {/* 3. Hero Bento Grid (Featured Big Battle + Stacked Colorful Cards) */}
-        <ShowcaseBentoGrid currentDateStr={currentDateStr} />
+        {/* 3. Quiet Monochrome Ticker Strip (Matches logos bar in reference) */}
+        <ShowcaseTickerStrip />
 
-        {/* 4. 3-Column Realtime Forecast Battles */}
-        <div id="battle-section">
-          <ShowcaseBattleSection
-            forecasts={forecasts}
-            searchFilter={searchQuery}
-          />
-        </div>
+        {/* 4. Storytelling Feature Section (Matches enterprise section in reference) */}
+        <ShowcaseStorySpotlight />
 
-        {/* 5. 3-Column Top Verified Forecasters (Matching photo cards in image) */}
-        <ShowcaseForecasterSection />
+        {/* 5. 4 Colorful Feature Cards (Exact match to 4 cards at bottom of reference) */}
+        <Showcase4FeatureCards />
 
-        {/* 6. 3-Column Hall of Fame (Resolved Predictions) */}
-        <ShowcaseHallOfFame currentDateStr={currentDateStr} />
-
-        {/* 7. Big Bottom Call To Action (Matches 'ChatGPT를 시작해보세요' banner) */}
+        {/* 6. Big Dark CTA Banner (Matches bottom banner in reference) */}
         <ShowcaseBottomCTA />
       </main>
 
-      {/* 8. Multi-column Modern Tech Footer */}
+      {/* 7. Clean Black Multi-column Footer */}
       <ShowcaseFooter />
     </div>
   );

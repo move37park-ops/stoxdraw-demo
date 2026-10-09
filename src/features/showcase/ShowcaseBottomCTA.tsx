@@ -5,8 +5,8 @@ export function ShowcaseBottomCTA() {
   const navigate = useNavigate();
 
   return (
-    <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 mb-20">
-      <div className="relative rounded-[32px] sm:rounded-[40px] bg-zinc-100 dark:bg-[#0d0f16] border border-zinc-200 dark:border-zinc-800 p-8 sm:p-16 text-center overflow-hidden">
+    <section className="w-full max-w-6xl mx-auto px-4 mb-24">
+      <div className="relative rounded-[36px] bg-[#0c0e14] border border-white/10 p-10 sm:p-20 text-center overflow-hidden">
         {/* Subtle radial glow */}
         <div className="absolute inset-0 bg-radial-gradient from-sky-400/10 via-transparent to-transparent pointer-events-none" />
 

@@ -9,7 +9,7 @@ interface AppShellProps {
 
 export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
   return (
-    <div className="min-h-screen w-full bg-[#fbfbfd] dark:bg-[#07080b] text-zinc-900 dark:text-white flex flex-col transition-colors duration-200">
+    <div className="min-h-screen w-full bg-black text-white flex flex-col transition-colors duration-200">
       {/* 1. Unified OpenAI-style Sticky Navigation */}
       <ShowcaseNav
         currentDateStr={currentDateStr}

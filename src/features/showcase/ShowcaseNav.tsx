@@ -15,9 +15,9 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
   const [isConnectOpen, setIsConnectOpen] = useState(false);
 
   useEffect(() => {
-    // Ensure clean OpenAI editorial light mode
-    document.documentElement.classList.add('light');
-    document.documentElement.classList.remove('dark');
+    // Ensure clean OpenAI dark theme matches reference
+    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('light');
   }, []);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-[#07080b]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 transition-colors">
+    <header className="sticky top-0 z-50 w-full bg-black/85 backdrop-blur-md border-b border-white/10 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Left: Brand Logo & Navigation */}
         <div className="flex items-center gap-8">

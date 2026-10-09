@@ -1,141 +1,127 @@
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Search, X, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface ShowcaseHeroSearchProps {
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
-  onTagSelect: (tag: string) => void;
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
+  onTagSelect?: (tag: string) => void;
 }
 
-const CATEGORY_CHIPS = [
-  { label: '실시간 격전지 NVDA', query: 'NVDA' },
-  { label: '실시간 격전지 TSLA', query: 'TSLA' },
-  { label: '5일 단기 승부 AAPL', query: 'AAPL' },
-  { label: '30일 스윙 PLTR', query: 'PLTR' },
-  { label: '실적 발표 변곡점 MSFT', query: 'MSFT' },
-];
-
-export function ShowcaseHeroSearch({
-  searchQuery,
-  onSearchChange,
-  onTagSelect,
-}: ShowcaseHeroSearchProps) {
-  const [isFocused, setIsFocused] = useState(false);
-
+export function ShowcaseHeroSearch({}: ShowcaseHeroSearchProps) {
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 pt-12 pb-8 sm:pt-16 sm:pb-12 text-center">
-      {/* 1. Main Headline & Subtitle */}
-      <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-3">
+    <div className="w-full max-w-6xl mx-auto px-4 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
+      {/* 1. Ambient Glowing Badge (Matches reference) */}
+      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs font-medium mb-6 backdrop-blur-md shadow-[0_0_24px_rgba(4,120,87,0.3)] font-mono">
+        실시간 주가 예측 플랫폼
+      </div>
+
+      {/* 2. Main Headline & Subtitle */}
+      <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-4 leading-[1.15]">
         다음 주가, 당신은 어떻게 보나요?
       </h1>
-      <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8 font-normal">
+      <p className="text-base sm:text-lg text-zinc-400 max-w-xl mx-auto mb-8 font-normal leading-relaxed">
         당신의 예측을 그리고 다른 사람들의 전망과 비교해 보세요.
       </p>
 
-      {/* 2. Primary Actions */}
-      <div className="flex items-center justify-center gap-3 mb-10">
+      {/* 3. Primary Actions */}
+      <div className="flex items-center justify-center gap-4 mb-14">
         <NavLink
           to="/draw"
-          className="btn-signature-draw px-6 py-3 rounded-full text-sm sm:text-base tracking-wide"
+          className="btn-signature-draw px-7 py-3.5 rounded-full text-sm sm:text-base tracking-wide"
         >
           <span>DRAW</span>
           <ArrowRight size={16} className="stroke-[2.5]" />
         </NavLink>
 
-        <button
-          type="button"
-          onClick={() => {
-            const section = document.getElementById('battle-section');
-            if (section) section.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="px-6 py-3 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-sm sm:text-base transition"
+        <NavLink
+          to="/arena"
+          className="text-sm font-semibold text-zinc-400 hover:text-white transition px-4 py-3.5 flex items-center gap-1.5"
         >
-          실시간 배틀 보기
-        </button>
+          <span>아레나 둘러보기</span>
+          <ArrowRight size={15} />
+        </NavLink>
       </div>
 
-      {/* 3. 3-Step "How STOXDRAW Works" (Zero emojis, pristine typography) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 max-w-3xl mx-auto mb-8 text-left">
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
-          <div className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-500 mb-1.5 uppercase tracking-wide">
-            01 선 긋기
+      {/* 4. Floating Cinematic Mockup Window (Matches the floating mockup cards in reference) */}
+      <div className="max-w-4xl mx-auto relative rounded-3xl bg-[#0c0e14] border border-white/10 p-5 sm:p-7 shadow-[0_20px_70px_-15px_rgba(0,0,0,0.9)] overflow-hidden text-left">
+        {/* Subtle radial glow */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Window Header */}
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <span className="font-mono font-bold text-white text-base">$NVDA</span>
+            <span className="text-xs text-zinc-400 font-mono">기준가 $128.80</span>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-950/70 text-emerald-400 border border-emerald-800/60">
+              실시간 배틀
+            </span>
           </div>
-          <div className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
-            차트에 미래 궤적 그리기
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-zinc-400 hidden sm:inline">1,420명 참여</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-            마우스나 터치로 본인이 생각하는 미래 주가 경로를 직접 선으로 그립니다.
-          </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
-          <div className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-500 mb-1.5 uppercase tracking-wide">
-            02 실시간 대결
+        {/* Sleek SVG Chart Canvas */}
+        <div className="relative w-full aspect-[21/9] sm:aspect-[24/9] bg-[#07080b] rounded-2xl border border-white/5 p-4 flex flex-col justify-between overflow-hidden">
+          <div className="flex items-center justify-between text-xs font-mono z-10">
+            <span className="text-zinc-500">최근 5일 추세 (실제 주가)</span>
+            <span className="text-emerald-400 font-bold">
+              군중 컨센서스 $144.50 (+12.2%)
+            </span>
           </div>
-          <div className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
-            군중 컨센서스와 비교
-          </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-            수천 명의 집단 지성 평균선과 상위 랭커들의 선을 한 차트에서 대조합니다.
-          </p>
-        </div>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
-          <div className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-500 mb-1.5 uppercase tracking-wide">
-            03 기록 & 검증
-          </div>
-          <div className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
-            실제 주가로 스코어 검증
-          </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-            만료일에 실제 시장 가격과 자동 대조되어 적중률과 순위가 영구 기록됩니다.
-          </p>
-        </div>
-      </div>
+          <svg viewBox="0 0 500 120" className="w-full h-full my-auto overflow-visible" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="heroConsensusGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#047857" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#047857" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
 
-      {/* 4. Purpose-Driven Category Chips (No emojis) */}
-      <div className="flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap mb-4">
-        {CATEGORY_CHIPS.map((chip) => (
-          <button
-            key={chip.label}
-            type="button"
-            onClick={() => onTagSelect(chip.query)}
-            className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60 transition"
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
+            <line x1="0" y1="60" x2="500" y2="60" stroke="#181a24" strokeDasharray="3 3" />
+            <line x1="200" y1="10" x2="200" y2="110" stroke="#252a38" strokeDasharray="4 4" />
 
-      {/* 5. Compact Secondary Search Bar */}
-      <div className="max-w-md mx-auto relative">
-        <div
-          className={`flex items-center w-full px-4 py-2.5 rounded-full bg-white dark:bg-[#12141c] border transition-all duration-200 shadow-sm ${
-            isFocused
-              ? 'border-emerald-700 dark:border-emerald-500 ring-2 ring-emerald-700/10'
-              : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
-          }`}
-        >
-          <Search size={16} className="text-zinc-400 dark:text-zinc-500 mr-2.5 flex-shrink-0" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder="종목 티커(NVDA, TSLA...) 또는 예측가 검색"
-            className="w-full bg-transparent text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchChange('')}
-              className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-            >
-              <X size={14} />
-            </button>
-          )}
+            {/* Past Trend Line */}
+            <path
+              d="M 10 75 Q 80 50 120 70 T 200 60"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="2.5"
+            />
+
+            {/* Forecast Area Band */}
+            <path
+              d="M 200 60 Q 280 40 380 30 T 490 25 L 490 65 Q 380 65 280 70 Z"
+              fill="url(#heroConsensusGrad)"
+            />
+
+            {/* Consensus Path */}
+            <path
+              d="M 200 60 Q 280 48 380 42 T 490 35"
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="2.5"
+            />
+
+            {/* Current Price Pin */}
+            <circle cx="200" cy="60" r="5" fill="#ffffff" />
+            <text x="200" y="80" fill="#a1a1aa" fontSize="10" fontFamily="monospace" textAnchor="middle">
+              현재가 $128.80
+            </text>
+
+            {/* End Target Pin */}
+            <circle cx="490" cy="35" r="5" fill="#10b981" />
+            <text x="450" y="25" fill="#34d399" fontSize="10" fontFamily="monospace" fontWeight="bold">
+              예측 목표 $144.50
+            </text>
+          </svg>
+
+          <div className="flex items-center justify-between text-xs text-zinc-500 font-mono z-10 pt-2 border-t border-white/5">
+            <span>시작일 10/05</span>
+            <span className="text-zinc-400">만료 시 실제 주가 자동 대조 검증</span>
+            <span>목표일 10/12 (5D)</span>
+          </div>
         </div>
       </div>
     </div>
