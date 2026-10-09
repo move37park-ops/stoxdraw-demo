@@ -36,7 +36,7 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
             </span>
           </NavLink>
 
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-zinc-600 dark:text-zinc-300">
             <NavLink
               to="/arena"
               className={({ isActive }) =>
@@ -45,7 +45,7 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
                 }`
               }
             >
-              배틀 아레나
+              아레나
             </NavLink>
 
             <NavLink
@@ -56,18 +56,18 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
                 }`
               }
             >
-              실시간 피드
+              피드
             </NavLink>
 
             <NavLink
-              to="/stream?tab=results"
+              to="/leaderboard"
               className={({ isActive }) =>
                 `hover:text-zinc-900 dark:hover:text-white transition ${
                   isActive ? 'text-zinc-900 dark:text-white font-semibold' : ''
                 }`
               }
             >
-              검증 랭킹
+              리더보드
             </NavLink>
           </nav>
         </div>

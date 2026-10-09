@@ -62,7 +62,7 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
           REALTIME FEED
         </div>
         <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2">
-          실시간 예측 피드
+          피드
         </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           모든 참여자의 미래 주가 궤적과 검증 완료 기록이 실시간으로 동기화됩니다.
@@ -76,7 +76,7 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
           {[
             { id: 'all', label: '전체 피드' },
             { id: 'following', label: '팔로잉' },
-            { id: 'results', label: '검증 완료 결과' },
+            { id: 'results', label: '검증 완료' },
           ].map(tab => (
             <button
               key={tab.id}

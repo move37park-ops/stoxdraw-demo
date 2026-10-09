@@ -8,6 +8,7 @@ import { DetailPage } from './features/detail/DetailPage';
 import { DrawWizard } from './features/draw/DrawWizard';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { NotificationPage } from './features/notifications/NotificationPage';
+import { LeaderboardPage } from './features/leaderboard/LeaderboardPage';
 
 export function App() {
   // 기준 시점 (Time Travel 시뮬레이터 지원)
@@ -43,6 +44,7 @@ export function App() {
           <Route path="draw" element={<DrawWizard currentDateStr={currentDateStr} />} />
           <Route path="u/:handle" element={<ProfilePage currentDateStr={currentDateStr} />} />
           <Route path="notifications" element={<NotificationPage />} />
+          <Route path="leaderboard" element={<LeaderboardPage currentDateStr={currentDateStr} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

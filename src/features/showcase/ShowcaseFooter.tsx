@@ -27,10 +27,10 @@ export function ShowcaseFooter() {
               플랫폼
             </h4>
             <ul className="space-y-2 text-xs">
-              <li><NavLink to="/arena" className="hover:text-zinc-900 dark:hover:text-white transition">배틀 아레나</NavLink></li>
+              <li><NavLink to="/arena" className="hover:text-zinc-900 dark:hover:text-white transition">아레나</NavLink></li>
               <li><NavLink to="/draw" className="hover:text-zinc-900 dark:hover:text-white transition">DRAW</NavLink></li>
-              <li><NavLink to="/stream" className="hover:text-zinc-900 dark:hover:text-white transition">실시간 피드</NavLink></li>
-              <li><NavLink to="/stream?tab=results" className="hover:text-zinc-900 dark:hover:text-white transition">검증 랭킹</NavLink></li>
+              <li><NavLink to="/stream" className="hover:text-zinc-900 dark:hover:text-white transition">피드</NavLink></li>
+              <li><NavLink to="/leaderboard" className="hover:text-zinc-900 dark:hover:text-white transition">리더보드</NavLink></li>
             </ul>
           </div>
 

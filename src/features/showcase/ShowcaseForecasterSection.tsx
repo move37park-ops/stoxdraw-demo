@@ -44,10 +44,10 @@ export function ShowcaseForecasterSection() {
 
         <button
           type="button"
-          onClick={() => navigate('/u/alpha_seeker')}
+          onClick={() => navigate('/leaderboard')}
           className="flex items-center gap-1 text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition"
         >
-          <span>랭킹 전체보기</span>
+          <span>리더보드 전체보기</span>
           <ArrowRight size={14} />
         </button>
       </div>
