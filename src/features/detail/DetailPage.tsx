@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, MessageSquare, Share2, Lock, Send, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Heart, MessageSquare, Share2, Lock, Send, CheckCircle2 } from 'lucide-react';
 import { repository } from '../../data/localRepository';
 import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
 import { getStockHistory } from '../../data/market';
@@ -295,7 +295,8 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
             onClick={handleDrawResponse}
             className="btn-signature-draw px-5 py-2.5 rounded-full text-xs sm:text-sm tracking-wide"
           >
-            DRAW
+            <span>DRAW</span>
+            <ArrowRight size={14} className="stroke-[2.5]" />
           </button>
         </div>
       </div>

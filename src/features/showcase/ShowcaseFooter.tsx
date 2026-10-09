@@ -28,9 +28,9 @@ export function ShowcaseFooter() {
             </h4>
             <ul className="space-y-2 text-xs">
               <li><NavLink to="/arena" className="hover:text-zinc-900 dark:hover:text-white transition">배틀 아레나</NavLink></li>
-              <li><NavLink to="/draw" className="hover:text-zinc-900 dark:hover:text-white transition">캔버스 그리기</NavLink></li>
-              <li><NavLink to="/stream" className="hover:text-zinc-900 dark:hover:text-white transition">실시간 스트림</NavLink></li>
-              <li><NavLink to="/u/alpha_seeker" className="hover:text-zinc-900 dark:hover:text-white transition">명예의 전당</NavLink></li>
+              <li><NavLink to="/draw" className="hover:text-zinc-900 dark:hover:text-white transition">DRAW</NavLink></li>
+              <li><NavLink to="/stream" className="hover:text-zinc-900 dark:hover:text-white transition">실시간 피드</NavLink></li>
+              <li><NavLink to="/stream?tab=results" className="hover:text-zinc-900 dark:hover:text-white transition">검증 랭킹</NavLink></li>
             </ul>
           </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, ArrowRight } from 'lucide-react';
 import { getCurrentUser, subscribeSession, logout } from '../../data/session';
 import { ConnectModal } from '../auth/ConnectModal';
 import type { User } from '../../domain/types';
@@ -56,18 +56,18 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
                 }`
               }
             >
-              실시간 스트림
+              실시간 피드
             </NavLink>
 
             <NavLink
-              to="/u/alpha_seeker"
+              to="/stream?tab=results"
               className={({ isActive }) =>
                 `hover:text-zinc-900 dark:hover:text-white transition ${
                   isActive ? 'text-zinc-900 dark:text-white font-semibold' : ''
                 }`
               }
             >
-              명예의 전당
+              검증 랭킹
             </NavLink>
           </nav>
         </div>
@@ -128,9 +128,10 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
           {/* Primary Signature DRAW CTA */}
           <NavLink
             to="/draw"
-            className="btn-signature-draw px-5 py-2 rounded-full text-xs sm:text-sm tracking-wide"
+            className="btn-signature-draw px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm tracking-wide"
           >
-            DRAW
+            <span>DRAW</span>
+            <ArrowRight size={14} className="stroke-[2.5]" />
           </NavLink>
         </div>
       </div>

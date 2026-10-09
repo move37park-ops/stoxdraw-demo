@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageSquare, Share2 } from 'lucide-react';
+import { Heart, MessageSquare, Share2, ArrowRight } from 'lucide-react';
 import type { Forecast } from '../domain/types';
 import { repository } from '../data/localRepository';
 import { deriveForecastStatus } from '../domain/lifecycle';
@@ -248,9 +248,10 @@ export function ForecastCard({
         {/* Primary Action Button: DRAW */}
         <button
           onClick={handleDrawResponse}
-          className="btn-signature-draw px-4 py-1.5 rounded-full text-xs tracking-wide"
+          className="btn-signature-draw px-3.5 py-1.5 rounded-full text-xs tracking-wide"
         >
-          DRAW
+          <span>DRAW</span>
+          <ArrowRight size={12} className="stroke-[2.5]" />
         </button>
       </div>
     </article>

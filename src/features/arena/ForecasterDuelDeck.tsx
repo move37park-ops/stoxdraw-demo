@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import type { Forecast } from '../../domain/types';
 import { CompactForecastCard } from '../../components/CompactForecastCard';
 
@@ -125,9 +126,10 @@ export function ForecasterDuelDeck({
           <button
             type="button"
             onClick={onDrawFirst}
-            className="btn-signature-draw px-6 py-2.5 rounded-full text-xs tracking-wide"
+            className="btn-signature-draw px-5 py-2.5 rounded-full text-xs tracking-wide"
           >
-            DRAW
+            <span>DRAW</span>
+            <ArrowRight size={13} className="stroke-[2.5]" />
           </button>
         </div>
       )}

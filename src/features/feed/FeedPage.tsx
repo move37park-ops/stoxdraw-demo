@@ -58,11 +58,11 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
     <div className="w-full">
       {/* Header Banner */}
       <div className="mb-8">
-        <div className="text-xs font-mono font-bold text-sky-600 dark:text-sky-400 mb-1">
+        <div className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-500 mb-1">
           REALTIME FEED
         </div>
         <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2">
-          실시간 예측 스트림
+          실시간 예측 피드
         </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           모든 참여자의 미래 주가 궤적과 검증 완료 기록이 실시간으로 동기화됩니다.
@@ -74,7 +74,7 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
         {/* Pill Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {[
-            { id: 'all', label: '전체 스트림' },
+            { id: 'all', label: '전체 피드' },
             { id: 'following', label: '팔로잉' },
             { id: 'results', label: '검증 완료 결과' },
           ].map(tab => (

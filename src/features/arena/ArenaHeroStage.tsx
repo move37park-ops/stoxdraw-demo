@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
 import type { CrowdAggregate, Forecast, Horizon, Mode } from '../../domain/types';
 import type { ArenaSummary } from '../../domain/arena';
 import { getStockHistory } from '../../data/market';
@@ -383,9 +383,10 @@ export function ArenaHeroStage({
           <button
             type="button"
             onClick={onDrawClick}
-            className="btn-signature-draw px-6 py-2.5 rounded-full text-xs sm:text-sm tracking-wide"
+            className="btn-signature-draw px-5 py-2.5 rounded-full text-xs sm:text-sm tracking-wide"
           >
-            DRAW
+            <span>DRAW</span>
+            <ArrowRight size={14} className="stroke-[2.5]" />
           </button>
         </div>
       </div>
