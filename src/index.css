@@ -118,6 +118,21 @@ html.light a.bg-white.text-black {
   color: #ffffff !important;
 }
 
+html.light .bg-zinc-900 .text-white,
+html.light .bg-black .text-white {
+  color: #ffffff !important;
+}
+
+html.light .bg-zinc-900 .text-zinc-300,
+html.light .bg-black .text-zinc-300 {
+  color: #d4d4d8 !important;
+}
+
+html.light .bg-zinc-900 .text-zinc-400,
+html.light .bg-black .text-zinc-400 {
+  color: #a1a1aa !important;
+}
+
 .bg-gradient-to-r.text-black {
   color: #050811 !important;
 }

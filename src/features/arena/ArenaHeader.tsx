@@ -82,21 +82,29 @@ export function ArenaHeader({
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: arena.logoColor }}
                   />
-                  <span className="font-bold text-sm font-mono tracking-tight">
+                  <span className={`font-bold text-sm font-mono tracking-tight ${
+                    isSelected ? 'text-white dark:text-zinc-900' : 'text-zinc-900 dark:text-white'
+                  }`}>
                     ${arena.ticker}
                   </span>
                 </div>
-                <span className={`text-[10px] font-mono ${isSelected ? 'opacity-75' : 'text-zinc-400'}`}>
+                <span className={`text-[10px] font-mono ${
+                  isSelected ? 'text-zinc-400 dark:text-zinc-500' : 'text-zinc-500 dark:text-zinc-400'
+                }`}>
                   {arena.participantsCount}명
                 </span>
               </div>
 
               {/* Price & Name */}
               <div className="flex items-center justify-between text-xs mb-2">
-                <span className={`truncate max-w-[85px] ${isSelected ? 'opacity-80' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                <span className={`truncate max-w-[85px] ${
+                  isSelected ? 'text-zinc-300 dark:text-zinc-600' : 'text-zinc-500 dark:text-zinc-400'
+                }`}>
                   {arena.name}
                 </span>
-                <span className="font-mono font-semibold">
+                <span className={`font-mono font-semibold ${
+                  isSelected ? 'text-white dark:text-zinc-900' : 'text-zinc-900 dark:text-white'
+                }`}>
                   ${arena.currentPrice.toFixed(1)}
                 </span>
               </div>
@@ -113,11 +121,11 @@ export function ArenaHeader({
                     style={{ width: `${arena.bearPct}%` }}
                   />
                 </div>
-                <div className={`flex items-center justify-between text-[9px] font-mono mt-1 ${isSelected ? 'opacity-85' : 'text-zinc-500'}`}>
-                  <span className={isSelected ? 'text-emerald-300 dark:text-emerald-700 font-bold' : 'text-emerald-600 dark:text-emerald-400'}>
+                <div className="flex items-center justify-between text-[9px] font-mono mt-1">
+                  <span className={isSelected ? 'text-emerald-400 dark:text-emerald-600 font-bold' : 'text-emerald-600 dark:text-emerald-400'}>
                     Bull {arena.bullPct}%
                   </span>
-                  <span className={isSelected ? 'text-rose-300 dark:text-rose-700 font-bold' : 'text-rose-600 dark:text-rose-400'}>
+                  <span className={isSelected ? 'text-rose-400 dark:text-rose-600 font-bold' : 'text-rose-600 dark:text-rose-400'}>
                     Bear {arena.bearPct}%
                   </span>
                 </div>

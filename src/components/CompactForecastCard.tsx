@@ -151,15 +151,16 @@ export function CompactForecastCard({
           className="w-9 h-9 rounded-full object-cover border border-zinc-200 dark:border-zinc-700 flex-shrink-0"
         />
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate max-w-[100px] sm:max-w-[130px]">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate max-w-[90px] sm:max-w-[120px]">
               {author?.name || '익명 예측가'}
             </span>
-            {author && (
-              <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
-                @{author.handle}
-              </span>
-            )}
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+              ${forecast.ticker}
+            </span>
+            <span className="text-[10px] font-mono text-zinc-400">
+              {forecast.horizon}
+            </span>
             {author && author.completedCount > 5 && (
               <CheckCircle2 size={13} className="text-sky-500 flex-shrink-0" />
             )}
@@ -183,7 +184,7 @@ export function CompactForecastCard({
       </div>
 
       {/* Center: Sparkline */}
-      <div className="hidden xs:flex items-center justify-center px-2 flex-shrink-0">
+      <div className="hidden sm:flex items-center justify-center px-2 flex-shrink-0">
         {renderSparkline()}
       </div>
 
