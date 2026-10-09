@@ -7,8 +7,7 @@ export function ShowcaseFooter() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand Col */}
           <div className="col-span-2">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
+            <div className="flex items-center mb-3">
               <span className="font-extrabold text-base tracking-tight text-zinc-900 dark:text-white font-mono">
                 STOXDRAW
               </span>

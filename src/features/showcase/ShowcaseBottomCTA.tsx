@@ -25,7 +25,7 @@ export function ShowcaseBottomCTA() {
             onClick={() => navigate('/draw')}
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold text-sm sm:text-base shadow-lg transition-all active:scale-95"
           >
-            <span>지금 첫 궤적 그리기</span>
+            <span>DRAW</span>
             <ArrowRight size={16} />
           </button>
         </div>

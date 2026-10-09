@@ -121,8 +121,8 @@ export function ShowcaseBentoGrid({ currentDateStr: _currentDateStr }: ShowcaseB
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="px-5 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs sm:text-sm font-semibold flex items-center gap-2 group-hover:bg-sky-600 dark:group-hover:bg-sky-400 dark:group-hover:text-black transition shadow-sm">
-                <span>배틀 참전하기</span>
+              <span className="px-5 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs sm:text-sm font-bold flex items-center gap-2 group-hover:bg-sky-600 dark:group-hover:bg-sky-400 dark:group-hover:text-black transition shadow-sm tracking-wide">
+                <span>DRAW</span>
                 <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </span>
             </div>

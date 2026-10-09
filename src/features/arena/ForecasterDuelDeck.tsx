@@ -127,7 +127,7 @@ export function ForecasterDuelDeck({
             onClick={onDrawFirst}
             className="px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold text-xs shadow-md transition"
           >
-            첫 예측 남기기
+            DRAW
           </button>
         </div>
       )}

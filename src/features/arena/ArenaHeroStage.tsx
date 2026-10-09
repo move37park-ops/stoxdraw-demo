@@ -383,9 +383,9 @@ export function ArenaHeroStage({
           <button
             type="button"
             onClick={onDrawClick}
-            className="px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-xl active:scale-95 transition"
+            className="px-6 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-xl active:scale-95 transition tracking-wide"
           >
-            이 아레나에 내 선 얹기
+            DRAW
           </button>
         </div>
       </div>

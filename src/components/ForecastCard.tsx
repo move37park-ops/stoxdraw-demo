@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageSquare, Share2, PenTool, RefreshCw } from 'lucide-react';
+import { Heart, MessageSquare, Share2 } from 'lucide-react';
 import type { Forecast } from '../domain/types';
 import { repository } from '../data/localRepository';
 import { deriveForecastStatus } from '../domain/lifecycle';
@@ -248,19 +248,9 @@ export function ForecastCard({
         {/* Primary Action Button: [나도 그리기] or [다시 그리기] (§3.4, §7) */}
         <button
           onClick={handleDrawResponse}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#4facfe] to-[#a18cd1] text-black font-bold text-[13px] hover:brightness-110 active:scale-95 transition-all shadow-[0_2px_10px_rgba(79,172,254,0.3)] border border-white/20"
+          className="px-4 py-1.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs hover:opacity-90 active:scale-95 transition-all shadow-sm tracking-wide"
         >
-          {status === 'RESOLVED' ? (
-            <>
-              <RefreshCw size={13} className="stroke-[2.5]" />
-              다시 그리기
-            </>
-          ) : (
-            <>
-              <PenTool size={13} className="stroke-[2.5]" />
-              나도 그리기
-            </>
-          )}
+          DRAW
         </button>
       </div>
     </article>
