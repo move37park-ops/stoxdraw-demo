@@ -220,7 +220,7 @@ export const SEED_COMMENTS: Comment[] = [
     authorHandle: 'quant_craft',
     authorName: '퀀트크래프트',
     authorAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
-    content: '궤적의 기울기가 매우 가파르네요! 저도 [나도 그리기]로 눌림목 관점 제출했습니다.',
+    content: '궤적의 기울기가 매우 가파르네요! 저도 [YOUR DRAW]로 눌림목 관점 제출했습니다.',
     createdAt: '2026-10-02T11:40:00Z',
   },
   {
@@ -244,7 +244,7 @@ export const SEED_NOTIFICATIONS: Notification[] = [
     actorName: '퀀트크래프트',
     forecastId: 'fc_tsla_live_derived_1',
     ticker: 'TSLA',
-    message: '@quant_craft 님이 회원님의 Forecast에 응답하는 새로운 Forecast를 공개했습니다.',
+    message: '@quant_craft 님이 회원님의 Forecast에 [YOUR DRAW]로 새로운 궤적을 제시했습니다.',
     createdAt: '2026-10-02T11:45:00Z',
     read: false,
   },

@@ -126,11 +126,12 @@ export function ForecastChart({
     ? forecast.path[forecast.path.length - 1].price >= forecast.basePrice
     : forecast.breakout?.direction === 'up';
 
-  const forecastColor = isUpTrend ? '#38bdf8' : '#f43f5e';
+  // Standard Financial Accent (#10b981 for Bull / #f43f5e for Bear)
+  const forecastColor = isUpTrend ? '#10b981' : '#f43f5e';
 
   return (
     <div
-      className={`relative w-full rounded-xl overflow-hidden bg-[#090a0d] border border-[#1b1e26] flex items-center justify-center ${className}`}
+      className={`relative w-full rounded-2xl overflow-hidden bg-[#050507] border border-white/10 flex items-center justify-center ${className}`}
       style={{ aspectRatio: `${width}/${height}` }}
     >
       <svg
@@ -218,12 +219,12 @@ export function ForecastChart({
           </g>
         )}
 
-        {/* Crowd Path (바이올렛 점선) */}
+        {/* Crowd Path (30% Supporting Secondary Soft Blue 점선) */}
         {showCrowd && crowdPathD && (
           <path
             d={crowdPathD}
             fill="none"
-            stroke="#a855f7"
+            stroke="#78ABFF"
             strokeWidth="2.5"
             strokeDasharray="4 4"
             strokeLinecap="round"
@@ -293,24 +294,24 @@ export function ForecastChart({
       </svg>
 
       {/* 우측 상단 범례 태그 */}
-      <div className="chart-legend absolute top-2 right-2.5 flex items-center gap-2 text-[11px] font-medium bg-[#090a0d]/80 backdrop-blur px-2 py-0.5 rounded border border-[#272a33]">
-        <span className="flex items-center gap-1 text-[#38bdf8]">
-          <span className="w-2 h-0.5 bg-[#38bdf8] rounded" /> Forecast
+      <div className="chart-legend absolute top-2 right-2.5 flex items-center gap-2 text-[11px] font-medium bg-black/80 backdrop-blur px-2.5 py-0.5 rounded-full border border-white/10">
+        <span className="flex items-center gap-1 text-emerald-400">
+          <span className="w-2 h-0.5 bg-emerald-400 rounded-full" /> Forecast
         </span>
         {actualEvalBars.length > 0 && (
-          <span className="flex items-center gap-1 text-[var(--text-primary)]">
-            <span className="w-2 h-0.5 bg-[var(--text-primary)] rounded" /> Actual
+          <span className="flex items-center gap-1 text-white">
+            <span className="w-2 h-0.5 bg-white rounded-full" /> Actual
           </span>
         )}
         {showCrowd && (
-          <span className="flex items-center gap-1 text-purple-400">
-            <span className="w-2 h-0.5 bg-purple-400 rounded" /> Crowd
+          <span className="flex items-center gap-1 text-[#78ABFF]">
+            <span className="w-2 h-0.5 bg-[#78ABFF] rounded-full" /> Crowd
           </span>
         )}
       </div>
 
       {/* 좌측 하단 기준가 표기 */}
-      <div className="absolute bottom-1.5 left-2.5 text-[11px] text-[#71767b] font-mono">
+      <div className="absolute bottom-1.5 left-2.5 text-[11px] text-zinc-400 font-mono">
         기준가: ${forecast.basePrice.toFixed(2)}
       </div>
     </div>

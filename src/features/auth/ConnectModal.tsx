@@ -21,23 +21,23 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-sm rounded-2xl bg-[#0e0f14] border border-[#262a34] p-6 shadow-2xl text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-sm rounded-3xl bg-[#0d0d10] border border-white/10 p-7 shadow-2xl text-center">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-[#71767b] hover:text-white p-1 rounded-full transition"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-white p-1 rounded-full transition"
         >
           <X size={18} />
         </button>
 
-        <div className="w-12 h-12 rounded-full bg-blue-500/10 text-[#38bdf8] flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
-          <Shield size={24} />
+        <div className="w-12 h-12 rounded-full bg-[#181822] text-[#DFC15D] flex items-center justify-center mx-auto mb-4 border border-[#C5A059]/20">
+          <Shield size={22} />
         </div>
 
-        <h3 className="text-xl font-bold text-white mb-2">
+        <h3 className="text-xl font-bold text-white mb-2 tracking-tight">
           Keep your Forecast
         </h3>
-        <p className="text-[13px] text-[#9aa0a6] leading-relaxed mb-6">
+        <p className="text-[13px] text-zinc-400 leading-relaxed mb-6">
           방금 그린 예측을 전체 공개 피드에 기록하고,<br />
           나만의 검증 가능한 <span className="text-white font-semibold">Forecast Record</span>로 축적하세요.
         </p>
@@ -46,7 +46,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           {/* Google */}
           <button
             onClick={() => handleLogin('google')}
-            className="w-full py-3 px-4 rounded-full bg-white text-black font-semibold text-[14px] flex items-center justify-center gap-2 hover:bg-zinc-200 transition shadow"
+            className="w-full py-3 px-4 rounded-full bg-white text-black font-semibold text-[14px] flex items-center justify-center gap-2 hover:bg-zinc-200 transition shadow-none"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -69,7 +69,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           {/* Later */}
           <button
             onClick={onClose}
-            className="w-full py-2.5 text-[13px] text-[#71767b] hover:text-white transition font-medium"
+            className="w-full py-2.5 text-[13px] text-zinc-400 hover:text-white transition font-medium"
           >
             나중에 하기
           </button>

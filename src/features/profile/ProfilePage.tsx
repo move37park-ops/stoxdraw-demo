@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, PenTool } from 'lucide-react';
 import { repository } from '../../data/localRepository';
-import { getCurrentUser } from '../../data/session';
+import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
 import { deriveForecastStatus } from '../../domain/lifecycle';
 import { resolveForecast } from '../../domain/resolution';
 import { getStockHistory } from '../../data/market';
@@ -20,75 +20,68 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
   const currentUser = getCurrentUser();
 
   const [activeTab, setActiveTab] = useState<'forecasts' | 'results'>('forecasts');
-  const [user, setUser] = useState<User | undefined>(() => {
-    if (!handle || handle === 'me') return currentUser || undefined;
-    return repository.getUserByHandle(handle);
-  });
+  const [user, setUser] = useState<User | undefined>(undefined);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [isConnectOpen, setIsConnectOpen] = useState(false);
 
-  const isMe = currentUser && (handle === 'me' || handle?.toLowerCase() === currentUser.handle.toLowerCase());
+  const isMeRoute = !handle || handle === 'me' || handle === 'record';
 
-  const loadData = () => {
-    let targetUser: User | undefined;
-    if (!handle || handle === 'me') {
-      targetUser = getCurrentUser() || undefined;
-    } else {
-      targetUser = repository.getUserByHandle(handle);
+  const loadData = useCallback(() => {
+    if (isMeRoute) {
+      if (currentUser) {
+        setUser(currentUser);
+        setForecasts(repository.listByUser(currentUser.id));
+      } else {
+        const anonId = getOrCreateAnonId();
+        const all = repository.listFeed('all', currentDateStr);
+        const myAnonList = all.filter(f => f.anonId === anonId);
+        const myAnonUser: User = {
+          id: anonId,
+          handle: 'device_user',
+          name: '내 예측 기록 (디바이스 ID)',
+          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+          bio: '현재 브라우저 기기에 저장된 나의 주가 궤적과 검증 성적표입니다.',
+          forecastsCount: myAnonList.length,
+          completedCount: myAnonList.filter(f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED').length,
+        };
+        setUser(myAnonUser);
+        setForecasts(myAnonList);
+      }
+      return;
     }
-    setUser(targetUser);
 
+    // Other user profile
+    const targetUser = repository.getUserByHandle(handle);
+    setUser(targetUser);
     if (targetUser) {
-      const list = repository.listByUser(targetUser.id);
-      setForecasts(list);
+      setForecasts(repository.listByUser(targetUser.id));
     } else {
       setForecasts([]);
     }
-  };
+  }, [handle, isMeRoute, currentUser, currentDateStr]);
 
   useEffect(() => {
     loadData();
     const unsub = repository.subscribe(loadData);
     return () => unsub();
-  }, [handle, currentDateStr]);
+  }, [loadData]);
 
   if (!user) {
     return (
       <div className="py-20 text-center max-w-sm mx-auto">
-        <div className="w-14 h-14 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sky-500 flex items-center justify-center mx-auto mb-4 border border-zinc-200 dark:border-zinc-700">
-          <Sparkles size={24} />
-        </div>
-        <h3 className="text-zinc-900 dark:text-white font-bold mb-2 text-lg">로그인이 필요합니다</h3>
-        <p className="text-xs sm:text-sm text-zinc-500 mb-6 leading-relaxed">
-          내 Forecast와 검증된 적중률 Record를 확인하려면 계정을 연결하세요.
-        </p>
-        <div className="flex flex-col gap-2.5">
-          <button
-            onClick={() => setIsConnectOpen(true)}
-            className="w-full py-3 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-bold text-xs sm:text-sm transition shadow-sm"
-          >
-            계정 연결 / 로그인
-          </button>
-          <button
-            onClick={() => navigate('/')}
-            className="w-full py-3 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold text-xs sm:text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
-          >
-            홈으로 돌아가기
-          </button>
-        </div>
-
-        <ConnectModal
-          isOpen={isConnectOpen}
-          onClose={() => setIsConnectOpen(false)}
-          onSuccess={() => {
-            setIsConnectOpen(false);
-            loadData();
-          }}
-        />
+        <h3 className="text-zinc-900 dark:text-white font-bold mb-2 text-lg">사용자를 찾을 수 없습니다</h3>
+        <button
+          onClick={() => navigate('/arena')}
+          className="mt-4 px-6 py-2.5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-bold text-xs"
+        >
+          아레나로 이동
+        </button>
       </div>
     );
   }
 
+  const isMe = isMeRoute || (currentUser && handle?.toLowerCase() === currentUser.handle.toLowerCase());
+  const isAnonymousDevice = isMe && !currentUser;
   const isFollowing = repository.isFollowing(user.id);
   const handleFollowToggle = () => {
     repository.toggleFollow(user.id);
@@ -118,29 +111,29 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
       {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white mb-6 transition"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white mb-6 transition"
       >
         <ArrowLeft size={16} />
         <span>돌아가기</span>
       </button>
 
       {/* Profile Header Card */}
-      <div className="rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/90 dark:border-zinc-800 p-6 sm:p-9 shadow-sm mb-6">
+      <div className="rounded-3xl bg-[#0d0d10] border border-white/10 p-6 sm:p-9 shadow-none mb-6">
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-4">
             <img
               src={user.avatarUrl}
               alt={user.name}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-zinc-200 dark:border-zinc-700 shadow-sm"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-white/10"
             />
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                <h1 className="type-h2 text-white font-bold">
                   {user.name}
                 </h1>
-                <CheckCircle2 size={18} className="text-sky-500" />
+                <CheckCircle2 size={18} className="text-[#DFC15D]" />
               </div>
-              <div className="text-xs sm:text-sm text-zinc-400 font-mono">
+              <div className="type-caption text-zinc-400">
                 @{user.handle}
               </div>
             </div>
@@ -151,8 +144,8 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
               onClick={handleFollowToggle}
               className={`px-5 py-2 rounded-full font-semibold text-xs sm:text-sm transition ${
                 isFollowing
-                  ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700'
-                  : 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:opacity-90 shadow-sm'
+                  ? 'bg-zinc-900 text-zinc-300 border border-white/15'
+                  : 'bg-white text-black hover:bg-zinc-200'
               }`}
             >
               {isFollowing ? '팔로잉' : '팔로우'}
@@ -161,28 +154,42 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
         </div>
 
         {user.bio && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-6 leading-relaxed">
+          <p className="type-body text-zinc-400 mb-6">
             {user.bio}
           </p>
         )}
 
+        {isAnonymousDevice && (
+          <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-[#141418] border border-white/10 flex items-center justify-between gap-3 text-xs">
+            <div className="text-zinc-300">
+              현재 브라우저(기기 ID)에 예측이 실시간 저장되고 있습니다.
+            </div>
+            <button
+              onClick={() => setIsConnectOpen(true)}
+              className="px-3.5 py-1.5 rounded-full bg-white text-black font-semibold hover:bg-zinc-200 transition flex-shrink-0 text-xs"
+            >
+              계정 연동
+            </button>
+          </div>
+        )}
+
         {/* Verified Track Record Stats Grid */}
-        <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-[#12141c] border border-zinc-200/70 dark:border-zinc-800">
+        <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-[#141418] border border-white/10">
           <div className="text-center">
             <div className="text-[11px] text-zinc-400 mb-0.5">전체 Forecast</div>
-            <div className="font-mono font-bold text-zinc-900 dark:text-white text-lg sm:text-xl">
+            <div className="font-bold text-white text-lg sm:text-xl">
               {forecasts.length}
             </div>
           </div>
-          <div className="text-center border-x border-zinc-200 dark:border-zinc-800">
+          <div className="text-center border-x border-white/10">
             <div className="text-[11px] text-zinc-400 mb-0.5">검증 완료 (Record)</div>
-            <div className="font-mono font-bold text-zinc-900 dark:text-white text-lg sm:text-xl">
+            <div className="font-bold text-zinc-200 text-lg sm:text-xl">
               {resolvedForecasts.length}
             </div>
           </div>
           <div className="text-center">
             <div className="text-[11px] text-zinc-400 mb-0.5">적중률 (Hit Rate)</div>
-            <div className="font-mono font-bold text-lg sm:text-xl text-emerald-600 dark:text-emerald-400">
+            <div className="font-bold text-lg sm:text-xl font-mono text-[#DFC15D]">
               {hitRate !== null ? `${hitRate}%` : '—'}
             </div>
           </div>
@@ -190,24 +197,24 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
       </div>
 
       {/* Tabs: Pill Buttons */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveTab('forecasts')}
           className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
             activeTab === 'forecasts'
-              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              ? 'bg-white text-black'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
           }`}
         >
-          전체 예측 ({forecasts.length})
+          진행 중인 예측 ({forecasts.length})
         </button>
 
         <button
           onClick={() => setActiveTab('results')}
           className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
             activeTab === 'results'
-              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              ? 'bg-white text-black'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
           }`}
         >
           검증 완료 아카이브 ({resolvedForecasts.length})
@@ -224,13 +231,36 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
             />
           ))
         ) : (
-          <div className="text-center py-16 px-4 rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800">
-            <p className="text-xs sm:text-sm text-zinc-500">
-              {activeTab === 'results' ? '아직 검증 완료된 결과가 없습니다.' : '등록된 예측이 없습니다.'}
+          <div className="text-center py-16 px-4 rounded-2xl bg-[#0d0d10] border border-white/10">
+            <div className="w-12 h-12 rounded-full bg-[#181822] border border-[#C5A059]/20 text-[#DFC15D] flex items-center justify-center mx-auto mb-3">
+              <PenTool size={20} />
+            </div>
+            <h3 className="text-sm font-bold text-white mb-1">
+              {activeTab === 'results' ? '아직 검증 완료된 결과가 없습니다' : '아직 제출한 예측이 없습니다'}
+            </h3>
+            <p className="text-xs text-zinc-400 mb-5 max-w-xs mx-auto">
+              {activeTab === 'results'
+                ? '5거래일이 지나 실제 주가와 대조되면 여기에 오차율과 성적이 기록됩니다.'
+                : '차트 위에 나만의 미래 5D 궤적을 그리고 첫 트랙 레코드를 쌓아보세요!'}
             </p>
+            <button
+              onClick={() => navigate('/draw')}
+              className="btn-signature-draw px-5 py-2.5 rounded-full text-xs"
+            >
+              <span>DRAW — 첫 궤적 그리기</span>
+            </button>
           </div>
         )}
       </div>
+
+      <ConnectModal
+        isOpen={isConnectOpen}
+        onClose={() => setIsConnectOpen(false)}
+        onSuccess={() => {
+          setIsConnectOpen(false);
+          loadData();
+        }}
+      />
     </div>
   );
 }

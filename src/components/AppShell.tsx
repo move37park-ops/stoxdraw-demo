@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { ShowcaseNav } from '../features/showcase/ShowcaseNav';
+import { GlobalHeader } from './GlobalHeader';
 import { ShowcaseFooter } from '../features/showcase/ShowcaseFooter';
 
 interface AppShellProps {
@@ -10,8 +10,8 @@ interface AppShellProps {
 export function AppShell({ currentDateStr, onDateChange }: AppShellProps) {
   return (
     <div className="min-h-screen w-full bg-black text-white flex flex-col transition-colors duration-200">
-      {/* 1. Unified OpenAI-style Sticky Navigation */}
-      <ShowcaseNav
+      {/* 1. Unified Sticky Navigation (GlobalHeader) */}
+      <GlobalHeader
         currentDateStr={currentDateStr}
         onDateChange={onDateChange}
       />

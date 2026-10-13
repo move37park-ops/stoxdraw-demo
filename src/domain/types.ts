@@ -26,7 +26,7 @@ export interface Forecast {
   evalDates: string[];           // 평가 거래일 목록 (5일 또는 21일)
   path?: PathPoint[];            // Mode === 'path'
   breakout?: BreakoutTarget;     // Mode === 'breakout'
-  parentId?: string;             // 원본 Forecast ID ([나도 그리기] 파생 관계)
+  parentId?: string;             // 원본 Forecast ID ([YOUR DRAW] 파생 대결 관계)
   rulesVersion: 'v1';
 }
 

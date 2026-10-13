@@ -7,30 +7,27 @@ import { formatPct } from '../../domain/format';
 
 interface ArenaHeroStageProps {
   ticker: string;
-  horizon: Horizon;
-  mode: Mode;
+  horizon?: Horizon;
+  mode?: Mode;
   currentDateStr: string;
   crowd: CrowdAggregate;
   arenaSummary: ArenaSummary;
   activeLayerForecasts: Forecast[];
-  onHorizonChange: (h: Horizon) => void;
-  onModeChange: (m: Mode) => void;
+  onHorizonChange?: (h: Horizon) => void;
+  onModeChange?: (m: Mode) => void;
   onDrawClick: () => void;
   onRemoveLayer: (forecastId: string) => void;
 }
 
-const LAYER_COLORS = ['#f59e0b', '#c084fc', '#10b981', '#f43f5e', '#0284c7'];
+const LAYER_COLORS = ['#DFC15D', '#78ABFF', '#1F7DFF', '#f59e0b', '#f43f5e'];
 
 export function ArenaHeroStage({
   ticker,
-  horizon,
-  mode,
+  horizon = '5D',
   currentDateStr,
   crowd,
   arenaSummary,
   activeLayerForecasts,
-  onHorizonChange,
-  onModeChange,
   onDrawClick,
   onRemoveLayer,
 }: ArenaHeroStageProps) {
@@ -124,74 +121,42 @@ export function ArenaHeroStage({
   const gridSteps = [0.2, 0.4, 0.6, 0.8];
 
   return (
-    <div className="relative w-full bg-white dark:bg-[#0c0e14] border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-5 sm:p-7 shadow-sm mb-6">
+    <div className="relative w-full bg-[#0d0d10] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-none mb-6">
       {/* Top Controls: Ticker Info & Horizon/Mode Switchers */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div>
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl sm:text-3xl font-extrabold font-mono text-zinc-900 dark:text-white">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               ${ticker}
             </span>
-            <span className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+            <span className="text-xs sm:text-sm text-zinc-400 font-medium">
               {arenaSummary.name}
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-900 border border-white/10 text-white">
               ${basePrice.toFixed(2)}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1.5">
             <span className="font-medium">
               {arenaSummary.participantsCount}명 참여 중
             </span>
             <span>·</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+            <span className="text-emerald-400 font-semibold font-mono">
               Bull {arenaSummary.bullPct}%
             </span>
             <span>·</span>
-            <span className="text-rose-500 dark:text-rose-400 font-semibold">
+            <span className="text-rose-400 font-semibold font-mono">
               Bear {arenaSummary.bearPct}%
             </span>
           </div>
         </div>
 
-        {/* Switchers (Horizon & Mode) with Pill Buttons */}
-        <div className="flex items-center gap-2.5">
-          {/* Horizon Toggle */}
-          <div className="flex items-center p-1 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700/60">
-            {(['5D', '30D'] as Horizon[]).map(h => (
-              <button
-                key={h}
-                type="button"
-                onClick={() => onHorizonChange(h)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold font-mono transition ${
-                  horizon === h
-                    ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
-                }`}
-              >
-                {h}
-              </button>
-            ))}
-          </div>
-
-          {/* Mode Toggle */}
-          <div className="flex items-center p-1 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700/60">
-            {(['path', 'breakout'] as Mode[]).map(m => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => onModeChange(m)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                  mode === m
-                    ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
-                }`}
-              >
-                {m === 'path' ? '경로' : '돌파'}
-              </button>
-            ))}
-          </div>
+        {/* Core MVP: 5D Path Focus */}
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-full bg-zinc-900 text-zinc-200 border border-white/10 text-xs font-medium">
+            5D 궤적 배틀
+          </span>
         </div>
       </div>
 
@@ -227,7 +192,7 @@ export function ArenaHeroStage({
       )}
 
       {/* Main Integrated Chart Canvas */}
-      <div className="relative w-full aspect-[16/9] max-h-[380px] rounded-2xl bg-zinc-50/80 dark:bg-[#07080b] border border-zinc-200/80 dark:border-zinc-800 overflow-hidden select-none">
+      <div className="relative w-full aspect-[16/9] max-h-[380px] rounded-2xl bg-[#050507] border border-white/10 overflow-hidden select-none">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="w-full h-full block"
@@ -235,13 +200,13 @@ export function ArenaHeroStage({
         >
           <defs>
             <linearGradient id="arenaPastGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#64748b" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#64748b" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#586B60" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#586B60" stopOpacity="0.0" />
             </linearGradient>
 
             <linearGradient id="arenaConsensusGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0284c7" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#0284c7" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#78ABFF" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#78ABFF" stopOpacity="0.0" />
             </linearGradient>
           </defs>
 
@@ -330,15 +295,15 @@ export function ArenaHeroStage({
             );
           })}
 
-          {/* Crowd Consensus Area & Line */}
+          {/* 30% Supporting Crowd Consensus Area & Line (Soft Blue #78ABFF) */}
           {consensusAreaD && <path d={consensusAreaD} fill="url(#arenaConsensusGrad)" />}
           {consensusPathD && (
             <g>
               <path
                 d={consensusPathD}
                 fill="none"
-                stroke="#0284c7"
-                strokeWidth="3.5"
+                stroke="#78ABFF"
+                strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeDasharray="6 4"
@@ -348,7 +313,7 @@ export function ArenaHeroStage({
                   cx={getX(crowd.consensusPath[crowd.consensusPath.length - 1].date)}
                   cy={getY(crowd.consensusPath[crowd.consensusPath.length - 1].price)}
                   r="5"
-                  fill="#0284c7"
+                  fill="#78ABFF"
                 />
               )}
             </g>
@@ -387,16 +352,16 @@ export function ArenaHeroStage({
           })}
 
           {/* Base Anchor Point */}
-          <circle cx={baseX} cy={baseY} r="5" className="fill-zinc-900 dark:fill-white" />
-          <circle cx={baseX} cy={baseY} r="8" fill="none" stroke="#0284c7" strokeWidth="2" />
+          <circle cx={baseX} cy={baseY} r="5" fill="#ffffff" />
+          <circle cx={baseX} cy={baseY} r="8" fill="none" stroke="#78ABFF" strokeWidth="2" />
         </svg>
 
         {/* Floating HUD Label */}
         <div className="absolute top-3.5 left-3.5 flex flex-wrap items-center gap-2 pointer-events-none">
-          <div className="px-3 py-1.5 rounded-full bg-white/90 dark:bg-black/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-800 dark:text-zinc-200 flex items-center gap-2 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+          <div className="px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-md border border-white/10 text-xs font-mono text-zinc-200 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#78ABFF]" />
             <span>군중 중간값: </span>
-            <span className={arenaSummary.medianChangePct >= 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-rose-500 dark:text-rose-400 font-bold'}>
+            <span className={arenaSummary.medianChangePct >= 0 ? 'text-emerald-400 font-bold font-mono' : 'text-rose-400 font-bold font-mono'}>
               {formatPct(arenaSummary.medianChangePct)} (${arenaSummary.medianTargetPrice})
             </span>
           </div>

@@ -102,6 +102,19 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
 
   return (
     <div className="w-full flex flex-col">
+      {/* Editorial Header (OpenAI Style) */}
+      <div className="mb-6">
+        <div className="text-xs font-medium text-zinc-400 tracking-wider mb-1">
+          아레나 · 종목별 5D 궤적 배틀
+        </div>
+        <h1 className="type-h2 text-white font-bold tracking-tight mb-1">
+          실시간 궤적 아레나
+        </h1>
+        <p className="type-caption text-zinc-400">
+          과거의 차트를 넘어, 5일 뒤 미래 주가 궤적을 직접 그리고 군중 컨센서스와 대결합니다.
+        </p>
+      </div>
+
       {/* 1. Hot Arenas Carousel Header */}
       <ArenaHeader
         hotArenas={hotArenas}
@@ -126,15 +139,15 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
 
       {/* 3. Sub-Tab Navigator & Deck */}
       <div className="w-full mt-4">
-        {/* Navigation Tabs - Pill Buttons */}
-        <div className="flex items-center gap-2 mb-6">
+        {/* Navigation Tabs - Flat Pill Buttons */}
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
           <button
             type="button"
             onClick={() => setActiveTab('duel')}
             className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'duel'
-                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                ? 'bg-white text-black'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
             }`}
           >
             궤적 배틀 덱 ({arenaSummary.topForecasts.length})
@@ -145,8 +158,8 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
             onClick={() => setActiveTab('distribution')}
             className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'distribution'
-                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                ? 'bg-white text-black'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
             }`}
           >
             군중 기대치 분포
@@ -157,8 +170,8 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
             onClick={() => setActiveTab('resolved')}
             className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
               activeTab === 'resolved'
-                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                ? 'bg-white text-black'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
             }`}
           >
             검증 결과 아카이브 ({resolvedForecasts.length})
@@ -198,8 +211,8 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
                 />
               ))
             ) : (
-              <div className="text-center py-12 px-4 rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800">
-                <p className="text-xs sm:text-sm text-zinc-500">
+              <div className="text-center py-16 px-4 rounded-2xl bg-[#0d0d10] border border-white/10">
+                <p className="text-xs sm:text-sm text-zinc-400">
                   아직 {ticker} 종목의 검증 완료된 예측이 없습니다.
                 </p>
               </div>

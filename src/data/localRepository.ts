@@ -130,7 +130,7 @@ class LocalRepository implements Repository {
           actorName,
           forecastId: newForecast.id,
           ticker: newForecast.ticker,
-          message: `@${actorHandle} 님이 회원님의 Forecast에 응답하는 새로운 Forecast를 공개했습니다.`,
+          message: `@${actorHandle} 님이 회원님의 Forecast에 [YOUR DRAW]로 새로운 궤적을 제시했습니다.`,
           createdAt: new Date().toISOString(),
           read: false,
         });

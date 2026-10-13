@@ -66,7 +66,7 @@ export function ShowcaseHallOfFame({ currentDateStr }: ShowcaseHallOfFameProps) 
                   </span>
                 </div>
 
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#C5A059]/10 text-[#DFC15D] border border-[#C5A059]/25">
                   적중 {score}점
                 </span>
               </div>
@@ -75,7 +75,7 @@ export function ShowcaseHallOfFame({ currentDateStr }: ShowcaseHallOfFameProps) 
               <div className="my-3 py-3 px-4 rounded-xl bg-zinc-50 dark:bg-[#08090e] border border-zinc-100 dark:border-zinc-800/80">
                 <div className="flex items-center justify-between text-[11px] font-mono mb-2">
                   <span className="text-zinc-400">기준가: ${forecast.basePrice.toFixed(1)}</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="text-[#DFC15D] font-bold">
                     방향 일치 (Hit)
                   </span>
                 </div>

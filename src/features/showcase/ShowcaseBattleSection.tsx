@@ -167,10 +167,10 @@ export function ShowcaseBattleSection({
                     onClick={() => {
                       navigate(`/draw?parent=${forecast.id}&ticker=${forecast.ticker}&horizon=${forecast.horizon}&mode=${forecast.mode}`);
                     }}
-                    title="반박선 긋기"
-                    className="px-2.5 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-amber-600 transition text-[11px] font-medium"
+                    title="이 예측에 맞서는 내 궤적 그리기"
+                    className="px-2.5 py-1 rounded-full bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 hover:text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold transition flex items-center gap-1 shadow-sm"
                   >
-                    반박
+                    YOUR DRAW
                   </button>
 
                   <button

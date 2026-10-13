@@ -1,35 +1,55 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
 export function ShowcaseBottomCTA() {
   const navigate = useNavigate();
 
   return (
-    <section className="w-full max-w-6xl mx-auto px-4 mb-24">
-      <div className="relative rounded-[36px] bg-[#0c0e14] border border-white/10 p-10 sm:p-20 text-center overflow-hidden">
-        {/* Subtle radial glow */}
-        <div className="absolute inset-0 bg-radial-gradient from-sky-400/10 via-transparent to-transparent pointer-events-none" />
+    <div className="w-full max-w-4xl mx-auto px-4 pb-20 sm:pb-28">
+      {/* 1. Second Large Featured Card: Solitary Tree / Verifiable Ledger (Matches OpenAI reference) */}
+      <div className="w-full rounded-3xl overflow-hidden border border-white/10 bg-[#0d0d10] text-left mb-16 sm:mb-20">
+        <div className="w-full aspect-[16/10] sm:aspect-[16/9] overflow-hidden bg-zinc-900">
+          <img
+            src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1400&q=80"
+            alt="투명한 검증과 보상"
+            className="w-full h-full object-cover filter brightness-[0.95] contrast-[1.05]"
+            loading="lazy"
+          />
+        </div>
 
-        <div className="relative z-10 max-w-2xl mx-auto">
-          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-4">
-            STOXDRAW로 미래를 직접 그려보세요
+        <div className="p-6 sm:p-8">
+          <h2 className="type-h2 text-white mb-2 font-bold tracking-tight">
+            투명한 검증과 보상
           </h2>
-          <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mb-8 leading-relaxed">
-            사람들은 이미 미래 주가에 대해 끊임없이 예측하고 있습니다.
-            <br className="hidden sm:inline" />
-            그 예측을 흘려보내지 말고, <strong>검증 가능한 데이터</strong>와 <strong>당신만의 트랙 레코드</strong>로 축적하세요.
+          <p className="type-body text-zinc-400 mb-5 max-w-2xl leading-relaxed">
+            모든 드로잉은 수정 불가능한 타임스탬프와 함께 기록되며, 5거래일 후 실제 시장 종가와 비교하여 정확도에 따른 명예의 전당 랭킹과 보상이 부여됩니다.
           </p>
+          <NavLink
+            to="/arena"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-zinc-300 hover:text-white transition font-medium"
+          >
+            <span>평가 기준 알아보기</span>
+            <ArrowRight size={14} />
+          </NavLink>
+        </div>
+      </div>
 
+      {/* 2. Flat Dark CTA Banner: "미래 시장을 함께 만들어가세요" (Matches OpenAI bottom banner) */}
+      <div className="w-full rounded-3xl bg-[#141416] border border-white/10 p-12 sm:p-20 text-center">
+        <h2 className="type-h1 text-white mb-8 tracking-tight font-bold">
+          미래 시장을 함께 만들어가세요
+        </h2>
+
+        <div>
           <button
             type="button"
             onClick={() => navigate('/draw')}
-            className="btn-signature-draw inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm sm:text-base tracking-wide"
+            className="btn-flat-white text-xs sm:text-sm font-semibold px-6 py-3"
           >
-            <span>DRAW</span>
-            <ArrowRight size={16} />
+            <span>지금 시작하기</span>
           </button>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

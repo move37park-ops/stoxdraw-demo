@@ -100,7 +100,7 @@ export function ShowcaseForecasterSection() {
             <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono">
               <div className="flex items-center gap-3 text-zinc-500">
                 <span>검증 완료 <strong className="text-zinc-900 dark:text-white">{user.completedCount}회</strong></span>
-                <span>적중률 <strong className="text-emerald-600 dark:text-emerald-400">{user.accuracy}</strong></span>
+                <span>적중률 <strong className="text-[#DFC15D]">{user.accuracy}</strong></span>
               </div>
 
               <span className="text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white flex items-center gap-0.5 font-sans font-medium transition">

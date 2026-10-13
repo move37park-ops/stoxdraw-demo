@@ -60,8 +60,8 @@ export function ForecasterDuelDeck({
             onClick={() => setStanceFilter('all')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
               stanceFilter === 'all'
-                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
+                ? 'bg-white text-black'
+                : 'bg-[#141418] text-zinc-400 hover:text-white border border-white/10'
             }`}
           >
             전체 ({forecasts.length})
@@ -71,8 +71,8 @@ export function ForecasterDuelDeck({
             onClick={() => setStanceFilter('bull')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
               stanceFilter === 'bull'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800/40'
+                ? 'bg-emerald-500 text-black font-bold'
+                : 'bg-[#141418] text-emerald-400 hover:bg-zinc-800 border border-white/10'
             }`}
           >
             Bull 진영 ({bullForecasts.length})
@@ -82,16 +82,16 @@ export function ForecasterDuelDeck({
             onClick={() => setStanceFilter('bear')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
               stanceFilter === 'bear'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-800/40'
+                ? 'bg-rose-500 text-white font-bold'
+                : 'bg-[#141418] text-rose-400 hover:bg-zinc-800 border border-white/10'
             }`}
           >
             Bear 진영 ({bearForecasts.length})
           </button>
         </div>
 
-        <div className="hidden sm:flex items-center text-xs text-zinc-500 font-medium">
-          반박 버튼으로 1:1 결투
+        <div className="hidden sm:flex items-center text-xs text-zinc-400 font-medium">
+          YOUR DRAW 버튼으로 맞불 궤적 대결
         </div>
       </div>
 
@@ -116,11 +116,11 @@ export function ForecasterDuelDeck({
           })}
         </div>
       ) : (
-        <div className="text-center py-16 px-4 rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800">
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
+        <div className="text-center py-16 px-4 rounded-2xl bg-[#0d0d10] border border-white/10">
+          <h3 className="text-sm font-bold text-white mb-1">
             아직 이 조건의 예측이 없습니다
           </h3>
-          <p className="text-xs text-zinc-500 mb-5">
+          <p className="text-xs text-zinc-400 mb-5">
             가장 먼저 미래 궤적을 제시하고 군중의 첫 기준점을 세워보세요!
           </p>
           <button

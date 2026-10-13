@@ -1,163 +1,68 @@
 import { NavLink } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
-interface ShowcaseHeroSearchProps {
-  searchQuery?: string;
-  onSearchChange?: (q: string) => void;
-  onTagSelect?: (tag: string) => void;
-}
-
-export function ShowcaseHeroSearch({}: ShowcaseHeroSearchProps) {
+export function ShowcaseHeroSearch() {
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
-      {/* 1. Ambient Glowing Badge (Matches reference) */}
-      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs font-medium mb-6 backdrop-blur-md shadow-[0_0_24px_rgba(4,120,87,0.3)] font-mono">
-        실시간 주가 예측 플랫폼
+    <div className="w-full max-w-4xl mx-auto px-4 pt-14 pb-16 sm:pt-20 sm:pb-24 text-center">
+      {/* 1. Header category tag matching reference ("소개") */}
+      <div className="text-xs font-medium text-zinc-400 tracking-wider mb-3">
+        소개
       </div>
 
-      {/* 2. Main Headline & Subtitle */}
-      <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-4 leading-[1.15]">
-        다음 주가, 당신은 어떻게 보나요?
+      {/* 2. Main Title matching reference ("소개" / Typography H1: 40px/32px Bold) */}
+      <h1 className="type-h1 text-white mb-4 tracking-tight">
+        소개
       </h1>
-      <p className="text-base sm:text-lg text-zinc-400 max-w-xl mx-auto mb-8 font-normal leading-relaxed">
-        당신의 예측을 그리고 다른 사람들의 전망과 비교해 보세요.
+
+      {/* 3. Subtitle (Typography Body: 16px Regular, 1.6 Leading) */}
+      <p className="type-body text-zinc-400 max-w-xl mx-auto mb-14 text-center leading-relaxed">
+        STOXDRAW의 사명은 모든 시장 참여자가 미래 주가를 직접 그리고,<br className="hidden sm:inline" />
+        검증 가능한 데이터와 집단지성을 통해 시장의 미래를 읽도록 돕는 것입니다.
       </p>
 
-      {/* 3. Primary Actions */}
-      <div className="flex items-center justify-center gap-4 mb-14">
-        <NavLink
-          to="/draw"
-          className="btn-signature-draw px-7 py-3.5 rounded-full text-sm sm:text-base tracking-wide"
-        >
-          <span>DRAW</span>
-          <ArrowRight size={16} className="stroke-[2.5]" />
-        </NavLink>
+      {/* 4. Large Featured Card (Exact layout as OpenAI reference) */}
+      <div className="w-full rounded-3xl overflow-hidden border border-white/10 bg-[#0d0d10] text-left transition-all duration-300 hover:border-white/20">
+        {/* Artistic Impressionist Visual Header */}
+        <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] overflow-hidden bg-zinc-900">
+          <img
+            src="https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=1400&q=80"
+            alt="시장의 내일을 그리는 집단지성"
+            className="w-full h-full object-cover filter brightness-[0.92] contrast-[1.05]"
+            loading="eager"
+          />
 
-        <NavLink
-          to="/arena"
-          className="text-sm font-semibold text-zinc-400 hover:text-white transition px-4 py-3.5 flex items-center gap-1.5"
-        >
-          <span>아레나 둘러보기</span>
-          <ArrowRight size={15} />
-        </NavLink>
-      </div>
+          {/* Minimalist chart trajectory watermark overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d10] via-black/20 to-transparent opacity-80" />
 
-      {/* 4. Floating Cinematic Mockup Window (Matches the floating mockup cards in reference) */}
-      <div className="max-w-4xl mx-auto relative rounded-3xl bg-[#0c0e14] border border-white/10 p-5 sm:p-7 shadow-[0_20px_70px_-15px_rgba(0,0,0,0.9)] overflow-hidden text-left">
-        {/* Subtle radial glow */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Window Header */}
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-bold text-white text-base">$NVDA</span>
-            <span className="text-xs text-zinc-400 font-mono">기준가 $128.80</span>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-950/70 text-emerald-400 border border-emerald-800/60">
-              실시간 배틀
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-zinc-400 hidden sm:inline">1,420명 참여</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          {/* Subtle live indicator badge on top right */}
+          <div className="absolute top-4 right-4 flex items-center px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs font-mono text-white">
+            <span>실시간 5D 궤적 배틀</span>
           </div>
         </div>
 
-        {/* Sleek SVG Chart Canvas */}
-        <div className="relative w-full aspect-[21/9] sm:aspect-[24/9] bg-[#07080b] rounded-2xl border border-white/5 p-4 flex flex-col justify-between overflow-hidden">
-          <div className="flex items-center justify-between text-xs font-mono z-10">
-            <span className="text-zinc-500">최근 5일 추세 (실제 주가)</span>
-            <span className="text-emerald-400 font-bold">
-              군중 컨센서스 $144.50 (+12.2%)
-            </span>
+        {/* Card Content Footer */}
+        <div className="p-6 sm:p-8">
+          <div className="text-xs font-medium text-zinc-400 mb-1.5 flex items-center gap-2">
+            <span>소셜 예측 플랫폼</span>
+            <span>·</span>
+            <span>2026</span>
           </div>
 
-          <svg viewBox="0 0 500 120" className="w-full h-full my-auto overflow-visible" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="heroConsensusGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#047857" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#047857" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
+          <h2 className="type-h2 text-white mb-2 font-bold tracking-tight">
+            시장의 내일을 먼저 그리는 집단지성
+          </h2>
 
-            <line x1="0" y1="60" x2="500" y2="60" stroke="#181a24" strokeDasharray="3 3" />
-            <line x1="200" y1="10" x2="200" y2="110" stroke="#252a38" strokeDasharray="4 4" />
+          <p className="type-body text-zinc-400 mb-6 max-w-2xl leading-relaxed">
+            과거의 차트를 분석하는 데 그치지 않고, 5일 뒤 주가 궤적을 캔버스 위에 직접 브러시로 그리고 군집의 합의와 대결합니다.
+          </p>
 
-            {/* Past Stock Candlesticks (캔들스틱 형식) */}
-            <g className="past-candlesticks">
-              <line x1="25" y1="65" x2="25" y2="85" stroke="#10b981" strokeWidth="1.2" />
-              <rect x="22" y="70" width="6" height="10" fill="#10b981" rx="0.5" />
-
-              <line x1="50" y1="58" x2="50" y2="78" stroke="#10b981" strokeWidth="1.2" />
-              <rect x="47" y="62" width="6" height="11" fill="#10b981" rx="0.5" />
-
-              <line x1="75" y1="50" x2="75" y2="72" stroke="#f43f5e" strokeWidth="1.2" />
-              <rect x="72" y="54" width="6" height="12" fill="#f43f5e" rx="0.5" />
-
-              <line x1="100" y1="62" x2="100" y2="82" stroke="#10b981" strokeWidth="1.2" />
-              <rect x="97" y="66" width="6" height="9" fill="#10b981" rx="0.5" />
-
-              <line x1="125" y1="55" x2="125" y2="76" stroke="#f43f5e" strokeWidth="1.2" />
-              <rect x="122" y="58" width="6" height="11" fill="#f43f5e" rx="0.5" />
-
-              <line x1="150" y1="48" x2="150" y2="68" stroke="#10b981" strokeWidth="1.2" />
-              <rect x="147" y="52" width="6" height="10" fill="#10b981" rx="0.5" />
-
-              <line x1="175" y1="52" x2="175" y2="72" stroke="#10b981" strokeWidth="1.2" />
-              <rect x="172" y="56" width="6" height="8" fill="#10b981" rx="0.5" />
-            </g>
-
-            {/* Forecast Area Band */}
-            <path
-              d="M 200 60 L 260 48 L 330 38 L 410 32 L 490 22 L 490 58 L 410 65 L 330 68 L 260 68 Z"
-              fill="url(#heroConsensusGrad)"
-            />
-
-            {/* Forecast Polyline (폴리라인) */}
-            <g className="forecast-polyline">
-              <path
-                d="M 200 60 L 260 48 L 330 40 L 410 44 L 490 30"
-                fill="none"
-                stroke="#10b981"
-                strokeWidth="2.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {[
-                { x: 260, y: 48 },
-                { x: 330, y: 40 },
-                { x: 410, y: 44 },
-                { x: 490, y: 30 },
-              ].map((pt, i) => (
-                <circle
-                  key={i}
-                  cx={pt.x}
-                  cy={pt.y}
-                  r="3.5"
-                  fill="#10b981"
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
-                />
-              ))}
-            </g>
-
-            {/* Current Price Pin */}
-            <circle cx="200" cy="60" r="5" fill="#ffffff" />
-            <text x="200" y="80" fill="#a1a1aa" fontSize="10" fontFamily="monospace" textAnchor="middle">
-              현재가 $128.80
-            </text>
-
-            {/* End Target Pin */}
-            <circle cx="490" cy="35" r="5" fill="#10b981" />
-            <text x="450" y="25" fill="#34d399" fontSize="10" fontFamily="monospace" fontWeight="bold">
-              예측 목표 $144.50
-            </text>
-          </svg>
-
-          <div className="flex items-center justify-between text-xs text-zinc-500 font-mono z-10 pt-2 border-t border-white/5">
-            <span>시작일 10/05</span>
-            <span className="text-zinc-400">만료 시 실제 주가 자동 대조 검증</span>
-            <span>목표일 10/12 (5D)</span>
-          </div>
+          <NavLink
+            to="/arena"
+            className="btn-flat-dark inline-flex items-center gap-2 text-xs sm:text-sm font-medium"
+          >
+            <span>플랫폼 시작하기</span>
+            <ArrowRight size={14} />
+          </NavLink>
         </div>
       </div>
     </div>

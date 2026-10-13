@@ -26,22 +26,22 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-black/85 backdrop-blur-md border-b border-white/10 transition-colors">
+    <header className="sticky top-0 z-50 w-full bg-black/90 backdrop-blur-md border-b border-white/10 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Left: Brand Logo & Navigation */}
         <div className="flex items-center gap-8">
           <NavLink to="/" className="flex items-center group">
-            <span className="font-extrabold text-lg tracking-tight text-zinc-900 dark:text-white font-mono">
+            <span className="font-extrabold text-base sm:text-lg tracking-tight text-white group-hover:text-zinc-300 transition">
               STOXDRAW
             </span>
           </NavLink>
 
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-zinc-400">
             <NavLink
               to="/arena"
               className={({ isActive }) =>
-                `hover:text-zinc-900 dark:hover:text-white transition ${
-                  isActive ? 'text-zinc-900 dark:text-white font-semibold' : ''
+                `transition ${
+                  isActive ? 'text-white font-semibold' : 'hover:text-white'
                 }`
               }
             >
@@ -51,8 +51,8 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
             <NavLink
               to="/stream"
               className={({ isActive }) =>
-                `hover:text-zinc-900 dark:hover:text-white transition ${
-                  isActive ? 'text-zinc-900 dark:text-white font-semibold' : ''
+                `transition ${
+                  isActive ? 'text-white font-semibold' : 'hover:text-white'
                 }`
               }
             >
@@ -60,33 +60,33 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
             </NavLink>
 
             <NavLink
-              to="/leaderboard"
+              to="/record"
               className={({ isActive }) =>
-                `hover:text-zinc-900 dark:hover:text-white transition ${
-                  isActive ? 'text-zinc-900 dark:text-white font-semibold' : ''
+                `transition ${
+                  isActive ? 'text-white font-semibold' : 'hover:text-white'
                 }`
               }
             >
-              리더보드
+              내 기록
             </NavLink>
           </nav>
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
-          {/* Time Machine Selector (Subtle pill) */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs font-mono">
-            <span className="text-[10px] text-zinc-400">시점:</span>
+          {/* Time Machine Selector (Flat Dark Pill) */}
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-mono">
+            <span className="text-[10px] text-zinc-500">시점:</span>
             <select
               value={currentDateStr}
               onChange={(e) => onDateChange(e.target.value)}
-              className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-medium focus:outline-none cursor-pointer text-zinc-200"
             >
-              <option value="2026-09-28">9/28 (과거)</option>
-              <option value="2026-10-05">10/05 (현재)</option>
-              <option value="2026-10-08">10/08 (미래+3)</option>
-              <option value="2026-10-12">10/12 (미래+7)</option>
-              <option value="2026-10-26">10/26 (미래+21)</option>
+              <option value="2026-09-28" className="bg-zinc-900 text-white">9/28 (과거)</option>
+              <option value="2026-10-05" className="bg-zinc-900 text-white">10/05 (현재)</option>
+              <option value="2026-10-08" className="bg-zinc-900 text-white">10/08 (미래+3)</option>
+              <option value="2026-10-12" className="bg-zinc-900 text-white">10/12 (미래+7)</option>
+              <option value="2026-10-26" className="bg-zinc-900 text-white">10/26 (미래+21)</option>
             </select>
           </div>
 
@@ -94,41 +94,41 @@ export function ShowcaseNav({ currentDateStr, onDateChange }: ShowcaseNavProps) 
           {currentUser ? (
             <div className="flex items-center gap-2">
               <NavLink
-                to={`/u/${currentUser.handle}`}
-                className="flex items-center gap-2 p-1 pl-2 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+                to="/record"
+                className="flex items-center gap-2 p-1 pl-2.5 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition"
               >
-                <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 hidden sm:inline">
+                <span className="text-xs font-medium text-zinc-200 hidden sm:inline">
                   {currentUser.name}
                 </span>
                 <img
                   src={currentUser.avatarUrl}
                   alt={currentUser.name}
-                  className="w-7 h-7 rounded-full object-cover"
+                  className="w-6 h-6 rounded-full object-cover"
                 />
               </NavLink>
               <button
                 type="button"
                 onClick={logout}
                 title="로그아웃"
-                className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                className="p-1.5 text-zinc-400 hover:text-white"
               >
-                <LogOut size={16} />
+                <LogOut size={15} />
               </button>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setIsConnectOpen(true)}
-              className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white px-3 py-1.5"
+              className="text-xs sm:text-sm font-medium text-zinc-400 hover:text-white px-3 py-1.5"
             >
               로그인
             </button>
           )}
 
-          {/* Primary Signature DRAW CTA */}
+          {/* Primary Flat White Pill Button (OpenAI Reference Style) */}
           <NavLink
             to="/draw"
-            className="btn-signature-draw px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm tracking-wide"
+            className="rounded-full bg-white text-black font-semibold px-4 sm:px-5 py-2 text-xs sm:text-sm hover:bg-zinc-200 transition-colors inline-flex items-center gap-1.5"
           >
             <span>DRAW</span>
             <ArrowRight size={14} className="stroke-[2.5]" />

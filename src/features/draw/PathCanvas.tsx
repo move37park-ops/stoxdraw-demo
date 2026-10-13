@@ -82,7 +82,7 @@ export function PathCanvas({
     // 1. Grid Lines & Price Labels
     ctx.strokeStyle = isLight ? '#e5e7eb' : '#181a24';
     ctx.lineWidth = 1;
-    ctx.font = '9px JetBrains Mono, monospace';
+    ctx.font = '9px "Pretendard Variable", Pretendard, sans-serif';
     ctx.fillStyle = isLight ? '#94a3b8' : '#4b5563';
     ctx.textAlign = 'right';
 
@@ -141,21 +141,21 @@ export function PathCanvas({
     });
 
     // 4. Base Point
-    ctx.fillStyle = isLight ? '#0f1419' : '#ffffff';
+    ctx.fillStyle = isLight ? '#0F1A15' : '#F2F5EF';
     ctx.beginPath();
     ctx.arc(baseX, baseY, 4.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = isLight ? '#ffffff' : '#000000';
+    ctx.strokeStyle = isLight ? '#FFFFFF' : '#0A120E';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // 5. Future Evaluation Slots & Vertical Guides
+    // 5. Future Evaluation Slots & Vertical Guides (30% Supporting Secondary)
     evalDates.forEach((date, i) => {
       const x = getXForIndex(pastCount + i);
       const isSet = pointsMap[date] !== undefined;
 
       // Subtle vertical slot guide line
-      ctx.strokeStyle = isLight ? '#f1f5f9' : '#141620';
+      ctx.strokeStyle = isLight ? '#E5ECE2' : '#1D2A23';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x, padTop);
@@ -164,21 +164,21 @@ export function PathCanvas({
 
       // Date Label below each slot
       const shortDate = date.slice(5).replace('-', '/');
-      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.font = '10px "Pretendard Variable", Pretendard, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillStyle = isSet
-        ? (isLight ? '#0284c7' : '#38bdf8')
-        : (isLight ? '#94a3b8' : '#4b5563');
+        ? (isLight ? '#1F7DFF' : '#78ABFF')
+        : (isLight ? '#586B60' : '#38463E');
       ctx.fillText(shortDate, x, height - 10);
 
       // Bottom Slot Dot
-      ctx.fillStyle = isSet ? (isLight ? '#0284c7' : '#38bdf8') : (isLight ? '#cbd5e1' : '#272a38');
+      ctx.fillStyle = isSet ? (isLight ? '#1F7DFF' : '#78ABFF') : (isLight ? '#C2CFC0' : '#26362E');
       ctx.beginPath();
       ctx.arc(x, height - 24, 2.5, 0, Math.PI * 2);
       ctx.fill();
     });
 
-    // 6. Connected Forecast Path & Placed Points
+    // 6. Connected Forecast Path & Placed Points (Champagne Gold #DFC15D)
     const validFuturePoints: { x: number; y: number; price: number; date: string }[] = [];
     evalDates.forEach((date, i) => {
       if (pointsMap[date] !== undefined) {
@@ -189,9 +189,9 @@ export function PathCanvas({
     });
 
     if (validFuturePoints.length > 0) {
-      // Connect line from Base to all points
-      ctx.strokeStyle = isLight ? '#0284c7' : '#38bdf8';
-      ctx.lineWidth = 3;
+      // Connect line from Base to all points (Wall Street Champagne Gold Path)
+      ctx.strokeStyle = '#DFC15D';
+      ctx.lineWidth = 3.2;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
@@ -204,18 +204,18 @@ export function PathCanvas({
       // Draw point circles and price text
       validFuturePoints.forEach(p => {
         // Point Circle
-        ctx.fillStyle = isLight ? '#0284c7' : '#38bdf8';
+        ctx.fillStyle = '#DFC15D';
         ctx.beginPath();
         ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = isLight ? '#ffffff' : '#000000';
+        ctx.strokeStyle = isLight ? '#FFFFFF' : '#0A120E';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
         // Price Label above point
-        ctx.font = '10px JetBrains Mono, monospace';
+        ctx.font = '10px "Pretendard Variable", Pretendard, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillStyle = isLight ? '#0f1419' : '#ffffff';
+        ctx.fillStyle = isLight ? '#0F1A15' : '#F2F5EF';
         ctx.fillText(`$${p.price.toFixed(1)}`, p.x, p.y - 9);
       });
     }
@@ -320,29 +320,29 @@ export function PathCanvas({
     <div className="w-full select-none">
       {/* Top Status & Price Callout */}
       <div className="flex items-center justify-between mb-2 px-1">
-        <div className="text-xs text-[#71767b]">
+        <div className="text-xs text-zinc-400">
           진행도: <span className="text-white font-semibold">{completedCount} / {evalDates.length}일</span>
-          {isAllCompleted && <span className="ml-1 text-emerald-400 font-bold">(완료)</span>}
+          {isAllCompleted && <span className="ml-1 text-[#DFC15D] font-bold font-mono">(완료)</span>}
         </div>
         {latestPrice !== null && latestChangePct !== null ? (
           <div className="text-xs font-mono font-bold">
             {isAllCompleted ? '최종 예측: ' : '최근 예측: '}
             <span className="text-white">${latestPrice.toFixed(2)}</span>{' '}
-            <span className={latestChangePct >= 0 ? 'text-[#38bdf8]' : 'text-[#f43f5e]'}>
+            <span className={latestChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
               ({formatPct(latestChangePct)})
             </span>
           </div>
         ) : (
-          <div className="text-xs text-[#71767b]">
+          <div className="text-xs text-[#586B60]">
             차트의 각 날짜를 탭하여 점을 찍어주세요
           </div>
         )}
       </div>
 
-      {/* Drawing Canvas Area */}
+      {/* Drawing Canvas Area (60% Dominant Base) */}
       <div
         ref={containerRef}
-        className="relative w-full aspect-[4/3] sm:aspect-video rounded-2xl bg-[#090a0d] border border-[#1f222b] overflow-hidden touch-none cursor-crosshair max-h-[50vh] min-h-[260px]"
+        className="relative w-full aspect-[4/3] sm:aspect-video rounded-2xl bg-[#0A120E] border border-[#C2CFC0]/15 overflow-hidden touch-none cursor-crosshair max-h-[50vh] min-h-[260px]"
       >
         <canvas
           ref={canvasRef}

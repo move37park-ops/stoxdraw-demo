@@ -48,7 +48,7 @@ export function ForecastCard({
 
   const handleDrawResponse = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // [나도 그리기] → 원본 Forecast의 종목, 기간, 모드를 계승하여 Draw로 직행
+    // [ YOUR DRAW ] → 원본 Forecast의 종목, 기간, 모드를 계승하여 Draw로 직행
     navigate(`/draw?parent=${forecast.id}&ticker=${forecast.ticker}&horizon=${forecast.horizon}&mode=${forecast.mode}`);
   };
 
@@ -74,7 +74,7 @@ export function ForecastCard({
   return (
     <article
       onClick={handleCardClick}
-      className="p-4 border-b border-[#1b1e26] hover:bg-[#0c0d12]/50 transition-colors cursor-pointer"
+      className="p-4 border-b border-white/10 hover:bg-zinc-900/40 transition-colors cursor-pointer"
     >
       {/* 1. 파생 관계 배너 */}
       {forecast.parentId && (
@@ -119,14 +119,14 @@ export function ForecastCard({
 
       {/* 3. 종목 및 메타 칩 바 */}
       <div className="flex items-center gap-2 mb-2">
-        <span className="px-2 py-0.5 rounded bg-[#181a24] text-white font-mono font-bold text-[12px] border border-[#2a2e3d]">
-          {forecast.ticker}
+        <span className="px-2.5 py-0.5 rounded-md bg-[#141418] text-white font-mono font-bold text-[12px] border border-white/10">
+          ${forecast.ticker}
         </span>
-        <span className="text-[12px] text-[#9aa0a6] font-medium font-mono">
+        <span className="text-[12px] text-zinc-400 font-medium font-mono">
           {forecast.horizon === '5D' ? '1주(5D)' : '1개월(30D)'}
         </span>
-        <span className="text-[#3f444d] text-[10px]">·</span>
-        <span className="text-[12px] text-[#9aa0a6]">
+        <span className="text-zinc-600 text-[10px]">·</span>
+        <span className="text-[12px] text-zinc-400">
           {forecast.mode === 'path' ? '경로 그리기' : '목표가 돌파'}
         </span>
 
@@ -157,22 +157,22 @@ export function ForecastCard({
 
       {/* 6. 결과 요약 바 (LIVE 또는 RESOLVED인 경우) */}
       {(status === 'LIVE' || status === 'RESOLVED') && (
-        <div className="flex items-center justify-between px-3 py-2 my-2.5 rounded-lg bg-[#11131a] border border-[#202430] text-[13px]">
+        <div className="flex items-center justify-between px-3.5 py-2.5 my-2.5 rounded-xl bg-[#141418] border border-white/10 text-[13px]">
           <div className="flex items-center gap-3">
             <div>
-              <span className="text-[#71767b] text-[11px] block">
+              <span className="text-zinc-400 text-[11px] block">
                 {forecast.mode === 'breakout' ? '목표 가격' : '예측 변화율'}
               </span>
-              <span className={`font-mono font-semibold ${result.forecastChangePct >= 0 ? 'text-[#38bdf8]' : 'text-[#f43f5e]'}`}>
+              <span className={`font-mono font-semibold ${result.forecastChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {forecast.mode === 'breakout'
                   ? `$${forecast.breakout?.price.toFixed(2)} (${formatPct(result.forecastChangePct)})`
                   : formatPct(result.forecastChangePct)}
               </span>
             </div>
-            <div className="h-6 w-px bg-[#262a36]" />
+            <div className="h-6 w-px bg-white/10" />
             <div>
-              <span className="text-[#71767b] text-[11px] block">{status === 'LIVE' ? '현재가 변화' : '최종 결과'}</span>
-              <span className={`font-mono font-semibold ${result.actualChangePct >= 0 ? 'text-[#22c55e]' : 'text-[#f43f5e]'}`}>
+              <span className="text-zinc-400 text-[11px] block">{status === 'LIVE' ? '현재가 변화' : '최종 결과'}</span>
+              <span className={`font-mono font-semibold ${result.actualChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {formatPct(result.actualChangePct)}
               </span>
             </div>
@@ -181,24 +181,24 @@ export function ForecastCard({
           <div>
             {forecast.mode === 'breakout' ? (
               result.breakoutHit ? (
-                <span className="text-[#38bdf8] font-semibold text-[12px] flex items-center gap-1">
+                <span className="text-[#DFC15D] font-semibold font-mono text-[12px] flex items-center gap-1">
                   ✓ 목표가 도달 {result.hitDate && `(${result.hitDate.slice(5).replace('-', '/')})`}
                 </span>
               ) : (
-                <span className="text-[#71767b] font-medium text-[12px]">
+                <span className="text-zinc-400 font-medium text-[12px]">
                   {status === 'LIVE' ? '도달 대기 중' : '목표가 미도달'}
                 </span>
               )
             ) : status === 'LIVE' ? (
-              <span className={result.directionHit ? "text-[#38bdf8] font-semibold text-[12px]" : "text-[#71767b] font-medium text-[12px]"}>
+              <span className={result.directionHit ? "text-[#DFC15D] font-semibold font-mono text-[12px]" : "text-zinc-400 font-medium text-[12px]"}>
                 {result.directionHit ? '방향 일치 중' : `오차 ${result.endErrorPct}%`}
               </span>
             ) : result.directionHit ? (
-              <span className="text-[#38bdf8] font-semibold text-[12px] flex items-center gap-1">
+              <span className="text-[#DFC15D] font-semibold font-mono text-[12px] flex items-center gap-1">
                 ✓ 방향 적중
               </span>
             ) : (
-              <span className="text-[#71767b] font-medium text-[12px]">
+              <span className="text-zinc-400 font-medium text-[12px]">
                 오차 {result.endErrorPct}%
               </span>
             )}
@@ -206,9 +206,9 @@ export function ForecastCard({
         </div>
       )}
 
-      {/* 7. 소셜 액션 & 핵심 CTA [나도 그리기] */}
-      <div className="flex items-center justify-between mt-3 pt-2 border-t border-[#161820]">
-        <div className="flex items-center gap-5 text-[#71767b]">
+      {/* 7. 소셜 액션 & 핵심 CTA [ YOUR DRAW ] */}
+      <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/10">
+        <div className="flex items-center gap-5 text-zinc-400">
           {/* Like */}
           <button
             onClick={handleLike}
@@ -230,7 +230,7 @@ export function ForecastCard({
               if (onCommentClick) onCommentClick(forecast.id);
               else navigate(`/f/${forecast.id}`);
             }}
-            className="flex items-center gap-1.5 text-[13px] hover:text-[#38bdf8] transition"
+            className="flex items-center gap-1.5 text-[13px] hover:text-white transition"
           >
             <MessageSquare size={17} />
             <span>{commentsCount > 0 ? commentsCount : ''}</span>
@@ -245,12 +245,12 @@ export function ForecastCard({
           </button>
         </div>
 
-        {/* Primary Action Button: DRAW */}
+        {/* 10% Accent Action Button: YOUR DRAW */}
         <button
           onClick={handleDrawResponse}
-          className="btn-signature-draw px-3.5 py-1.5 rounded-full text-xs tracking-wide"
+          className="btn-your-draw px-3.5 py-1.5"
         >
-          <span>DRAW</span>
+          <span>YOUR DRAW</span>
           <ArrowRight size={12} className="stroke-[2.5]" />
         </button>
       </div>

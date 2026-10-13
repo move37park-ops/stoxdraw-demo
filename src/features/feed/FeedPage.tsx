@@ -56,35 +56,34 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
 
   return (
     <div className="w-full">
-      {/* Header Banner */}
+      {/* Header Banner (OpenAI Style) */}
       <div className="mb-8">
-        <div className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-500 mb-1">
-          REALTIME FEED
+        <div className="text-xs font-medium text-zinc-400 tracking-wider mb-1">
+          소셜 피드 · 실시간 예측 스트림
         </div>
-        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2">
-          피드
+        <h1 className="type-h2 text-white font-bold tracking-tight mb-1">
+          실시간 예측 피드
         </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          모든 참여자의 미래 주가 궤적과 검증 완료 기록이 실시간으로 동기화됩니다.
+        <p className="type-caption text-zinc-400">
+          모든 참여자의 미래 주가 궤적과 검증 완료 기록이 투명하게 공유됩니다.
         </p>
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
         {/* Pill Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {[
-            { id: 'all', label: '전체 피드' },
-            { id: 'following', label: '팔로잉' },
-            { id: 'results', label: '검증 완료' },
+            { id: 'all', label: '실시간 예측 피드' },
+            { id: 'results', label: '검증 완료 (Results)' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id as FeedTab)}
               className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
                 currentTab === tab.id
-                  ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  ? 'bg-white text-black'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
               }`}
             >
               {tab.label}
@@ -95,9 +94,9 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
         {/* Search input */}
         <div className="flex items-center gap-2">
           {filterStock && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs font-mono text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 text-xs text-zinc-300 border border-white/10">
               <span>${filterStock.toUpperCase()}</span>
-              <button onClick={handleClearStock} className="hover:text-rose-500">
+              <button onClick={handleClearStock} className="hover:text-rose-400">
                 <X size={12} />
               </button>
             </div>
@@ -110,12 +109,12 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="종목 또는 코멘트 검색"
-              className="pl-8 pr-4 py-1.5 rounded-full text-xs sm:text-sm bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white w-48 sm:w-60"
+              className="pl-8 pr-4 py-1.5 rounded-full text-xs sm:text-sm bg-[#111114] border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 w-48 sm:w-60"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
               >
                 <X size={12} />
               </button>
@@ -135,11 +134,11 @@ export function FeedPage({ currentDateStr }: FeedPageProps) {
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 px-4 rounded-3xl bg-white dark:bg-[#0e1017] border border-zinc-200/80 dark:border-zinc-800">
-          <p className="text-sm text-zinc-500 mb-1">
+        <div className="text-center py-20 px-4 rounded-2xl bg-[#0d0d10] border border-white/10">
+          <p className="text-sm text-zinc-300 mb-1">
             해당 조건의 예측 데이터가 없습니다.
           </p>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-500">
             검색어를 변경하거나 다른 탭을 선택해 보세요.
           </p>
         </div>
