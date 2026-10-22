@@ -468,7 +468,7 @@ export function BattlegroundDeck({
               Time-weighted daily close verification as of {currentDateStr}
             </span>
             <span className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-              fnv1a: {auditDigest}
+              receipt: {auditDigest}
             </span>
           </div>
 

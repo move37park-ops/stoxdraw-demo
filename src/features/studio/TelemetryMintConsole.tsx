@@ -450,7 +450,7 @@ export function TelemetryMintConsole({
                 thesis: {lockedForecast.comment || 'none'}
               </p>
               <p className="truncate" style={{ color: 'var(--v-ink)' }} title={digestHash}>
-                fnv1a: {digestHash}
+                receipt: {digestHash}
               </p>
             </div>
 
@@ -517,7 +517,7 @@ export function TelemetryMintConsole({
                 vector [{vectorSummary}]
               </p>
               <p className="truncate" style={{ color: 'var(--v-dim)' }} title={digestHash}>
-                sha/fnv {digestHash.slice(0, 26)}...
+                receipt {digestHash.slice(0, 26)}...
               </p>
             </div>
 

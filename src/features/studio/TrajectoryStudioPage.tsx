@@ -315,7 +315,7 @@ export function TrajectoryStudioPage({
                 Sculpt the 5-day trajectory for {selectedTicker}.{' '}
               </span>
               <span style={{ color: 'var(--v-mute)', fontWeight: 400 }}>
-                Immutable FNV-1a verification against crowd consensus and daily market closes.
+                Immutable verification against crowd consensus and daily market closes.
               </span>
             </h1>
           </div>
@@ -481,7 +481,7 @@ export function TrajectoryStudioPage({
             </span>
           </div>
           <p className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-            rules:v1 · hybrid-100pt (path:50 / dir:30 / target:20) · fnv1a-128bit
+            rules:v1 · hybrid-100pt (path:50 / dir:30 / target:20) · immutable-lock
           </p>
         </div>
       </footer>
