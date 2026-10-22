@@ -1,73 +1,145 @@
-# STOXDRAW — Social Stock Trajectory Forecasting Platform
+# STOXDRAW — 5-Day Social Stock Trajectory Forecasting & Quantitative Elo Platform
 
-> **"말뿐인 예측은 그만, 차트 위에 내일의 궤적을 그리다"**  
-> STOXDRAW는 미래 주가 궤적을 직접 캔버스에 그리고, 타임스탬프 기반으로 불변 박제하여 실제 시장과 검증하며, 집단지성(Crowd Consensus)과 대결하는 차세대 소셜 예측 인텔리전스 플랫폼입니다.
-
----
-
-## 📚 전체 서비스 구조 상세 문서
-서비스의 전체 구조, 도메인 엔진, 수학적 채점 수식, 데이터 흐름, 컴포넌트 아키텍처 및 디자인 시스템을 담은 **상세 기술 명세서**는 아래 파일에서 확인하실 수 있습니다:
-
-👉 **[SERVICE_STRUCTURE.md](./SERVICE_STRUCTURE.md)** (서비스 구조 전체를 담은 마스터 문서)
+> **"Draw the next 5 days on the chart. Lock your prediction, challenge the crowd, and get scored against real market closes."**  
+> STOXDRAW is a financial prediction platform where traders sculpt exact 5-day stock price trajectories directly on interactive charts, lock them with immutable cryptographic receipts before market open, and compete on a quantitative Elo rating ladder settled against real NYSE/NASDAQ daily closes.
 
 ---
 
-## ⚡ 빠른 시작 (Quick Start)
+## 📸 Overview & Architecture
 
-### 1. 패키지 설치
-```bash
-npm install
+Designed under the **Vercel Geist Design System** (`#000000` deep black canvas, 1px `#222222` hairline rails, `+` crosshair corner alignment, and Geist typography), STOXDRAW fuses interactive visual forecasting with institutional settlement rigor:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ▲ STOXDRAW  |  Studio   Overview   Leaderboard   My Record      ● 21:45:00 [D-0] [D+1] [D+3] [D+5]  🔔 ☀️  [Connect] │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+         │
+         ├─── 1. Flagship Trajectory Studio (/)
+         │       • Split Horizon Canvas: 15-day historical tape + 5-day sculpt horizon
+         │       • Interactive node dragging & curve sculpt presets (Breakout, Dip & Recovery, etc.)
+         │       • Real-time crowd consensus envelope (P20–P80), Wall St targets, and options support
+         │       • Dynamic contrarian Elo stake engine (+20 / -14 LP)
+         │       • Peer deployment stream with instant Multi-Overlay and 1v1 Counter-Draw
+         │
+         ├─── 2. Workspace Overview (/overview)
+         │       • Multi-asset tension monitor (NVDA, TSLA, AAPL + 7 benchmarks)
+         │       • 15D reactive SVG sparklines and Bull/Bear ratio bars
+         │       • Real-time stream of crowd deployments across the entire market
+         │
+         ├─── 3. Quantitative Elo Leaderboard (/leaderboard)
+         │       • Master / Diamond / Gold / Silver Elo tiers (Zero-inflation K=32 system)
+         │       • Verified forecaster directory with Mean Score, Hit Rate, and Mean Error %
+         │
+         ├─── 4. Immutable Prediction Receipt (/f/:id)
+         │       • Cryptographically hashed immutable audit ledger (e.g. 0x45bedb...)
+         │       • Daily settlement matrix comparing predicted path vs real market closes
+         │
+         └─── 5. Time-Warp Simulation Engine
+                 • [D-0 Lock]  : Predictions open, locking at Monday 09:30 ET
+                 • [D+1 Live]  : First trading session close recorded
+                 • [D+3 Mid]   : Midweek market movement & live trajectory tracking
+                 • [D+5 Settle]: Final Friday close, automated rubric scoring & LP settlement
 ```
 
-### 2. 로컬 개발 서버 실행
+---
+
+## ⚡ Core Pillars
+
+### 1. Interactive 5-Day Trajectory Sculpting (`SplitHorizonCanvas`)
+Instead of binary up/down polling or vague verbal forecasts, participants drag daily nodes ($D+1 \dots D+5$) on an interactive canvas to express non-linear price hypotheses—such as midweek pullbacks before Friday breakouts.
+
+### 2. Time-Stamped Immutable Lock
+All forecasts lock prior to market open (Monday 09:30 ET). Once locked, predictions receive an immutable cryptographic receipt and cannot be deleted or modified, eliminating hindsight bias and fake track records.
+
+### 3. Quantitative Scoring Rubric (100-pt Hybrid)
+Settlement evaluates forecasts against actual market closes using a balanced 3-factor quantitative model:
+- **Path Accuracy (50 pts):** Mean Squared Error across all 5 daily nodes, normalized by asset volatility.
+- **Directional Skill (30 pts):** Binary accuracy of day-over-day price movements.
+- **Friday Target Hit (20 pts):** Terminal distance to final Friday close.
+
+### 4. Zero-Inflation Elo Rating System
+Forecasters start at `1200 LP (Silver)` and progress through `Gold (1400+)`, `Diamond (1600+)`, and `Master (1800+)`. Elo stakes are dynamically weighted: taking contrarian positions against high crowd consensus yields higher LP rewards.
+
+### 5. Multi-Peer Overlays & 1v1 Counter-Draws
+Directly compare rival predictions by toggling multi-colored curve overlays on the main canvas, or initiate a direct 1v1 "Counter-Draw" against any thesis in the live feed.
+
+### 6. Built-in Time-Warp Engine
+The integrated timeline scrubber (`[D-0]`, `[D+1]`, `[D+3]`, `[D+5]`) allows testing and experiencing the entire platform lifecycle—from open round to live market movement and settled Elo receipts—without having to wait a calendar week.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework:** [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Routing:** [React Router v7](https://reactrouter.com/)
+- **Build Tool:** [Vite 8](https://vitejs.dev/)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/) + Custom Vercel Geist design tokens (`vercel-geist.css`)
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Testing:** [Vitest 5](https://vitest.dev/) (Unit testing domain scoring, round logic, and Elo settlements)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v18+ recommended)
+- npm or pnpm
+
+### Installation
+
 ```bash
+# 1. Clone the repository
+git clone https://github.com/move37park-ops/stoxdraw-demo.git
+cd stoxdraw-demo
+
+# 2. Install dependencies
+npm install
+
+# 3. Start local development server
 npm run dev
 ```
-브라우저에서 `http://localhost:5173`으로 접속합니다.
 
-### 3. 도메인 단위 테스트 실행
+Visit `http://localhost:5173` in your browser.
+
+### Verification & Testing
+
 ```bash
+# Run unit test suite (20 tests covering lifecycle, scoring, rounds, and Elo)
 npm test
-# 또는
-npx vitest run
-```
 
-### 4. 프로덕션 빌드
-```bash
+# Production build & TypeScript check
 npm run build
 ```
 
 ---
 
-## 🌟 핵심 기능 요약 (Core Pillars)
+## 📂 Project Structure
 
-1. **인터랙티브 드로잉 캔버스 (`/draw`):**
-   - 5거래일(5D) 미래 주가 궤적을 마우스나 터치로 직접 스케치
-   - 실시간 목표 수익률 연동 및 되돌리기(Undo)/초기화(Clear) 지원
-2. **타임스탬프 불변 락 (Timestamp Immutable Lock):**
-   - 예측 확정 즉시 기준가와 작성 시점이 박제되어 사후 조작 및 삭제 차단
-   - 기준 시점 경과 시 실제 시장 종가(OHLC)와 1:1 대조 자동 채점
-3. **군집 합의 AI & 콜드스타트 (`crowd.ts`):**
-   - 참여자들의 일별 궤적 중앙값(Median)과 80% 신뢰 구간 밴드 실시간 산출
-   - 5명 미만 시 이상치 왜곡 방지를 위한 Cold Start 보호 알고리즘 적용
-4. **실시간 궤적 아레나 (`/arena`):**
-   - 10대 빅테크 종목별 실시간 Bull/Bear 공방률 및 군중 기대치 가격 분포도
-   - 최대 3인 다자간 궤적 동시 비교 오버레이
-5. **[YOUR DRAW] 맞불 대결 및 소셜 스트림 (`/f/:id`, `/stream`):**
-   - 다른 사용자의 예측에 반박 궤적을 그리고 1:1로 승부
-   - 좋아요, 댓글, 실시간 반응 알림 센터
-6. **타임 트래블 시뮬레이터 (Time Travel Engine):**
-   - 상단 헤더의 기준 시점(9/28, 10/05, 10/08, 10/12, 10/26) 변경으로 라이프사이클(LOCKED -> LIVE -> RESOLVED) 실시간 검증
-7. **명예의 전당 리더보드 (`/leaderboard`):**
-   - 100% 검증된 실제 성적 기반 상위 1% 마스터 포캐스터 랭킹
+```
+src/
+├── components/          # Shared components (AppShell, Modals, Cards)
+├── data/                # Market history, mock quotes, session, and local repository
+│   ├── market.ts        # Historical prices and asset metadata (NVDA, TSLA, AAPL, etc.)
+│   ├── seed.ts          # Authentic seed forecasters & locked trajectory theses
+│   ├── session.ts       # User authentication and anonymous session manager
+│   └── localRepository.ts # Reactive storage engine with subscription hooks
+├── domain/              # Pure domain business logic & mathematical models
+│   ├── arena.ts         # Consensus calculations and crowd aggregation
+│   ├── elo.ts           # Zero-inflation Elo stake and LP rating engine
+│   ├── scoring.ts       # 100-point hybrid trajectory scoring rubric
+│   ├── round.ts         # Round cycles, locks, and countdown timers
+│   └── resolution.ts    # Settlement engine matching paths against market closes
+└── features/            # Feature modules
+    ├── studio/          # Flagship 5-Day Trajectory Studio & Split Horizon Canvas
+    ├── workspace/       # Workspace Overview & deployment streams
+    ├── leaderboard/     # Elo rankings & verified forecaster directory
+    ├── detail/          # Immutable prediction receipt & daily audit breakdown
+    ├── profile/         # User profile, Elo dossier, and personal deployments
+    └── auth/            # Wallet / Account connection modal
+```
 
 ---
 
-## 🛠️ 기술 스택 (Tech Stack)
+## 📄 License
 
-- **Frontend:** React 19, TypeScript, React Router DOM v7
-- **Styling:** Tailwind CSS, Pretendard Variable 가변 폰트, 60-30-10 에디토리얼 디자인 토큰
-- **Icons:** Lucide React
-- **Graphics:** HTML5 Canvas & Native Reactive SVG Engine
-- **Test:** Vitest 5.0 (도메인 비즈니스 로직 단위 테스트 11건 통과)
-- **Deployment:** Vercel SPA
+Private demonstration project. All rights reserved.

@@ -54,17 +54,17 @@ export function ShareTicketModal({
     .join(' -> ');
 
   const shareSnippet = [
-    `[STOXDRAW // 5D PRICE FORECAST & ELO PROTOCOL]`,
-    `종목: $${forecast.ticker} (${forecast.roundId || '5D ROUND'}) | 참여자: @${authorHandle} (${tierInfo.tier} · ${authorElo} LP)`,
-    `예측: 기준가 $${forecast.basePrice.toFixed(2)} -> 목표가 $${targetPrice.toFixed(2)} (${formatPct(changePct)})`,
+    `[STOXDRAW // 5D TRAJECTORY & ELO RECEIPT]`,
+    `Instrument: $${forecast.ticker} (${forecast.roundId || '5D ROUND'}) | Forecaster: @${authorHandle} (${tierInfo.tier} · ${authorElo} LP)`,
+    `Trajectory: Anchor $${forecast.basePrice.toFixed(2)} -> D+5 Target $${targetPrice.toFixed(2)} (${formatPct(changePct)})`,
     eloDeltaLp !== undefined
-      ? `정산 결과: ${scoreTotal?.toFixed(1)}점 (${scoreGrade}) | Elo ${formatSignedLp(eloDeltaLp)}`
+      ? `Settlement: ${scoreTotal?.toFixed(1)} pts (${scoreGrade}) | Elo ${formatSignedLp(eloDeltaLp)}`
       : divergencePct !== null
-      ? `컨센서스 괴리율: 중앙값(${formatPct(crowdChangePct!)}) 대비 ${divergencePct >= 0 ? '+' : ''}${divergencePct.toFixed(1)}%p`
+      ? `vs Crowd Median (${formatPct(crowdChangePct!)}): ${divergencePct >= 0 ? '+' : ''}${divergencePct.toFixed(1)}%p edge`
       : null,
-    stepSummary ? `5D 경로: ${stepSummary}` : null,
-    forecast.comment ? `근거: "${forecast.comment}"` : null,
-    `상세 확인: ${shareUrl}`,
+    stepSummary ? `5D Vector: ${stepSummary}` : null,
+    forecast.comment ? `Thesis: "${forecast.comment}"` : null,
+    `Verify receipt: ${shareUrl}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -361,66 +361,94 @@ export function ShareTicketModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-2xl rounded-lg bg-zinc-950 border border-zinc-800 divide-y divide-zinc-800 overflow-hidden shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' }}
+    >
+      <div
+        className="relative w-full max-w-2xl rounded-[8px] overflow-hidden"
+        style={{
+          backgroundColor: 'var(--v-canvas)',
+          boxShadow: 'var(--v-shadow-stack)',
+        }}
+      >
         {/* Header */}
-        <div className="px-5 py-3.5 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-zinc-100 tracking-tight">
-              5일 예측 및 Elo 티켓 공유
-            </h3>
-          </div>
+        <div
+          className="px-5 py-3.5 flex items-center justify-between"
+          style={{
+            backgroundColor: 'var(--v-canvas-soft)',
+            borderBottom: '1px solid var(--v-hairline)',
+          }}
+        >
+          <span className="v-body-sm-strong" style={{ color: 'var(--v-ink)' }}>
+            Export verified trajectory receipt
+          </span>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition"
+            style={{ color: 'var(--v-mute)' }}
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
         {/* Rendered Ticket Canvas Preview */}
-        <div className="w-full bg-black">
-          <canvas
-            ref={canvasRef}
-            className="w-full h-auto block"
-          />
+        <div
+          className="w-full"
+          style={{
+            backgroundColor: '#000000',
+            borderBottom: '1px solid var(--v-hairline)',
+          }}
+        >
+          <canvas ref={canvasRef} className="w-full h-auto block" />
         </div>
 
         {/* Copyable Text Snippet Preview */}
-        <div className="p-4 bg-zinc-950">
-          <pre className="text-[11px] text-zinc-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto">
+        <div
+          className="p-4"
+          style={{
+            backgroundColor: 'var(--v-canvas-soft)',
+            borderBottom: '1px solid var(--v-hairline)',
+          }}
+        >
+          <pre
+            className="v-caption-mono whitespace-pre-wrap leading-relaxed overflow-x-auto"
+            style={{ color: 'var(--v-body)' }}
+          >
             {shareSnippet}
           </pre>
         </div>
 
         {/* Actions */}
-        <div className="p-4 bg-zinc-950 grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div
+          className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-2"
+          style={{ backgroundColor: 'var(--v-canvas)' }}
+        >
           <button
             type="button"
             onClick={handleDownloadPng}
-            className="py-2 px-3 rounded-md bg-white hover:bg-zinc-200 text-black font-medium text-xs flex items-center justify-center gap-1.5 transition"
+            className="v-btn-primary w-full"
           >
             <Download size={13} />
-            <span>이미지 저장 (PNG)</span>
+            <span>Download PNG</span>
           </button>
 
           <button
             type="button"
             onClick={handleCopySnippet}
-            className="py-2 px-3 rounded-md bg-zinc-900 hover:bg-zinc-850 text-zinc-200 border border-zinc-800 font-medium text-xs flex items-center justify-center gap-1.5 transition"
+            className="v-btn-secondary w-full h-9"
           >
-            {copiedType === 'text' ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-            <span>{copiedType === 'text' ? '요약 복사됨' : '요약 텍스트 복사'}</span>
+            {copiedType === 'text' ? <Check size={13} /> : <Copy size={13} />}
+            <span>{copiedType === 'text' ? 'Copied summary' : 'Copy summary'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleCopyLink}
-            className="py-2 px-3 rounded-md bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 font-medium text-xs flex items-center justify-center gap-1.5 transition"
+            className="v-btn-secondary w-full h-9"
           >
-            {copiedType === 'link' ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-            <span>{copiedType === 'link' ? '링크 복사됨' : '링크 복사'}</span>
+            {copiedType === 'link' ? <Check size={13} /> : <Copy size={13} />}
+            <span>{copiedType === 'link' ? 'Copied URL' : 'Copy receipt URL'}</span>
           </button>
         </div>
       </div>

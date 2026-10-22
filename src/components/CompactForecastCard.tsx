@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ThumbsUp } from 'lucide-react';
+import { ThumbsUp } from 'lucide-react';
 import type { Forecast } from '../domain/types';
 import { repository } from '../data/localRepository';
 import { getStockHistory, STOCKS } from '../data/market';
 import { deriveForecastStatus } from '../domain/lifecycle';
 import { resolveForecast } from '../domain/resolution';
-import { formatPct, formatRelativeTime } from '../domain/format';
 import {
   getEloTierInfo,
   DEFAULT_ELO,
@@ -25,14 +24,19 @@ interface CompactForecastCardProps {
 
 export function CompactForecastCard({
   forecast,
-  currentDateStr = '2026-10-05',
+  currentDateStr = '2026-10-02',
   isActiveLayer = false,
-  layerColor = '#e4e4e7',
+  layerColor = 'var(--v-cyan)',
   onToggleLayer,
   borderless = false,
 }: CompactForecastCardProps) {
   const navigate = useNavigate();
+  const [, setLikeTick] = useState(0);
+
   const author = forecast.authorId ? repository.getUser(forecast.authorId) : null;
+  const authorHandle = author
+    ? author.handle
+    : `guest_${forecast.anonId.replace(/^anon[_-]?/i, '').slice(0, 4) || 'user'}`;
   const authorElo = author?.elo ?? DEFAULT_ELO;
   const tierInfo = getEloTierInfo(authorElo);
   const isLiked = repository.isLiked(forecast.id);
@@ -45,18 +49,20 @@ export function CompactForecastCard({
     targetPrice = forecast.breakout.price;
   }
 
-  const changePct = forecast.basePrice > 0
-    ? ((targetPrice - forecast.basePrice) / forecast.basePrice) * 100
-    : 0;
+  const changePct =
+    forecast.basePrice > 0
+      ? ((targetPrice - forecast.basePrice) / forecast.basePrice) * 100
+      : 0;
 
   const isBull = changePct >= 0;
-
   const status = deriveForecastStatus(forecast, currentDateStr);
   const stockMeta = STOCKS.find(s => s.ticker === forecast.ticker) || STOCKS[0];
 
   const resolvedData = React.useMemo(() => {
     if (status !== 'RESOLVED') return null;
-    const bars = getStockHistory(forecast.ticker).filter(b => b.date <= currentDateStr);
+    const bars = getStockHistory(forecast.ticker).filter(
+      b => b.date <= currentDateStr
+    );
     return resolveForecast(forecast, bars);
   }, [forecast, status, currentDateStr]);
 
@@ -73,192 +79,251 @@ export function CompactForecastCard({
     const prices = [forecast.basePrice, ...forecast.path.map(p => p.price)];
     const min = Math.min(...prices);
     const max = Math.max(...prices);
-    const range = max - min || 1;
-    const w = 84;
-    const h = 26;
+    const span = Math.max(1e-4, max - min);
+    const w = 88;
+    const h = 24;
     const pad = 3;
 
-    const points = prices.map((p, idx) => {
-      const x = pad + (idx / (prices.length - 1)) * (w - pad * 2);
-      const norm = (p - min) / range;
-      const y = pad + (h - pad * 2) * (1 - norm);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    });
+    const points = prices
+      .map((p, idx) => {
+        const x = pad + (idx / Math.max(1, prices.length - 1)) * (w - pad * 2);
+        const y = pad + (h - pad * 2) * (1 - (p - min) / span);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
 
-    const d = `M ${points.join(' L ')}`;
-    const lastX = pad + (w - pad * 2);
-    const lastNorm = (prices[prices.length - 1] - min) / range;
-    const lastY = pad + (h - pad * 2) * (1 - lastNorm);
+    const lastCoords = points.split(' ').pop()?.split(',') || ['85', '12'];
+    const strokeColor = isActiveLayer
+      ? layerColor
+      : isBull
+      ? 'var(--v-bull)'
+      : 'var(--v-bear)';
 
     return (
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
-        <path
-          d={d}
+      <svg
+        width={w}
+        height={h}
+        viewBox={`0 0 ${w} ${h}`}
+        className="overflow-visible"
+        aria-hidden="true"
+      >
+        <line
+          x1="0"
+          y1={h / 2}
+          x2={w}
+          y2={h / 2}
+          stroke="var(--v-hairline)"
+          strokeDasharray="2 2"
+          strokeWidth="1"
+        />
+        <polyline
           fill="none"
-          stroke={isActiveLayer ? layerColor : (isBull ? '#10b981' : '#f43f5e')}
-          strokeWidth={isActiveLayer ? '2.2' : '1.75'}
+          stroke={strokeColor}
+          strokeWidth={isActiveLayer ? '2' : '1.5'}
           strokeLinecap="round"
           strokeLinejoin="round"
+          points={points}
         />
         <circle
-          cx={lastX}
-          cy={lastY}
-          r="2.5"
-          fill={isActiveLayer ? layerColor : (isBull ? '#10b981' : '#f43f5e')}
+          cx={lastCoords[0]}
+          cy={lastCoords[1]}
+          r="2.2"
+          fill={strokeColor}
         />
       </svg>
     );
   };
 
-  const handleCardClick = () => {
-    navigate(`/f/${forecast.id}`);
-  };
-
-  const handleLike = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    repository.toggleLike(forecast.id);
-  };
-
-  const handleToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onToggleLayer) onToggleLayer(forecast.id);
-  };
-
   return (
     <div
-      onClick={handleCardClick}
-      className={`group relative flex items-center justify-between gap-4 px-4 py-3.5 transition-colors cursor-pointer ${
-        borderless
-          ? isActiveLayer
-            ? 'bg-zinc-900/80 text-zinc-100'
-            : 'bg-zinc-950 hover:bg-zinc-900/40 text-zinc-100'
-          : isActiveLayer
-          ? 'rounded-lg border border-zinc-600 bg-zinc-900 text-zinc-100'
-          : 'rounded-lg border border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900/30 text-zinc-100'
-      }`}
+      onClick={() => navigate(`/f/${forecast.id}`)}
+      className="relative px-5 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 transition-colors cursor-pointer"
+      style={{
+        backgroundColor: isActiveLayer
+          ? 'var(--v-canvas-soft)'
+          : 'var(--v-canvas)',
+        borderBottom: borderless
+          ? '1px solid var(--v-hairline-subtle)'
+          : 'none',
+        boxShadow: borderless ? 'none' : 'var(--v-shadow-border)',
+        borderRadius: borderless ? 0 : '6px',
+      }}
     >
       {isActiveLayer && (
         <span
-          className="absolute left-0 top-2 bottom-2 w-1 rounded-r"
+          className="absolute left-0 top-1.5 bottom-1.5 w-[3px]"
           style={{ backgroundColor: layerColor }}
         />
       )}
 
-      {/* Column 1: Deployment Target & Thesis */}
-      <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-shrink-0 font-mono">
-            <span
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                status === 'RESOLVED'
-                  ? resolvedData?.directionHit
-                    ? 'bg-emerald-400'
-                    : 'bg-zinc-500'
-                  : 'bg-emerald-400'
-              }`}
-              title={status === 'RESOLVED' ? '정산 완료' : '진행 중'}
-            />
-            <span className="text-xs font-semibold text-zinc-100">
-              ${forecast.ticker}
-            </span>
-            <span
-              className={`text-xs font-semibold ${
-                isBull ? 'text-emerald-400' : 'text-rose-400'
-              }`}
-            >
-              {formatPct(changePct)}
-            </span>
-            <span className="text-xs text-zinc-400">
-              (${targetPrice.toFixed(1)})
-            </span>
-          </div>
+      {/* Col 1: Status + Ticker + Target + Author + Thesis */}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <span
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{
+            backgroundColor:
+              status === 'RESOLVED'
+                ? 'var(--v-link)'
+                : isBull
+                ? 'var(--v-bull)'
+                : 'var(--v-bear)',
+          }}
+          title={status}
+        />
 
-          {forecast.comment && (
-            <span className="text-xs text-zinc-400 truncate max-w-[360px]">
-              {forecast.comment}
-            </span>
-          )}
+        <div className="flex items-baseline gap-1.5 flex-shrink-0 v-mono">
+          <span
+            className="text-xs font-semibold"
+            style={{ color: 'var(--v-ink)' }}
+          >
+            ${forecast.ticker}
+          </span>
+          <span
+            className="text-xs font-semibold"
+            style={{ color: isBull ? 'var(--v-bull)' : 'var(--v-bear)' }}
+          >
+            {isBull ? '+' : ''}
+            {changePct.toFixed(2)}%
+          </span>
+          <span
+            className="v-caption-mono"
+            style={{ color: 'var(--v-body)' }}
+          >
+            (${targetPrice.toFixed(2)})
+          </span>
         </div>
+
+        <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              if (author) navigate(`/u/${author.handle}`);
+            }}
+            className="v-mono text-xs hover:underline"
+            style={{ color: 'var(--v-body)' }}
+          >
+            @{authorHandle}
+          </button>
+          <span
+            className="v-caption-mono px-1.5 py-0.2 rounded-[4px]"
+            style={{
+              backgroundColor: 'var(--v-canvas-soft-2)',
+              boxShadow: 'var(--v-shadow-border)',
+              color: 'var(--v-mute)',
+            }}
+          >
+            {tierInfo.tier} · {authorElo}
+          </span>
+        </div>
+
+        {forecast.comment && (
+          <p
+            className="v-body-sm truncate max-w-[340px] hidden md:block"
+            style={{ color: 'var(--v-mute)' }}
+          >
+            {forecast.comment}
+          </p>
+        )}
       </div>
 
-      {/* Column 2: 5D Sparkline & Quantitative Elo Stake / Settlement */}
-      <div className="hidden md:flex items-center gap-4 flex-shrink-0">
+      {/* Col 2: 5D Sparkline + Quantitative Elo Stake / Settlement */}
+      <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
         {renderSparkline()}
 
-        <div className="w-32 text-right font-mono">
+        <div className="w-28 text-right v-caption-mono">
           {resolvedData?.eloSettlement ? (
-            <div className="inline-flex items-center gap-1.5 text-xs">
+            <span className="inline-flex items-center gap-1.5">
               {resolvedData.score && (
-                <span className="text-zinc-400">{resolvedData.score.total}점</span>
+                <span style={{ color: 'var(--v-body)' }}>
+                  {resolvedData.score.total.toFixed(1)} pts
+                </span>
               )}
               <span
-                className={`font-semibold ${
-                  resolvedData.eloSettlement.deltaLp >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                }`}
+                className="font-semibold"
+                style={{
+                  color:
+                    resolvedData.eloSettlement.deltaLp >= 0
+                      ? 'var(--v-bull)'
+                      : 'var(--v-bear)',
+                }}
               >
                 {formatSignedLp(resolvedData.eloSettlement.deltaLp)}
               </span>
-            </div>
+            </span>
           ) : (
-            <div className="text-[11px] text-zinc-400">
-              <span className="text-emerald-400 font-medium">+{eloProjection.expectedWinLp}</span>
-              <span className="text-zinc-600"> / </span>
-              <span className="text-rose-400">{eloProjection.expectedLossLp} LP</span>
-            </div>
+            <span>
+              <span style={{ color: 'var(--v-bull)' }}>
+                +{eloProjection.expectedWinLp}
+              </span>
+              <span style={{ color: 'var(--v-dim)' }}> / </span>
+              <span style={{ color: 'var(--v-bear)' }}>
+                {eloProjection.expectedLossLp} LP
+              </span>
+            </span>
           )}
         </div>
       </div>
 
-      {/* Column 3: Author Scope & Actions */}
-      <div className="flex items-center gap-2.5 flex-shrink-0">
-        <div className="hidden sm:flex items-center gap-2 text-right">
-          <div className="flex items-center gap-1.5 font-mono text-xs">
-            <span className="text-zinc-300 font-sans font-medium truncate max-w-[90px]">
-              {author?.name || '익명'}
-            </span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded border ${tierInfo.badgeClass}`}>
-              {tierInfo.tier}
-            </span>
-            <span className="text-zinc-500 text-[11px] hidden lg:inline">
-              {formatRelativeTime(forecast.lockedAt)}
-            </span>
-          </div>
-          <img
-            src={author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
-            alt={author?.name || '익명'}
-            className="w-6 h-6 rounded-full object-cover border border-zinc-800 flex-shrink-0"
-          />
-        </div>
-
+      {/* Col 3: Actions */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         {onToggleLayer && forecast.mode === 'path' && (
           <button
             type="button"
-            onClick={handleToggle}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition ${
-              isActiveLayer
-                ? 'bg-zinc-100 text-black'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700'
-            }`}
+            onClick={e => {
+              e.stopPropagation();
+              onToggleLayer(forecast.id);
+            }}
+            className="v-btn-secondary"
+            style={{
+              backgroundColor: isActiveLayer
+                ? 'var(--v-primary)'
+                : 'var(--v-canvas)',
+              color: isActiveLayer
+                ? 'var(--v-on-primary)'
+                : 'var(--v-ink)',
+            }}
           >
-            {isActiveLayer ? <Eye size={12} /> : <EyeOff size={12} />}
-            <span className="text-[11px] hidden sm:inline">
-              {isActiveLayer ? '표시 중' : '비교'}
-            </span>
+            {isActiveLayer ? 'Pinned' : 'Overlay'}
           </button>
         )}
 
         <button
           type="button"
-          onClick={handleLike}
-          className={`px-2 py-1 rounded-md text-xs font-mono flex items-center gap-1 border transition ${
-            isLiked
-              ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-              : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-100 hover:border-zinc-700'
-          }`}
+          onClick={e => {
+            e.stopPropagation();
+            navigate(`/studio/${forecast.ticker}`);
+          }}
+          className="v-btn-secondary"
         >
-          <ThumbsUp size={11} className={isLiked ? 'fill-rose-500' : ''} />
-          <span className="text-[11px]">{likesCount}</span>
+          Studio ↗
         </button>
+
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            repository.toggleLike(forecast.id);
+            setLikeTick(t => t + 1);
+          }}
+          className="v-btn-secondary px-2"
+          style={{
+            color: isLiked ? 'var(--v-ink)' : 'var(--v-mute)',
+          }}
+          title="Like trajectory"
+        >
+          <ThumbsUp size={11} />
+          {likesCount > 0 && (
+            <span className="v-caption-mono">{likesCount}</span>
+          )}
+        </button>
+
+        <span
+          className="v-caption-mono px-1 hover:underline"
+          style={{ color: 'var(--v-mute)' }}
+        >
+          Receipt ↗
+        </span>
       </div>
     </div>
   );

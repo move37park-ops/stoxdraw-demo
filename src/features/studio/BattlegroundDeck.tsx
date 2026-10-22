@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ThumbsUp } from 'lucide-react';
 import { repository } from '../../data/localRepository';
 import { getStockHistory, STOCKS } from '../../data/market';
 import { computePriceDistribution } from '../../domain/arena';
 import { buildDailySettlementRows, computeForecastDigest } from '../../domain/audit';
 import { calculateForecastScore } from '../../domain/scoring';
-import { getEloTierInfo, DEFAULT_ELO } from '../../domain/elo';
+import { getEloTierInfo, DEFAULT_ELO, calculateEloProjection } from '../../domain/elo';
 import type { Forecast } from '../../domain/types';
 import type { OverlayRival } from './SplitHorizonCanvas';
 
@@ -37,8 +39,10 @@ export function BattlegroundDeck({
   onToggleOverlayRival,
   onStartDuel,
 }: BattlegroundDeckProps) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'duels' | 'distribution' | 'ledger'>('duels');
   const [stanceFilter, setStanceFilter] = useState<'all' | 'bull' | 'bear'>('all');
+  const [, setLikeTick] = useState(0);
 
   const stockMeta = STOCKS.find(s => s.ticker === ticker) || STOCKS[0];
   const allBars = useMemo(() => getStockHistory(ticker), [ticker]);
@@ -55,7 +59,7 @@ export function BattlegroundDeck({
     return closes;
   }, [allBars, evalDates, currentDateStr, baseDate]);
 
-  const enrichedForecasts = useMemo(() => {
+  const allEnriched = useMemo(() => {
     return allTickerForecasts
       .filter(f => f.mode === 'path' && f.path && f.path.length > 0)
       .map(f => {
@@ -68,6 +72,12 @@ export function BattlegroundDeck({
         const lastPt = f.path![f.path!.length - 1];
         const changePct =
           f.basePrice > 0 ? ((lastPt.price - f.basePrice) / f.basePrice) * 100 : 0;
+
+        const eloProj = calculateEloProjection(
+          changePct,
+          undefined,
+          stockMeta.volatility
+        );
 
         const score =
           actualCloses.length > 0
@@ -87,15 +97,22 @@ export function BattlegroundDeck({
           tier: tier.tier,
           targetPrice: lastPt.price,
           changePct,
+          eloProj,
           score,
         };
-      })
-      .filter(item => {
-        if (stanceFilter === 'bull') return item.changePct >= 0;
-        if (stanceFilter === 'bear') return item.changePct < 0;
-        return true;
       });
-  }, [allTickerForecasts, actualCloses, stockMeta.volatility, stanceFilter]);
+  }, [allTickerForecasts, actualCloses, stockMeta.volatility]);
+
+  const bullCount = allEnriched.filter(i => i.changePct >= 0).length;
+  const bearCount = allEnriched.filter(i => i.changePct < 0).length;
+
+  const enrichedForecasts = useMemo(() => {
+    return allEnriched.filter(item => {
+      if (stanceFilter === 'bull') return item.changePct >= 0;
+      if (stanceFilter === 'bear') return item.changePct < 0;
+      return true;
+    });
+  }, [allEnriched, stanceFilter]);
 
   const priceBuckets = useMemo(
     () => computePriceDistribution(ticker, allTickerForecasts, basePrice, '5D'),
@@ -154,7 +171,7 @@ export function BattlegroundDeck({
           {[
             {
               id: 'duels' as const,
-              label: `Peer trajectories (${allTickerForecasts.length})`,
+              label: `Peer deployments (${allEnriched.length})`,
             },
             {
               id: 'distribution' as const,
@@ -190,27 +207,35 @@ export function BattlegroundDeck({
 
         {activeTab === 'duels' && (
           <div className="flex items-center gap-1 py-1.5">
-            {(['all', 'bull', 'bear'] as const).map(filter => {
-              const active = stanceFilter === filter;
+            {(
+              [
+                { id: 'all', label: `All ${allEnriched.length}` },
+                { id: 'bull', label: `Bull ${bullCount}` },
+                { id: 'bear', label: `Bear ${bearCount}` },
+              ] as const
+            ).map(filter => {
+              const active = stanceFilter === filter.id;
               return (
                 <button
-                  key={filter}
+                  key={filter.id}
                   type="button"
-                  onClick={() => setStanceFilter(filter)}
-                  className="px-2 py-0.5 rounded-[4px] v-caption-mono transition"
+                  onClick={() => setStanceFilter(filter.id)}
+                  className="px-2.5 py-0.5 rounded-[4px] v-caption-mono transition"
                   style={{
                     backgroundColor: active
                       ? 'var(--v-canvas-soft-2)'
                       : 'transparent',
-                    color: active ? 'var(--v-ink)' : 'var(--v-mute)',
+                    color: active
+                      ? 'var(--v-ink)'
+                      : filter.id === 'bull'
+                      ? 'var(--v-bull)'
+                      : filter.id === 'bear'
+                      ? 'var(--v-bear)'
+                      : 'var(--v-mute)',
                     boxShadow: active ? 'var(--v-shadow-border)' : 'none',
                   }}
                 >
-                  {filter === 'all'
-                    ? 'All'
-                    : filter === 'bull'
-                    ? 'Bull (>=0%)'
-                    : 'Bear (<0%)'}
+                  {filter.label}
                 </button>
               );
             })}
@@ -218,7 +243,7 @@ export function BattlegroundDeck({
         )}
       </div>
 
-      {/* TAB 1: Flush Hairline 3-Column Bento Grid for Peer Trajectories */}
+      {/* TAB 1: 1-Line Vercel Deployment Rows (Fused CompactForecastCard + Duel Controls) */}
       {activeTab === 'duels' && (
         <div>
           {enrichedForecasts.length === 0 ? (
@@ -228,178 +253,237 @@ export function BattlegroundDeck({
               </p>
             </div>
           ) : (
-            <div
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px"
-              style={{ backgroundColor: 'var(--v-hairline)' }}
-            >
-              {enrichedForecasts.map(item => {
-                const isOverlaid = overlaidRivals.some(
+            <div>
+              {enrichedForecasts.map((item, rowIdx) => {
+                const overlaidObj = overlaidRivals.find(
                   r => r.forecast.id === item.forecast.id
                 );
+                const isOverlaid = Boolean(overlaidObj);
                 const isAuditing = lockedForecast?.id === item.forecast.id;
                 const isBull = item.changePct >= 0;
+                const isLiked = repository.isLiked(item.forecast.id);
+                const likesCount = repository.getLikesCount(item.forecast.id);
 
                 const pts = item.forecast.path || [];
                 const prices = [item.forecast.basePrice, ...pts.map(p => p.price)];
                 const minP = Math.min(...prices);
                 const maxP = Math.max(...prices);
                 const span = Math.max(1e-4, maxP - minP);
+                const w = 88;
+                const h = 24;
+                const pad = 3;
                 const sparkPoints = prices
                   .map((p, idx) => {
-                    const x = (idx / Math.max(1, prices.length - 1)) * 120;
-                    const y = 28 - ((p - minP) / span) * 22;
+                    const x = pad + (idx / Math.max(1, prices.length - 1)) * (w - pad * 2);
+                    const y = pad + (h - pad * 2) * (1 - (p - minP) / span);
                     return `${x.toFixed(1)},${y.toFixed(1)}`;
                   })
                   .join(' ');
+                const lastPtCoords = sparkPoints.split(' ').pop()?.split(',') || ['85', '12'];
+                const strokeColor = isOverlaid
+                  ? overlaidObj!.colorVar
+                  : isBull
+                  ? 'var(--v-bull)'
+                  : 'var(--v-bear)';
 
                 return (
-                  <article
+                  <div
                     key={item.forecast.id}
-                    className="p-5 flex flex-col justify-between transition"
+                    className="relative px-5 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 transition-colors"
                     style={{
-                      backgroundColor: isOverlaid
-                        ? 'var(--v-canvas-soft)'
-                        : 'var(--v-canvas)',
+                      backgroundColor:
+                        isOverlaid || isAuditing
+                          ? 'var(--v-canvas-soft)'
+                          : 'var(--v-canvas)',
+                      borderBottom:
+                        rowIdx < enrichedForecasts.length - 1
+                          ? '1px solid var(--v-hairline-subtle)'
+                          : 'none',
                     }}
                   >
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className="v-mono text-xs font-medium truncate"
-                            style={{ color: 'var(--v-ink)' }}
-                          >
-                            @{item.handle}
-                          </span>
-                          <span
-                            className="v-caption-mono"
-                            style={{ color: 'var(--v-mute)' }}
-                          >
-                            {item.tier} · {item.elo} LP
-                          </span>
-                        </div>
+                    {/* Left Active Overlay Color Bar */}
+                    {isOverlaid && (
+                      <span
+                        className="absolute left-0 top-1.5 bottom-1.5 w-[3px]"
+                        style={{ backgroundColor: overlaidObj!.colorVar }}
+                      />
+                    )}
 
-                        {item.score && (
-                          <span
-                            className="v-caption-mono font-medium"
-                            style={{ color: 'var(--v-ink)' }}
-                          >
-                            {item.score.total.toFixed(1)} pts ({item.score.grade})
-                          </span>
-                        )}
+                    {/* Col 1: Forecaster Handle + Target + Thesis */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{
+                          backgroundColor: isBull ? 'var(--v-bull)' : 'var(--v-bear)',
+                        }}
+                      />
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/u/${item.handle}`)}
+                          className="v-mono text-xs font-medium hover:underline"
+                          style={{ color: 'var(--v-ink)' }}
+                        >
+                          @{item.handle}
+                        </button>
+                        <span
+                          className="v-caption-mono px-1.5 py-0.2 rounded-[4px]"
+                          style={{
+                            backgroundColor: 'var(--v-canvas-soft-2)',
+                            boxShadow: 'var(--v-shadow-border)',
+                            color: 'var(--v-mute)',
+                          }}
+                        >
+                          {item.tier} · {item.elo}
+                        </span>
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <div>
-                          <span
-                            className="v-caption-mono uppercase"
-                            style={{ color: 'var(--v-mute)' }}
-                          >
-                            D+5 close
-                          </span>
-                          <div className="flex items-baseline gap-1.5 mt-0.5">
-                            <span
-                              className="v-mono text-lg font-semibold tracking-tight"
-                              style={{ color: 'var(--v-ink)' }}
-                            >
-                              ${item.targetPrice.toFixed(2)}
-                            </span>
-                            <span
-                              className="v-mono text-xs font-medium"
-                              style={{
-                                color: isBull
-                                  ? 'var(--v-bull)'
-                                  : 'var(--v-bear)',
-                              }}
-                            >
-                              {isBull ? '+' : ''}
-                              {item.changePct.toFixed(2)}%
-                            </span>
-                          </div>
-                        </div>
-
-                        <svg
-                          width="124"
-                          height="32"
-                          viewBox="0 0 124 32"
-                          className="overflow-visible"
-                          aria-hidden="true"
+                      <div className="flex items-baseline gap-1.5 flex-shrink-0 v-mono">
+                        <span
+                          className="text-xs font-semibold"
+                          style={{
+                            color: isBull ? 'var(--v-bull)' : 'var(--v-bear)',
+                          }}
                         >
-                          <line
-                            x1="0"
-                            y1="16"
-                            x2="120"
-                            y2="16"
-                            stroke="var(--v-hairline)"
-                            strokeDasharray="2 2"
-                            strokeWidth="1"
-                          />
-                          <polyline
-                            fill="none"
-                            stroke={isBull ? 'var(--v-bull)' : 'var(--v-bear)'}
-                            strokeWidth="1.5"
-                            points={sparkPoints}
-                          />
-                        </svg>
+                          {isBull ? '+' : ''}
+                          {item.changePct.toFixed(2)}%
+                        </span>
+                        <span
+                          className="v-caption-mono"
+                          style={{ color: 'var(--v-body)' }}
+                        >
+                          (${item.targetPrice.toFixed(2)})
+                        </span>
                       </div>
 
                       <p
-                        className="v-body-sm mt-2.5 line-clamp-2"
-                        style={{ color: 'var(--v-body)' }}
+                        onClick={() => onSelectForecastToAudit(item.forecast)}
+                        className="v-body-sm truncate max-w-[340px] cursor-pointer hover:underline hidden md:block"
+                        style={{ color: 'var(--v-mute)' }}
+                        title={item.forecast.comment}
                       >
                         {item.forecast.comment || 'No directional thesis.'}
                       </p>
                     </div>
 
-                    <div className="mt-4 pt-3 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onToggleOverlayRival(
-                              item.forecast,
-                              item.handle,
-                              item.elo
-                            )
-                          }
-                          className="v-btn-secondary"
-                          style={{
-                            backgroundColor: isOverlaid
-                              ? 'var(--v-primary)'
-                              : 'var(--v-canvas)',
-                            color: isOverlaid
-                              ? 'var(--v-on-primary)'
-                              : 'var(--v-ink)',
-                          }}
-                        >
-                          {isOverlaid ? 'Pinned on canvas' : 'Overlay'}
-                        </button>
+                    {/* Col 2: 5D Mini Sparkline + Elo Stake / Settled Score */}
+                    <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
+                      <svg
+                        width={w}
+                        height={h}
+                        viewBox={`0 0 ${w} ${h}`}
+                        className="overflow-visible"
+                        aria-hidden="true"
+                      >
+                        <line
+                          x1="0"
+                          y1={h / 2}
+                          x2={w}
+                          y2={h / 2}
+                          stroke="var(--v-hairline)"
+                          strokeDasharray="2 2"
+                          strokeWidth="1"
+                        />
+                        <polyline
+                          fill="none"
+                          stroke={strokeColor}
+                          strokeWidth={isOverlaid ? '2' : '1.5'}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={sparkPoints}
+                        />
+                        <circle
+                          cx={lastPtCoords[0]}
+                          cy={lastPtCoords[1]}
+                          r="2.2"
+                          fill={strokeColor}
+                        />
+                      </svg>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onStartDuel(item.forecast, item.handle)
-                          }
-                          className="v-btn-secondary"
-                        >
-                          Counter-draw
-                        </button>
+                      <div className="w-28 text-right v-caption-mono">
+                        {item.score ? (
+                          <span
+                            className="font-medium"
+                            style={{ color: 'var(--v-ink)' }}
+                          >
+                            {item.score.total.toFixed(1)} pts ({item.score.grade})
+                          </span>
+                        ) : (
+                          <span>
+                            <span style={{ color: 'var(--v-bull)' }}>
+                              +{item.eloProj.expectedWinLp}
+                            </span>
+                            <span style={{ color: 'var(--v-dim)' }}> / </span>
+                            <span style={{ color: 'var(--v-bear)' }}>
+                              {item.eloProj.expectedLossLp} LP
+                            </span>
+                          </span>
+                        )}
                       </div>
+                    </div>
+
+                    {/* Col 3: Overlay, Counter-Draw, Like & Receipt Link */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onToggleOverlayRival(
+                            item.forecast,
+                            item.handle,
+                            item.elo
+                          )
+                        }
+                        className="v-btn-secondary"
+                        style={{
+                          backgroundColor: isOverlaid
+                            ? 'var(--v-primary)'
+                            : 'var(--v-canvas)',
+                          color: isOverlaid
+                            ? 'var(--v-on-primary)'
+                            : 'var(--v-ink)',
+                        }}
+                      >
+                        {isOverlaid ? 'Pinned' : 'Overlay'}
+                      </button>
 
                       <button
                         type="button"
-                        onClick={() => onSelectForecastToAudit(item.forecast)}
-                        className="v-caption-mono underline"
-                        style={{
-                          color: isAuditing
-                            ? 'var(--v-link)'
-                            : 'var(--v-mute)',
-                        }}
+                        onClick={() => onStartDuel(item.forecast, item.handle)}
+                        className="v-btn-secondary"
                       >
-                        {isAuditing ? 'Auditing' : 'Inspect'}
+                        Counter-draw
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          repository.toggleLike(item.forecast.id);
+                          setLikeTick(t => t + 1);
+                        }}
+                        className="v-btn-secondary px-2"
+                        style={{
+                          color: isLiked ? 'var(--v-ink)' : 'var(--v-mute)',
+                        }}
+                        title="Like trajectory"
+                      >
+                        <ThumbsUp size={11} />
+                        {likesCount > 0 && (
+                          <span className="v-caption-mono">{likesCount}</span>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/f/${item.forecast.id}`)}
+                        className="v-caption-mono px-1.5 hover:underline"
+                        style={{ color: 'var(--v-mute)' }}
+                        title="Open full prediction receipt"
+                      >
+                        Receipt ↗
                       </button>
                     </div>
-                  </article>
+                  </div>
                 );
               })}
             </div>
@@ -409,8 +493,8 @@ export function BattlegroundDeck({
 
       {/* TAB 2: Shared-Scale Price Bucket Distribution (Flush Hairline Rows) */}
       {activeTab === 'distribution' && (
-        <div className="divide-y" style={{ borderColor: 'var(--v-hairline-subtle)' }}>
-          {priceBuckets.map(bucket => {
+        <div>
+          {priceBuckets.map((bucket, idx) => {
             const isAboveBase = bucket.min >= basePrice;
             return (
               <div
@@ -418,6 +502,10 @@ export function BattlegroundDeck({
                 className="px-5 py-3 grid items-center gap-4"
                 style={{
                   gridTemplateColumns: '148px 1fr 100px',
+                  borderBottom:
+                    idx < priceBuckets.length - 1
+                      ? '1px solid var(--v-hairline-subtle)'
+                      : 'none',
                 }}
               >
                 <span
@@ -544,7 +632,7 @@ export function BattlegroundDeck({
                             2
                           )}%`
                         : 'Pending'}
-                    </td>
+                        </td>
                     <td className="v-numeric">
                       {row.absErrorPct !== null
                         ? `${row.absErrorPct.toFixed(2)}%`

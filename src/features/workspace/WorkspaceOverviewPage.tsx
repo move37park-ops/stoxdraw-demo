@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, PenTool, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
+import { Search, ArrowRight } from 'lucide-react';
 import { repository } from '../../data/localRepository';
 import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
 import { getHotArenas } from '../../domain/arena';
@@ -8,7 +8,6 @@ import { deriveForecastStatus } from '../../domain/lifecycle';
 import { resolveForecast } from '../../domain/resolution';
 import { getStockHistory } from '../../data/market';
 import { getEloTierInfo, DEFAULT_ELO, formatSignedLp } from '../../domain/elo';
-import { formatPct } from '../../domain/format';
 import { CompactForecastCard } from '../../components/CompactForecastCard';
 import type { Forecast } from '../../domain/types';
 
@@ -39,7 +38,6 @@ export function WorkspaceOverviewPage({ currentDateStr }: WorkspaceOverviewPageP
   const currentUser = getCurrentUser();
   const anonId = getOrCreateAnonId();
 
-  // 1. My Workspace Elo & Forecast Stats
   const myForecasts = useMemo(() => {
     return forecasts.filter(f =>
       currentUser ? f.authorId === currentUser.id : f.anonId === anonId
@@ -72,7 +70,7 @@ export function WorkspaceOverviewPage({ currentDateStr }: WorkspaceOverviewPageP
 
     const liveElo = Math.max(800, baseElo + deltaSum);
     const tierInfo = getEloTierInfo(liveElo);
-    const avgScore = scoredCount > 0 ? Math.round(scoreSum / scoredCount) : null;
+    const avgScore = scoredCount > 0 ? (scoreSum / scoredCount).toFixed(1) : null;
     const hitRate = resolvedCount > 0 ? Math.round((hitCount / resolvedCount) * 100) : null;
 
     return {
@@ -86,7 +84,6 @@ export function WorkspaceOverviewPage({ currentDateStr }: WorkspaceOverviewPageP
     };
   }, [myForecasts, currentUser, currentDateStr]);
 
-  // 2. Market Arenas (Vercel Project Cards)
   const arenas = useMemo(() => {
     const allHot = getHotArenas(forecasts, currentDateStr, '5D');
     return CORE_TICKERS.map(t => allHot.find(a => a.ticker === t)).filter(
@@ -94,7 +91,6 @@ export function WorkspaceOverviewPage({ currentDateStr }: WorkspaceOverviewPageP
     );
   }, [forecasts, currentDateStr]);
 
-  // 3. Top Elo Leaderboard Preview
   const topUsers = useMemo(() => {
     const users = repository.listAllUsers();
     return users
@@ -119,7 +115,6 @@ export function WorkspaceOverviewPage({ currentDateStr }: WorkspaceOverviewPageP
       .slice(0, 4);
   }, [currentDateStr, forecasts]);
 
-  // 4. Filtered Forecast Stream
   const filteredForecasts = useMemo(() => {
     return forecasts.filter(f => {
       const st = deriveForecastStatus(f, currentDateStr);
@@ -140,13 +135,13 @@ export function WorkspaceOverviewPage({ currentDateStr }: WorkspaceOverviewPageP
   const renderArenaSparkline = (ticker: string) => {
     const bars = getStockHistory(ticker)
       .filter(b => b.date <= currentDateStr)
-      .slice(-10);
+      .slice(-12);
     if (bars.length < 2) return null;
     const prices = bars.map(b => b.close);
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     const range = max - min || 1;
-    const w = 76;
+    const w = 78;
     const h = 24;
     const pad = 2;
 
@@ -159,10 +154,10 @@ export function WorkspaceOverviewPage({ currentDateStr }: WorkspaceOverviewPageP
 
     return (
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
-        <path
-          d={`M ${pts.join(' L ')}`}
+        <polyline
+          points={pts.join(' ')}
           fill="none"
-          stroke={isUp ? '#10b981' : '#f43f5e'}
+          stroke={isUp ? 'var(--v-bull)' : 'var(--v-bear)'}
           strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -172,396 +167,529 @@ export function WorkspaceOverviewPage({ currentDateStr }: WorkspaceOverviewPageP
   };
 
   return (
-    <div className="w-full space-y-6">
-      {/* Top Search & Action Bar (Vercel Dashboard Toolbar Pattern) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
-          />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="종목 티커($NVDA, $TSLA, $AAPL) 또는 참여자 검색..."
-            className="w-full pl-9 pr-3 py-2 rounded-md bg-zinc-950 border border-zinc-800 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-600 transition"
-          />
+    <div className="w-full">
+      {/* ZONE 1: Architectural Masthead Band */}
+      <div
+        className="relative grid grid-cols-1 lg:grid-cols-12"
+        style={{ borderBottom: '1px solid var(--v-hairline)' }}
+      >
+        <span className="v-crosshair" style={{ bottom: -6, left: -6 }} />
+        <span className="v-crosshair" style={{ bottom: -6, right: -6 }} />
+
+        {/* Left 7 Cols: Dual-Tone Vercel Headline */}
+        <div
+          className="lg:col-span-7 px-5 py-5 flex flex-col justify-center gap-2 min-w-0"
+          style={{ borderRight: '1px solid var(--v-hairline)' }}
+        >
+          <div
+            className="flex items-center gap-2 v-caption-mono uppercase"
+            style={{ color: 'var(--v-mute)' }}
+          >
+            <span style={{ color: 'var(--v-ink)' }}>Workspace overview</span>
+            <span style={{ color: 'var(--v-dim)' }}>·</span>
+            <span>As of {currentDateStr}</span>
+          </div>
+          <h1 className="v-display-hero">
+            <span style={{ color: 'var(--v-ink)' }}>
+              Monitor live 5-day trajectory deployments across the market.{' '}
+            </span>
+            <span style={{ color: 'var(--v-mute)', fontWeight: 400 }}>
+              Compare crowd consensus tension, inspect verified receipts, or open the studio to sculpt your call.
+            </span>
+          </h1>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate('/arena')}
-            className="px-3 py-2 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-200 transition"
+        {/* Right 5 Cols: Flush 3-Column Personal Telemetry Strip */}
+        <div className="lg:col-span-5 grid grid-cols-3 min-w-0">
+          <div
+            className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
+            style={{ borderRight: '1px solid var(--v-hairline)' }}
           >
-            전체 종목 아레나
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/draw')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-white hover:bg-zinc-200 text-black text-xs font-medium transition"
-          >
-            <PenTool size={13} />
-            <span>새 5D 예측 등록</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Main 12-Column Workspace Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Sidebar (4 Cols): User Scope Summary, Recent Activity, Top Elo */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* 1. My Elo Rating Card (Single Container + 1px Hairline Dividers) */}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950 divide-y divide-zinc-800 overflow-hidden">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-zinc-400">내 Elo 레이팅</span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium border ${myStats.tierInfo.badgeClass}`}
-                >
-                  {myStats.tierInfo.tier}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between font-mono">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-zinc-100">
-                    {myStats.liveElo.toLocaleString()} LP
-                  </span>
-                  {myStats.deltaSum !== 0 && (
-                    <span
-                      className={`text-xs font-medium ${
-                        myStats.deltaSum >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}
-                    >
-                      ({formatSignedLp(myStats.deltaSum)})
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/record')}
-                  className="text-xs font-sans text-zinc-400 hover:text-zinc-100 transition"
-                >
-                  내 기록 →
-                </button>
-              </div>
-
-              {/* Progress to next tier */}
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 mb-1.5">
-                  <span>티어 진행률 ({myStats.tierInfo.progressPct}%)</span>
-                  <span>
-                    {myStats.tierInfo.nextTierElo
-                      ? `다음 티어까지 ${myStats.tierInfo.nextTierElo - myStats.liveElo} LP`
-                      : '최고 티어'}
-                  </span>
-                </div>
-                <div className="w-full h-1 rounded-full bg-zinc-800 overflow-hidden">
-                  <div
-                    className="h-full bg-zinc-100 transition-all duration-300"
-                    style={{ width: `${myStats.tierInfo.progressPct}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 3-Column Hairline Stats */}
-            <div className="grid grid-cols-3 divide-x divide-zinc-800 text-center font-mono">
-              <div className="py-2.5 px-2">
-                <div className="text-[11px] text-zinc-500 font-sans">등록 예측</div>
-                <div className="text-xs font-semibold text-zinc-100 mt-0.5">
-                  {myStats.totalCount}건
-                </div>
-              </div>
-              <div className="py-2.5 px-2">
-                <div className="text-[11px] text-zinc-500 font-sans">정산 완료</div>
-                <div className="text-xs font-semibold text-zinc-100 mt-0.5">
-                  {myStats.resolvedCount}건
-                </div>
-              </div>
-              <div className="py-2.5 px-2">
-                <div className="text-[11px] text-zinc-500 font-sans">
-                  {myStats.avgScore !== null ? '평균 점수' : '적중률'}
-                </div>
-                <div className="text-xs font-semibold text-zinc-100 mt-0.5">
-                  {myStats.avgScore !== null
-                    ? `${myStats.avgScore}점`
-                    : myStats.hitRate !== null
-                    ? `${myStats.hitRate}%`
-                    : '—'}
-                </div>
-              </div>
+            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
+              Elo standing
+            </span>
+            <div className="mt-2">
+              <p
+                className="v-mono text-xl font-semibold tracking-tight"
+                style={{ color: 'var(--v-ink)' }}
+              >
+                {myStats.liveElo} LP
+              </p>
+              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                {myStats.tierInfo.tier}
+                {myStats.deltaSum !== 0
+                  ? ` (${formatSignedLp(myStats.deltaSum)})`
+                  : ' · active'}
+              </p>
             </div>
           </div>
 
-          {/* 2. My Active Forecasts */}
-          <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <h2 className="text-xs font-semibold text-zinc-300">내 최근 예측</h2>
+          <div
+            className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
+            style={{ borderRight: '1px solid var(--v-hairline)' }}
+          >
+            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
+              My deployments
+            </span>
+            <div className="mt-2">
+              <p
+                className="v-mono text-xl font-semibold tracking-tight"
+                style={{ color: 'var(--v-ink)' }}
+              >
+                {myStats.totalCount}
+              </p>
+              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                {myStats.resolvedCount} settled
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
+            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
+              Mean score
+            </span>
+            <div className="mt-2">
+              <p
+                className="v-mono text-xl font-semibold tracking-tight"
+                style={{ color: 'var(--v-ink)' }}
+              >
+                {myStats.avgScore ? `${myStats.avgScore}` : '—'}
+              </p>
               <button
                 type="button"
                 onClick={() => navigate('/record')}
-                className="text-xs text-zinc-500 hover:text-zinc-200 transition"
+                className="v-caption-mono mt-0.5 hover:underline text-left"
+                style={{ color: 'var(--v-link)' }}
               >
-                전체 보기
+                My record →
               </button>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 divide-y divide-zinc-800 overflow-hidden">
-              {myForecasts.length > 0 ? (
-                myForecasts.slice(0, 3).map(f => {
-                  const target =
-                    f.path && f.path.length > 0
-                      ? f.path[f.path.length - 1].price
-                      : f.basePrice;
-                  const pct = ((target - f.basePrice) / f.basePrice) * 100;
-                  const st = deriveForecastStatus(f, currentDateStr);
-                  return (
-                    <div
-                      key={f.id}
-                      onClick={() => navigate(`/f/${f.id}`)}
-                      className="p-3 hover:bg-zinc-900/50 transition cursor-pointer flex items-center justify-between text-xs font-mono"
-                    >
-                      <div className="flex items-center gap-2">
+      {/* ZONE 2: 3 Core Market Arenas (Flush Architectural Grid) */}
+      <div
+        className="relative"
+        style={{ borderBottom: '1px solid var(--v-hairline)' }}
+      >
+        <span className="v-crosshair" style={{ bottom: -6, left: -6 }} />
+        <span className="v-crosshair" style={{ bottom: -6, right: -6 }} />
+
+        <div
+          className="px-5 py-2.5 flex items-center justify-between"
+          style={{
+            backgroundColor: 'var(--v-canvas-soft)',
+            borderBottom: '1px solid var(--v-hairline)',
+          }}
+        >
+          <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
+            Core market arenas (5D round)
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="v-caption-mono hover:underline"
+            style={{ color: 'var(--v-body)' }}
+          >
+            Open interactive Studio →
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3">
+          {arenas.map((arena, idx) => {
+            const isPos = arena.medianChangePct >= 0;
+            return (
+              <div
+                key={arena.ticker}
+                onClick={() => navigate(`/studio/${arena.ticker}`)}
+                className="cursor-pointer transition-colors flex flex-col justify-between"
+                style={{
+                  backgroundColor: 'var(--v-canvas)',
+                  borderRight:
+                    idx < 2 ? '1px solid var(--v-hairline)' : 'none',
+                }}
+              >
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <div className="flex items-baseline gap-2">
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            st === 'RESOLVED' ? 'bg-zinc-400' : 'bg-emerald-400'
-                          }`}
-                        />
-                        <span className="font-semibold text-zinc-100">${f.ticker}</span>
-                        <span className={pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                          {formatPct(pct)}
+                          className="v-mono text-base font-semibold"
+                          style={{ color: 'var(--v-ink)' }}
+                        >
+                          ${arena.ticker}
+                        </span>
+                        <span
+                          className="v-caption"
+                          style={{ color: 'var(--v-mute)' }}
+                        >
+                          {arena.name}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-zinc-400">
-                        <span>${target.toFixed(1)}</span>
-                        <span className="text-[11px] font-sans text-zinc-500">
-                          {st === 'RESOLVED' ? '정산됨' : '진행 중'}
-                        </span>
+                      <div
+                        className="v-mono text-xl font-semibold tracking-tight mt-1"
+                        style={{ color: 'var(--v-ink)' }}
+                      >
+                        ${arena.currentPrice.toFixed(2)}
                       </div>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="p-5 text-center">
-                  <p className="text-xs text-zinc-400 mb-3">
-                    아직 등록한 5일 주가 예측이 없습니다.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/draw')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-black text-xs font-medium transition"
-                  >
-                    <span>첫 5D 예측 등록하기</span>
-                    <ArrowRight size={12} />
-                  </button>
+
+                    {renderArenaSparkline(arena.ticker)}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between v-caption-mono">
+                      <span style={{ color: 'var(--v-mute)' }}>
+                        5D crowd median
+                      </span>
+                      <span
+                        className="font-medium"
+                        style={{
+                          color: isPos ? 'var(--v-bull)' : 'var(--v-bear)',
+                        }}
+                      >
+                        {isPos ? '+' : ''}
+                        {arena.medianChangePct.toFixed(2)}% ($
+                        {arena.medianTargetPrice.toFixed(2)})
+                      </span>
+                    </div>
+
+                    <div
+                      className="w-full h-1.5 rounded-[2px] flex overflow-hidden"
+                      style={{ backgroundColor: 'var(--v-hairline)' }}
+                    >
+                      <div
+                        style={{
+                          width: `${arena.bullPct}%`,
+                          backgroundColor: 'var(--v-bull)',
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: `${arena.bearPct}%`,
+                          backgroundColor: 'var(--v-bear)',
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between v-caption-mono">
+                      <span style={{ color: 'var(--v-bull)' }}>
+                        Bull {arena.bullPct}%
+                      </span>
+                      <span style={{ color: 'var(--v-bear)' }}>
+                        Bear {arena.bearPct}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
+
+                <div
+                  className="px-5 py-2.5 flex items-center justify-between v-caption-mono"
+                  style={{
+                    backgroundColor: 'var(--v-canvas-soft)',
+                    borderTop: '1px solid var(--v-hairline-subtle)',
+                  }}
+                >
+                  <span style={{ color: 'var(--v-mute)' }}>
+                    {arena.participantsCount} locked peers
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-1"
+                    style={{ color: 'var(--v-ink)' }}
+                  >
+                    <span>Sculpt in Studio</span>
+                    <ArrowRight size={11} />
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ZONE 3: 12-Column Split — Left 8 Cols Deployment Stream | Right 4 Cols Standings & Vault */}
+      <div className="grid grid-cols-1 lg:grid-cols-12">
+        {/* Left 8 Cols: Global Forecast Deployment Stream */}
+        <div
+          className="lg:col-span-8 min-w-0"
+          style={{ borderRight: '1px solid var(--v-hairline)' }}
+        >
+          <div
+            className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-3"
+            style={{
+              backgroundColor: 'var(--v-canvas-soft)',
+              borderBottom: '1px solid var(--v-hairline)',
+            }}
+          >
+            <div className="flex items-center gap-3 flex-1 min-w-[220px]">
+              <span
+                className="v-caption-mono uppercase whitespace-nowrap"
+                style={{ color: 'var(--v-ink)' }}
+              >
+                Deployments ({filteredForecasts.length})
+              </span>
+
+              <div className="relative flex-1 max-w-xs">
+                <Search
+                  size={12}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--v-mute)' }}
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Filter by $ticker, @handle, or thesis..."
+                  className="w-full h-7 pl-7 pr-2.5 rounded-[5px] text-xs outline-none"
+                  style={{
+                    backgroundColor: 'var(--v-canvas)',
+                    boxShadow: 'var(--v-shadow-border)',
+                    color: 'var(--v-ink)',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {(
+                [
+                  { id: 'all', label: 'All' },
+                  { id: 'live', label: 'Live' },
+                  { id: 'resolved', label: 'Settled' },
+                ] as const
+              ).map(tab => {
+                const active = statusFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setStatusFilter(tab.id)}
+                    className="px-2.5 py-0.5 rounded-[4px] v-caption-mono transition"
+                    style={{
+                      backgroundColor: active
+                        ? 'var(--v-canvas-soft-2)'
+                        : 'transparent',
+                      color: active ? 'var(--v-ink)' : 'var(--v-mute)',
+                      boxShadow: active ? 'var(--v-shadow-border)' : 'none',
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* 3. Top Elo Ranking Preview */}
           <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <h2 className="text-xs font-semibold text-zinc-300">Elo 리더보드 상위</h2>
+            {filteredForecasts.length > 0 ? (
+              filteredForecasts.map(forecast => (
+                <CompactForecastCard
+                  key={forecast.id}
+                  forecast={forecast}
+                  currentDateStr={currentDateStr}
+                  borderless={true}
+                />
+              ))
+            ) : (
+              <div className="p-12 text-center">
+                <p className="v-body-sm" style={{ color: 'var(--v-mute)' }}>
+                  No trajectory deployments match the current filter.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right 4 Cols: Top Elo Leaderboard Preview & My Locked Receipts */}
+        <div className="lg:col-span-4 min-w-0 flex flex-col">
+          {/* Block A: Top Elo Standings */}
+          <div style={{ borderBottom: '1px solid var(--v-hairline)' }}>
+            <div
+              className="px-5 py-2.5 flex items-center justify-between"
+              style={{
+                backgroundColor: 'var(--v-canvas-soft)',
+                borderBottom: '1px solid var(--v-hairline)',
+              }}
+            >
+              <span
+                className="v-caption-mono uppercase"
+                style={{ color: 'var(--v-mute)' }}
+              >
+                Top Elo standings
+              </span>
               <button
                 type="button"
                 onClick={() => navigate('/leaderboard')}
-                className="text-xs text-zinc-500 hover:text-zinc-200 transition"
+                className="v-caption-mono hover:underline"
+                style={{ color: 'var(--v-body)' }}
               >
-                순위표 →
+                Leaderboard →
               </button>
             </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 divide-y divide-zinc-800 overflow-hidden">
+            <div>
               {topUsers.map((u, idx) => (
                 <div
                   key={u.id}
                   onClick={() => navigate(`/u/${u.handle}`)}
-                  className="px-3.5 py-2.5 hover:bg-zinc-900/50 transition cursor-pointer flex items-center justify-between text-xs"
+                  className="px-5 py-3 flex items-center justify-between cursor-pointer transition-colors"
+                  style={{
+                    borderBottom:
+                      idx < topUsers.length - 1
+                        ? '1px solid var(--v-hairline-subtle)'
+                        : 'none',
+                  }}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="font-mono text-zinc-500 w-4">#{idx + 1}</span>
-                    <img
-                      src={u.avatarUrl}
-                      alt={u.name}
-                      className="w-6 h-6 rounded-full object-cover border border-zinc-800 flex-shrink-0"
-                    />
+                    <span
+                      className="v-caption-mono w-5"
+                      style={{ color: 'var(--v-mute)' }}
+                    >
+                      #{idx + 1}
+                    </span>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium text-zinc-100 truncate">{u.name}</span>
-                        <CheckCircle2 size={11} className="text-zinc-500 flex-shrink-0" />
+                      <div
+                        className="v-mono text-xs font-medium truncate hover:underline"
+                        style={{ color: 'var(--v-ink)' }}
+                      >
+                        @{u.handle}
+                      </div>
+                      <div
+                        className="v-caption truncate"
+                        style={{ color: 'var(--v-mute)' }}
+                      >
+                        {u.name}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 font-mono flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span
-                      className={`px-1.5 py-0.2 rounded text-[10px] border ${u.tierInfo.badgeClass}`}
+                      className="v-caption-mono px-1.5 py-0.2 rounded-[4px]"
+                      style={{
+                        backgroundColor: 'var(--v-canvas-soft-2)',
+                        boxShadow: 'var(--v-shadow-border)',
+                        color: 'var(--v-mute)',
+                      }}
                     >
                       {u.tierInfo.tier}
                     </span>
-                    <span className="font-semibold text-zinc-100 w-16 text-right">
-                      {u.liveElo.toLocaleString()} LP
+                    <span
+                      className="v-mono text-xs font-semibold w-16 text-right"
+                      style={{ color: 'var(--v-ink)' }}
+                    >
+                      {u.liveElo} LP
                     </span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Right Main Column (8 Cols): Market Project Cards & Live Deployment Rows */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* 1. Market Arenas (Vercel Project Cards Grid) */}
-          <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <h2 className="text-xs font-semibold text-zinc-300">종목 워크스페이스 (Markets)</h2>
-              <span className="text-[11px] text-zinc-500 font-mono">
-                5거래일 라운드 · 기준일 {currentDateStr}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-              {arenas.map(arena => {
-                const hasParticipated = myForecasts.some(f => f.ticker === arena.ticker);
-
-                return (
-                  <div
-                    key={arena.ticker}
-                    onClick={() => navigate(`/arena/${arena.ticker}`)}
-                    className="group rounded-lg border border-zinc-800 bg-zinc-950 hover:border-zinc-700 transition cursor-pointer flex flex-col justify-between divide-y divide-zinc-800/80"
-                  >
-                    <div className="p-4">
-                      {/* Project Header */}
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold text-base text-zinc-100 group-hover:underline">
-                              ${arena.ticker}
-                            </span>
-                            <span className="text-xs text-zinc-500">{arena.name}</span>
-                          </div>
-                          <div className="text-sm font-mono font-semibold text-zinc-200 mt-0.5">
-                            ${arena.currentPrice.toFixed(2)}
-                          </div>
-                        </div>
-                        {renderArenaSparkline(arena.ticker)}
-                      </div>
-
-                      {/* Consensus & Bull/Bear Bar */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs font-mono">
-                          <span className="text-zinc-500 font-sans text-[11px]">5D 컨센서스</span>
-                          {hasParticipated ? (
-                            <span
-                              className={
-                                arena.medianChangePct >= 0
-                                  ? 'text-emerald-400 font-medium'
-                                  : 'text-rose-400 font-medium'
-                              }
-                            >
-                              {formatPct(arena.medianChangePct)} (${arena.medianTargetPrice})
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400 font-sans">
-                              <Lock size={10} className="text-zinc-500" />
-                              <span>예측 시 공개</span>
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="w-full h-1 rounded-full bg-zinc-800 flex overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500"
-                            style={{ width: `${arena.bullPct}%` }}
-                          />
-                          <div
-                            className="h-full bg-rose-500"
-                            style={{ width: `${arena.bearPct}%` }}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
-                          <span className="text-emerald-400">BULL {arena.bullPct}%</span>
-                          <span className="text-rose-400">BEAR {arena.bearPct}%</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Footer */}
-                    <div className="px-4 py-2.5 flex items-center justify-between text-xs">
-                      <span className="text-zinc-500 font-mono text-[11px]">
-                        {arena.participantsCount}명 참여
-                      </span>
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.stopPropagation();
-                          navigate(`/draw?ticker=${arena.ticker}`);
-                        }}
-                        className="text-zinc-300 hover:text-white font-medium inline-flex items-center gap-1 transition"
-                      >
-                        <span>예측 등록</span>
-                        <ArrowRight size={11} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 2. Recent Forecast Deployments (Single Container + 1px Hairline Rows) */}
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xs font-semibold text-zinc-300">최근 등록된 5D 예측</h2>
-                <span className="text-xs font-mono text-zinc-500">
-                  ({filteredForecasts.length})
+          {/* Block B: My Session Receipts */}
+          <div className="flex-1 flex flex-col justify-between">
+            <div>
+              <div
+                className="px-5 py-2.5 flex items-center justify-between"
+                style={{
+                  backgroundColor: 'var(--v-canvas-soft)',
+                  borderBottom: '1px solid var(--v-hairline)',
+                }}
+              >
+                <span
+                  className="v-caption-mono uppercase"
+                  style={{ color: 'var(--v-mute)' }}
+                >
+                  My locked receipts ({myForecasts.length})
                 </span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/record')}
+                  className="v-caption-mono hover:underline"
+                  style={{ color: 'var(--v-body)' }}
+                >
+                  All records →
+                </button>
               </div>
 
-              <div className="flex items-center gap-1">
-                {(
-                  [
-                    { id: 'all', label: '전체' },
-                    { id: 'live', label: '진행 중' },
-                    { id: 'resolved', label: '정산 완료' },
-                  ] as const
-                ).map(tab => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setStatusFilter(tab.id)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${
-                      statusFilter === tab.id
-                        ? 'bg-zinc-100 text-black'
-                        : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+              {myForecasts.length > 0 ? (
+                <div>
+                  {myForecasts.slice(0, 4).map((f, idx) => {
+                    const target =
+                      f.path && f.path.length > 0
+                        ? f.path[f.path.length - 1].price
+                        : f.basePrice;
+                    const pct =
+                      f.basePrice > 0
+                        ? ((target - f.basePrice) / f.basePrice) * 100
+                        : 0;
+                    const st = deriveForecastStatus(f, currentDateStr);
+                    return (
+                      <div
+                        key={f.id}
+                        onClick={() => navigate(`/f/${f.id}`)}
+                        className="px-5 py-3 flex items-center justify-between cursor-pointer"
+                        style={{
+                          borderBottom:
+                            idx < Math.min(3, myForecasts.length - 1)
+                              ? '1px solid var(--v-hairline-subtle)'
+                              : 'none',
+                        }}
+                      >
+                        <div className="flex items-center gap-2 v-mono text-xs">
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              backgroundColor:
+                                st === 'RESOLVED'
+                                  ? 'var(--v-link)'
+                                  : pct >= 0
+                                  ? 'var(--v-bull)'
+                                  : 'var(--v-bear)',
+                            }}
+                          />
+                          <span
+                            className="font-semibold"
+                            style={{ color: 'var(--v-ink)' }}
+                          >
+                            ${f.ticker}
+                          </span>
+                          <span
+                            style={{
+                              color:
+                                pct >= 0 ? 'var(--v-bull)' : 'var(--v-bear)',
+                            }}
+                          >
+                            {pct >= 0 ? '+' : ''}
+                            {pct.toFixed(2)}%
+                          </span>
+                        </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 divide-y divide-zinc-800 overflow-hidden">
-              {filteredForecasts.length > 0 ? (
-                filteredForecasts.slice(0, 10).map(forecast => (
-                  <CompactForecastCard
-                    key={forecast.id}
-                    forecast={forecast}
-                    currentDateStr={currentDateStr}
-                    borderless={true}
-                  />
-                ))
+                        <div className="v-caption-mono flex items-center gap-2">
+                          <span style={{ color: 'var(--v-body)' }}>
+                            ${target.toFixed(2)}
+                          </span>
+                          <span style={{ color: 'var(--v-mute)' }}>
+                            Receipt ↗
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                <div className="py-12 px-4 text-center">
-                  <p className="text-xs text-zinc-400">
-                    조건에 일치하는 예측 기록이 없습니다.
+                <div className="p-6 text-center space-y-3">
+                  <p className="v-body-sm" style={{ color: 'var(--v-mute)' }}>
+                    No locked trajectories in this session yet. Sculpt your first 5D call in the studio.
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/')}
+                    className="v-btn-primary w-full"
+                  >
+                    Launch Trajectory Studio
+                  </button>
                 </div>
               )}
             </div>

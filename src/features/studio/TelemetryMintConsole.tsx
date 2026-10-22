@@ -13,6 +13,12 @@ const CATALYST_TAGS = [
   'Macro',
 ];
 
+const DIFFICULTY_EN_MAP: Record<string, string> = {
+  '컨센서스 동조': 'Consensus aligned',
+  '컨센서스 이탈': 'Consensus divergence',
+  '역발상 예측': 'Contrarian call',
+};
+
 interface TelemetryMintConsoleProps {
   ticker: string;
   baseDate: string;
@@ -44,6 +50,7 @@ export function TelemetryMintConsole({
 }: TelemetryMintConsoleProps) {
   const [selectedTag, setSelectedTag] = useState<string>('Breakout');
   const [thesisText, setThesisText] = useState<string>('');
+  const [showNodeMatrix, setShowNodeMatrix] = useState<boolean>(false);
 
   const stockMeta = STOCKS.find(s => s.ticker === ticker) || STOCKS[0];
 
@@ -71,6 +78,7 @@ export function TelemetryMintConsole({
     [myChangePct, crowdChangePct, stockMeta.volatility]
   );
 
+  // Only compute actual closes when timeline has advanced past baseDate (D+1, D+3, D+5)
   const actualCloses = useMemo(() => {
     if (currentDateStr <= baseDate) return [];
     const bars = getStockHistory(ticker);
@@ -151,17 +159,14 @@ export function TelemetryMintConsole({
     setThesisText('');
   };
 
-  const vectorSummary = activePrices
-    .map(p => {
-      const pct = basePrice > 0 ? ((p - basePrice) / basePrice) * 100 : 0;
-      return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
-    })
-    .join(', ');
+  const difficultyEn =
+    DIFFICULTY_EN_MAP[eloProjection.difficultyLabel] ||
+    eloProjection.difficultyLabel;
 
   return (
-    <aside className="flex flex-col h-full justify-between">
+    <aside className="flex flex-col h-full justify-between min-w-0">
       <div>
-        {/* Flush 2-Column Top Telemetry Split (No nested boxes) */}
+        {/* Block 1: Flush 2-Column Top Telemetry Split */}
         <div
           className="grid grid-cols-2"
           style={{ borderBottom: '1px solid var(--v-hairline)' }}
@@ -173,7 +178,7 @@ export function TelemetryMintConsole({
             <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
               D+5 target
             </span>
-            <div className="mt-1.5 flex items-baseline gap-2">
+            <div className="mt-1.5 flex items-baseline gap-2 flex-wrap">
               <span
                 className="v-mono text-2xl font-semibold tracking-tight"
                 style={{ color: 'var(--v-ink)' }}
@@ -196,12 +201,12 @@ export function TelemetryMintConsole({
           </div>
 
           <div className="p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1">
               <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
                 Elo stake
               </span>
-              <span className="v-caption-mono" style={{ color: 'var(--v-ink)' }}>
-                {eloProjection.difficultyLabel}
+              <span className="v-caption-mono truncate" style={{ color: 'var(--v-ink)' }}>
+                {difficultyEn}
               </span>
             </div>
             <div className="mt-1.5 flex items-baseline gap-1.5">
@@ -227,7 +232,7 @@ export function TelemetryMintConsole({
           </div>
         </div>
 
-        {/* Live 100-Point Hybrid Score Breakdown (Flush Cell when Time-Warp >= D+1) */}
+        {/* Block 2 (Conditional): Live 100-Point Hybrid Score Breakdown (Only when Time-Warp > D-0) */}
         {liveScore && liveSettlement && (
           <div
             className="p-4"
@@ -321,116 +326,167 @@ export function TelemetryMintConsole({
           </div>
         )}
 
-        {/* Flush 5-Day Coordinate Matrix (Edge-to-Edge Hairline Rows) */}
+        {/* Collapsible 5-Day Node Fine-Tuning Matrix (Collapsed by default to prevent visual duplication) */}
         <div style={{ borderBottom: '1px solid var(--v-hairline)' }}>
-          <div
-            className="px-4 py-2 flex items-center justify-between"
-            style={{
-              backgroundColor: 'var(--v-canvas-soft)',
-              borderBottom: '1px solid var(--v-hairline-subtle)',
-            }}
+          <button
+            type="button"
+            onClick={() => setShowNodeMatrix(prev => !prev)}
+            className="w-full px-4 py-2.5 flex items-center justify-between text-left transition"
+            style={{ backgroundColor: 'var(--v-canvas-soft)' }}
           >
-            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
-              Node vector (D+1..D+5)
+            <span className="v-caption-mono" style={{ color: 'var(--v-body)' }}>
+              {showNodeMatrix ? '▾' : '▸'} Fine-tune daily nodes (D+1..D+5)
             </span>
             <span className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-              Anchor ${basePrice.toFixed(2)}
+              ${activePrices[0]?.toFixed(1)} → ${finalPrice.toFixed(1)}
             </span>
-          </div>
+          </button>
 
-          <div className="divide-y" style={{ borderColor: 'var(--v-hairline-subtle)' }}>
-            {evalDates.map((d, idx) => {
-              const price = activePrices[idx] ?? basePrice;
-              const pct =
-                basePrice > 0 ? ((price - basePrice) / basePrice) * 100 : 0;
-              const actualClose = actualCloses[idx];
-
-              return (
-                <div
-                  key={d}
-                  className="px-4 py-2 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className="v-mono text-xs font-medium w-7"
-                      style={{ color: 'var(--v-ink)' }}
-                    >
-                      D+{idx + 1}
-                    </span>
-                    <span
-                      className="v-caption-mono"
+          {!showNodeMatrix ? (
+            <div
+              className="grid grid-cols-5"
+              style={{ borderTop: '1px solid var(--v-hairline-subtle)' }}
+            >
+              {evalDates.map((d, idx) => {
+                const price = activePrices[idx] ?? basePrice;
+                const pct =
+                  basePrice > 0 ? ((price - basePrice) / basePrice) * 100 : 0;
+                return (
+                  <div
+                    key={d}
+                    className="py-2.5 px-1.5 text-center"
+                    style={{
+                      borderRight:
+                        idx < 4 ? '1px solid var(--v-hairline-subtle)' : 'none',
+                    }}
+                  >
+                    <div
+                      className="v-caption-mono text-[10px]"
                       style={{ color: 'var(--v-mute)' }}
                     >
-                      {d}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="v-mono text-xs font-medium"
+                      D+{idx + 1}
+                    </div>
+                    <div
+                      className="v-mono text-[11px] font-medium mt-0.5"
                       style={{ color: 'var(--v-ink)' }}
                     >
-                      ${price.toFixed(2)}
-                    </span>
-                    <span
-                      className="v-mono text-xs w-14 text-right"
+                      ${price.toFixed(1)}
+                    </div>
+                    <div
+                      className="v-caption-mono text-[10px]"
                       style={{
                         color: pct >= 0 ? 'var(--v-bull)' : 'var(--v-bear)',
                       }}
                     >
                       {pct >= 0 ? '+' : ''}
-                      {pct.toFixed(2)}%
-                    </span>
-
-                    {!lockedForecast ? (
-                      <div className="inline-flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => adjustSingleNode(idx, -0.5)}
-                          className="w-5 h-5 rounded-[4px] v-mono text-xs flex items-center justify-center"
-                          style={{
-                            backgroundColor: 'var(--v-canvas-soft)',
-                            boxShadow: 'var(--v-shadow-border)',
-                            color: 'var(--v-body)',
-                          }}
-                          title="-0.5%"
-                        >
-                          -
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => adjustSingleNode(idx, 0.5)}
-                          className="w-5 h-5 rounded-[4px] v-mono text-xs flex items-center justify-center"
-                          style={{
-                            backgroundColor: 'var(--v-canvas-soft)',
-                            boxShadow: 'var(--v-shadow-border)',
-                            color: 'var(--v-body)',
-                          }}
-                          title="+0.5%"
-                        >
-                          +
-                        </button>
-                      </div>
-                    ) : (
-                      actualClose !== undefined && (
-                        <span
-                          className="v-caption-mono"
-                          style={{ color: 'var(--v-mute)' }}
-                        >
-                          Act ${actualClose.toFixed(1)}
-                        </span>
-                      )
-                    )}
+                      {pct.toFixed(1)}%
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ borderTop: '1px solid var(--v-hairline-subtle)' }}>
+              {evalDates.map((d, idx) => {
+                const price = activePrices[idx] ?? basePrice;
+                const pct =
+                  basePrice > 0 ? ((price - basePrice) / basePrice) * 100 : 0;
+                const actualClose = actualCloses[idx];
+
+                return (
+                  <div
+                    key={d}
+                    className="px-4 py-1.5 flex items-center justify-between"
+                    style={{
+                      borderBottom:
+                        idx < 4 ? '1px solid var(--v-hairline-subtle)' : 'none',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="v-mono text-xs font-medium w-7"
+                        style={{ color: 'var(--v-ink)' }}
+                      >
+                        D+{idx + 1}
+                      </span>
+                      <span
+                        className="v-caption-mono"
+                        style={{ color: 'var(--v-mute)' }}
+                      >
+                        {d.slice(5)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="v-mono text-xs font-medium"
+                        style={{ color: 'var(--v-ink)' }}
+                      >
+                        ${price.toFixed(2)}
+                      </span>
+                      <span
+                        className="v-mono text-xs w-14 text-right"
+                        style={{
+                          color: pct >= 0 ? 'var(--v-bull)' : 'var(--v-bear)',
+                        }}
+                      >
+                        {pct >= 0 ? '+' : ''}
+                        {pct.toFixed(2)}%
+                      </span>
+
+                      {!lockedForecast ? (
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => adjustSingleNode(idx, -0.5)}
+                            className="w-5 h-5 rounded-[4px] v-mono text-xs flex items-center justify-center"
+                            style={{
+                              backgroundColor: 'var(--v-canvas-soft)',
+                              boxShadow: 'var(--v-shadow-border)',
+                              color: 'var(--v-body)',
+                            }}
+                            title="-0.5%"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adjustSingleNode(idx, 0.5)}
+                            className="w-5 h-5 rounded-[4px] v-mono text-xs flex items-center justify-center"
+                            style={{
+                              backgroundColor: 'var(--v-canvas-soft)',
+                              boxShadow: 'var(--v-shadow-border)',
+                              color: 'var(--v-body)',
+                            }}
+                            title="+0.5%"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        actualClose !== undefined && (
+                          <span
+                            className="v-caption-mono"
+                            style={{ color: 'var(--v-mute)' }}
+                          >
+                            Act ${actualClose.toFixed(1)}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Bottom Mint / CLI Deployment Cell */}
-      <div className="p-4">
+      {/* Block 3: Catalyst Thesis & Immutable Lock Action */}
+      <div
+        className="p-4"
+        style={{ borderTop: '1px solid var(--v-hairline)' }}
+      >
         {lockedForecast ? (
           <div className="space-y-3">
             <div
@@ -464,27 +520,35 @@ export function TelemetryMintConsole({
           </div>
         ) : (
           <form onSubmit={handleSubmitLock} className="space-y-3">
-            <div className="flex flex-wrap gap-1">
-              {CATALYST_TAGS.map(tag => {
-                const active = selectedTag === tag;
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setSelectedTag(tag)}
-                    className="px-2 py-0.5 rounded-[4px] v-caption-mono transition"
-                    style={{
-                      backgroundColor: active
-                        ? 'var(--v-primary)'
-                        : 'var(--v-canvas-soft)',
-                      color: active ? 'var(--v-on-primary)' : 'var(--v-mute)',
-                      boxShadow: active ? 'none' : 'var(--v-shadow-border)',
-                    }}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
+            <div>
+              <span
+                className="v-caption-mono uppercase block mb-2"
+                style={{ color: 'var(--v-mute)' }}
+              >
+                Catalyst & thesis
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {CATALYST_TAGS.map(tag => {
+                  const active = selectedTag === tag;
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSelectedTag(tag)}
+                      className="px-2 py-0.5 rounded-[4px] v-caption-mono transition"
+                      style={{
+                        backgroundColor: active
+                          ? 'var(--v-primary)'
+                          : 'var(--v-canvas-soft)',
+                        color: active ? 'var(--v-on-primary)' : 'var(--v-mute)',
+                        boxShadow: active ? 'none' : 'var(--v-shadow-border)',
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <input
@@ -494,7 +558,7 @@ export function TelemetryMintConsole({
               value={thesisText}
               onChange={e => setThesisText(e.target.value)}
               placeholder={`Directional thesis for ${ticker} ($${finalPrice.toFixed(2)})...`}
-              className="w-full h-8 px-3 rounded-[6px] text-xs outline-none"
+              className="w-full h-9 px-3 rounded-[6px] text-xs outline-none"
               style={{
                 backgroundColor: 'var(--v-canvas-soft)',
                 boxShadow: 'var(--v-shadow-border)',
@@ -502,23 +566,20 @@ export function TelemetryMintConsole({
               }}
             />
 
-            {/* Authentic Vercel Build/Deployment CLI Log Preview */}
+            {/* Compact 2-Line CLI Receipt Preview (No duplicate 5-day vector) */}
             <div
-              className="p-2.5 rounded-[6px] v-caption-mono space-y-0.5"
+              className="px-3 py-2 rounded-[6px] v-caption-mono flex items-center justify-between gap-2"
               style={{
                 backgroundColor: 'var(--v-canvas-soft)',
                 boxShadow: 'var(--v-shadow-border)',
               }}
             >
-              <p style={{ color: 'var(--v-mute)' }}>
-                ▲ stoxdraw lock --ticker {ticker} --horizon 5d
-              </p>
-              <p className="truncate" style={{ color: 'var(--v-body)' }}>
-                vector [{vectorSummary}]
-              </p>
-              <p className="truncate" style={{ color: 'var(--v-dim)' }} title={digestHash}>
-                receipt {digestHash.slice(0, 26)}...
-              </p>
+              <span className="truncate" style={{ color: 'var(--v-mute)' }}>
+                ▲ lock --ticker {ticker}
+              </span>
+              <span className="truncate" style={{ color: 'var(--v-dim)' }} title={digestHash}>
+                {digestHash.slice(0, 14)}...
+              </span>
             </div>
 
             <button type="submit" className="v-btn-primary w-full">

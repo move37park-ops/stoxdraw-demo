@@ -10,20 +10,20 @@ export interface StockMeta {
 }
 
 export const CORE_STOCKS: StockMeta[] = [
-  { ticker: 'NVDA', name: '엔비디아', startPrice: 128.8, volatility: 0.038, logoColor: '#76b900' },
-  { ticker: 'TSLA', name: '테슬라', startPrice: 245.5, volatility: 0.035, logoColor: '#e82127' },
-  { ticker: 'AAPL', name: '애플', startPrice: 227.4, volatility: 0.018, logoColor: '#a2aaad' },
+  { ticker: 'NVDA', name: 'NVIDIA', startPrice: 128.8, volatility: 0.038, logoColor: '#76b900' },
+  { ticker: 'TSLA', name: 'Tesla', startPrice: 245.5, volatility: 0.035, logoColor: '#e82127' },
+  { ticker: 'AAPL', name: 'Apple', startPrice: 227.4, volatility: 0.018, logoColor: '#a2aaad' },
 ];
 
 export const STOCKS: StockMeta[] = [
   ...CORE_STOCKS,
-  { ticker: 'MSFT', name: '마이크로소프트', startPrice: 422.3, volatility: 0.019, logoColor: '#00a4ef' },
-  { ticker: 'AMZN', name: '아마존', startPrice: 186.2, volatility: 0.024, logoColor: '#ff9900' },
-  { ticker: 'META', name: '메타', startPrice: 585.1, volatility: 0.028, logoColor: '#0668e1' },
-  { ticker: 'GOOGL', name: '알파벳 (구글)', startPrice: 164.7, volatility: 0.021, logoColor: '#4285f4' },
+  { ticker: 'MSFT', name: 'Microsoft', startPrice: 422.3, volatility: 0.019, logoColor: '#00a4ef' },
+  { ticker: 'AMZN', name: 'Amazon', startPrice: 186.2, volatility: 0.024, logoColor: '#ff9900' },
+  { ticker: 'META', name: 'Meta', startPrice: 585.1, volatility: 0.028, logoColor: '#0668e1' },
+  { ticker: 'GOOGL', name: 'Alphabet', startPrice: 164.7, volatility: 0.021, logoColor: '#4285f4' },
   { ticker: 'AMD', name: 'AMD', startPrice: 156.4, volatility: 0.036, logoColor: '#ed1c24' },
-  { ticker: 'NFLX', name: '넷플릭스', startPrice: 698.0, volatility: 0.026, logoColor: '#e50914' },
-  { ticker: 'PLTR', name: '팔란티어', startPrice: 38.6, volatility: 0.042, logoColor: '#ffffff' },
+  { ticker: 'NFLX', name: 'Netflix', startPrice: 698.0, volatility: 0.026, logoColor: '#e50914' },
+  { ticker: 'PLTR', name: 'Palantir', startPrice: 38.6, volatility: 0.042, logoColor: '#ffffff' },
 ];
 
 function createSeededRandom(seed: number) {

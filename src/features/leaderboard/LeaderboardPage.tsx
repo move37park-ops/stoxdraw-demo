@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { repository } from '../../data/localRepository';
 import { deriveForecastStatus } from '../../domain/lifecycle';
 import { resolveForecast } from '../../domain/resolution';
@@ -26,11 +25,39 @@ interface RankedUser extends User {
   category: 'tech' | 'momentum' | 'macro';
 }
 
-const USER_META: Record<string, { specialty: string; category: 'tech' | 'momentum' | 'macro'; defaultScore: number; baseElo: number }> = {
-  u_quant: { specialty: '퀀트 모멘텀 & 변동성 돌파', category: 'momentum', defaultScore: 89.4, baseElo: 1920 },
-  u_alpha: { specialty: '빅테크 & 반도체 변곡점', category: 'tech', defaultScore: 86.2, baseElo: 1760 },
-  u_bull: { specialty: 'AI 성장주 추세 분석', category: 'tech', defaultScore: 80.5, baseElo: 1490 },
-  u_macro: { specialty: '금리 & 매크로 스윙', category: 'macro', defaultScore: 76.4, baseElo: 1320 },
+const USER_META: Record<
+  string,
+  {
+    specialty: string;
+    category: 'tech' | 'momentum' | 'macro';
+    defaultScore: number;
+    baseElo: number;
+  }
+> = {
+  u_quant: {
+    specialty: 'Volatility-normalized path & mean reversion',
+    category: 'momentum',
+    defaultScore: 89.4,
+    baseElo: 1920,
+  },
+  u_alpha: {
+    specialty: 'Semiconductor & hyperscaler gamma inflection',
+    category: 'tech',
+    defaultScore: 86.2,
+    baseElo: 1760,
+  },
+  u_bull: {
+    specialty: 'AI infrastructure & earnings momentum',
+    category: 'tech',
+    defaultScore: 80.5,
+    baseElo: 1490,
+  },
+  u_macro: {
+    specialty: 'Rates-driven swing & liquidity regimes',
+    category: 'macro',
+    defaultScore: 76.4,
+    baseElo: 1320,
+  },
 };
 
 export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
@@ -42,10 +69,12 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
 
     const scored = rawUsers.map(u => {
       const forecasts = repository.listByUser(u.id);
-      const resolved = forecasts.filter(f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED');
+      const resolved = forecasts.filter(
+        f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED'
+      );
 
       const meta = USER_META[u.id] || {
-        specialty: '5D 주가 궤적 분석',
+        specialty: '5D equity trajectory analysis',
         category: 'tech' as const,
         defaultScore: 74.0,
         baseElo: u.elo ?? DEFAULT_ELO,
@@ -80,13 +109,18 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
       const liveElo = Math.max(800, baseElo + netLpDelta);
       const tierInfo = getEloTierInfo(liveElo);
 
-      const score = scoreCount > 0 ? parseFloat((scoreSum / scoreCount).toFixed(1)) : meta.defaultScore;
-      const accuracy = resolved.length > 0
-        ? `${Math.round((hitCount / resolved.length) * 100)}%`
-        : `${Math.round(meta.defaultScore)}%`;
-      const avgMae = resolved.length > 0 && errorSum > 0
-        ? `±${(errorSum / resolved.length).toFixed(1)}%`
-        : '±3.4%';
+      const score =
+        scoreCount > 0
+          ? parseFloat((scoreSum / scoreCount).toFixed(1))
+          : meta.defaultScore;
+      const accuracy =
+        resolved.length > 0
+          ? `${Math.round((hitCount / resolved.length) * 100)}%`
+          : `${Math.round(meta.defaultScore)}%`;
+      const avgMae =
+        resolved.length > 0 && errorSum > 0
+          ? `±${(errorSum / resolved.length).toFixed(1)}%`
+          : '±3.4%';
 
       return {
         ...u,
@@ -108,186 +142,412 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
     return scored.map((u, i) => ({ ...u, rank: i + 1 }));
   }, [currentDateStr]);
 
-  const filtered = activeTab === 'all'
-    ? rankedUsers
-    : rankedUsers.filter(u => u.category === activeTab);
+  const filtered =
+    activeTab === 'all'
+      ? rankedUsers
+      : rankedUsers.filter(u => u.category === activeTab);
 
   const top3 = rankedUsers.slice(0, 3);
 
   return (
     <div className="w-full">
-      {/* Header & Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-zinc-100 tracking-tight">
-            Elo 리더보드
+      {/* ZONE 1: Architectural Masthead Band */}
+      <div
+        className="relative grid grid-cols-1 lg:grid-cols-12"
+        style={{ borderBottom: '1px solid var(--v-hairline)' }}
+      >
+        <span className="v-crosshair" style={{ bottom: -6, left: -6 }} />
+        <span className="v-crosshair" style={{ bottom: -6, right: -6 }} />
+
+        <div
+          className="lg:col-span-7 px-5 py-5 flex flex-col justify-center gap-2 min-w-0"
+          style={{ borderRight: '1px solid var(--v-hairline)' }}
+        >
+          <div
+            className="flex items-center gap-2 v-caption-mono uppercase"
+            style={{ color: 'var(--v-mute)' }}
+          >
+            <span style={{ color: 'var(--v-ink)' }}>Quantitative Elo standings</span>
+            <span style={{ color: 'var(--v-dim)' }}>·</span>
+            <span>As of {currentDateStr}</span>
+          </div>
+          <h1 className="v-display-hero">
+            <span style={{ color: 'var(--v-ink)' }}>
+              Forecasters ranked by verified 5-day trajectory precision.{' '}
+            </span>
+            <span style={{ color: 'var(--v-mute)', fontWeight: 400 }}>
+              Ratings settle automatically against real Friday market closes using time-weighted path skill and contrarian Elo stakes.
+            </span>
           </h1>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            실제 시장 종가 정산 기준 참여자 순위
-          </p>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {[
-            { id: 'all', label: '전체' },
-            { id: 'tech', label: '빅테크' },
-            { id: 'momentum', label: '모멘텀' },
-            { id: 'macro', label: '매크로' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as 'all' | 'tech' | 'momentum' | 'macro')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                activeTab === tab.id
-                  ? 'bg-zinc-100 text-black'
-                  : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="lg:col-span-5 grid grid-cols-3 min-w-0">
+          <div
+            className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
+            style={{ borderRight: '1px solid var(--v-hairline)' }}
+          >
+            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
+              Rating engine
+            </span>
+            <div className="mt-2">
+              <p
+                className="v-mono text-xl font-semibold tracking-tight"
+                style={{ color: 'var(--v-ink)' }}
+              >
+                K = 32
+              </p>
+              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                Zero-inflation Elo
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
+            style={{ borderRight: '1px solid var(--v-hairline)' }}
+          >
+            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
+              Hybrid rubric
+            </span>
+            <div className="mt-2">
+              <p
+                className="v-mono text-xl font-semibold tracking-tight"
+                style={{ color: 'var(--v-ink)' }}
+              >
+                50·30·20
+              </p>
+              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                Path · Dir · Target
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
+            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
+              Season leader
+            </span>
+            <div className="mt-2">
+              <p
+                className="v-mono text-xl font-semibold tracking-tight"
+                style={{ color: 'var(--v-bull)' }}
+              >
+                {top3[0]?.liveElo ?? 1920} LP
+              </p>
+              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                @{top3[0]?.handle ?? 'quant_craft'}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Top 3 Podium Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-        {top3.map((user) => (
+      {/* ZONE 2: Top 3 Podium (Flush 3-Column Architectural Grid) */}
+      <div
+        className="relative grid grid-cols-1 md:grid-cols-3"
+        style={{ borderBottom: '1px solid var(--v-hairline)' }}
+      >
+        <span className="v-crosshair" style={{ bottom: -6, left: -6 }} />
+        <span className="v-crosshair" style={{ bottom: -6, right: -6 }} />
+
+        {top3.map((user, idx) => (
           <div
             key={user.id}
             onClick={() => navigate(`/u/${user.handle}`)}
-            className={`group rounded-lg p-4 border transition-all cursor-pointer flex flex-col justify-between bg-zinc-950 ${
-              user.rank === 1
-                ? 'border-zinc-700 ring-1 ring-zinc-700/60'
-                : 'border-zinc-800 hover:border-zinc-700'
-            }`}
+            className="flex flex-col justify-between cursor-pointer transition-colors"
+            style={{
+              backgroundColor:
+                idx === 0 ? 'var(--v-canvas-soft)' : 'var(--v-canvas)',
+              borderRight: idx < 2 ? '1px solid var(--v-hairline)' : 'none',
+            }}
           >
-            <div>
+            <div className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-black text-zinc-300 border border-zinc-800 font-mono tabular-nums">
-                  #{user.rank}
+                <span
+                  className="v-mono text-xs font-semibold px-2 py-0.5 rounded-[4px]"
+                  style={{
+                    backgroundColor:
+                      idx === 0 ? 'var(--v-primary)' : 'var(--v-canvas-soft-2)',
+                    color:
+                      idx === 0 ? 'var(--v-on-primary)' : 'var(--v-ink)',
+                    boxShadow: idx === 0 ? 'none' : 'var(--v-shadow-border)',
+                  }}
+                >
+                  Rank #{user.rank}
                 </span>
 
-                <div className={`px-2 py-0.5 rounded-md text-xs font-medium font-mono tabular-nums flex items-center gap-1 border ${user.tierInfo.badgeClass}`}>
-                  <span>{user.tierInfo.tier}</span>
-                  <span>·</span>
-                  <span>{user.liveElo.toLocaleString()} LP</span>
-                </div>
+                <span
+                  className="v-caption-mono px-2 py-0.5 rounded-[4px]"
+                  style={{
+                    backgroundColor: 'var(--v-canvas-soft-2)',
+                    boxShadow: 'var(--v-shadow-border)',
+                    color: 'var(--v-ink)',
+                  }}
+                >
+                  {user.tierInfo.tier} · {user.liveElo} LP
+                </span>
               </div>
 
-              <div className="flex items-center gap-3 mb-3">
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  className="w-10 h-10 rounded-full object-cover border border-zinc-800"
-                />
+              <div className="flex items-baseline justify-between gap-2">
                 <div>
-                  <div className="flex items-center gap-1">
-                    <span className="font-semibold text-sm text-zinc-100 group-hover:underline transition">
-                      {user.name}
-                    </span>
-                    <CheckCircle2 size={13} className="text-zinc-400" />
+                  <div
+                    className="v-mono text-base font-semibold hover:underline"
+                    style={{ color: 'var(--v-ink)' }}
+                  >
+                    @{user.handle}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono tabular-nums">
-                    <span>@{user.handle}</span>
-                    {user.netLpDelta !== 0 && (
-                      <span className={user.netLpDelta >= 0 ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
-                        ({formatSignedLp(user.netLpDelta)})
-                      </span>
-                    )}
+                  <div
+                    className="v-caption mt-0.5"
+                    style={{ color: 'var(--v-mute)' }}
+                  >
+                    {user.name}
                   </div>
                 </div>
+
+                {user.netLpDelta !== 0 && (
+                  <span
+                    className="v-mono text-xs font-semibold"
+                    style={{
+                      color:
+                        user.netLpDelta >= 0
+                          ? 'var(--v-bull)'
+                          : 'var(--v-bear)',
+                    }}
+                  >
+                    {formatSignedLp(user.netLpDelta)}
+                  </span>
+                )}
               </div>
 
-              <p className="text-xs text-zinc-400 line-clamp-2 mb-3">
+              <p
+                className="v-body-sm mt-3 line-clamp-2"
+                style={{ color: 'var(--v-body)' }}
+              >
                 {user.bio}
               </p>
             </div>
 
-            <div className="pt-3 border-t border-zinc-850/60 grid grid-cols-3 gap-2 text-center font-mono tabular-nums">
-              <div>
-                <div className="text-[11px] text-zinc-500 font-sans">평균 점수</div>
-                <div className="text-xs font-medium text-zinc-200 mt-0.5">{user.score}점</div>
+            <div
+              className="grid grid-cols-3 text-center"
+              style={{
+                borderTop: '1px solid var(--v-hairline-subtle)',
+                backgroundColor: 'var(--v-canvas)',
+              }}
+            >
+              <div
+                className="py-2.5 px-2"
+                style={{ borderRight: '1px solid var(--v-hairline-subtle)' }}
+              >
+                <div
+                  className="v-caption-mono text-[10px] uppercase"
+                  style={{ color: 'var(--v-mute)' }}
+                >
+                  Mean score
+                </div>
+                <div
+                  className="v-mono text-xs font-semibold mt-0.5"
+                  style={{ color: 'var(--v-ink)' }}
+                >
+                  {user.score}
+                </div>
               </div>
-              <div>
-                <div className="text-[11px] text-zinc-500 font-sans">적중률</div>
-                <div className="text-xs font-medium text-emerald-400 mt-0.5">{user.accuracy}</div>
+              <div
+                className="py-2.5 px-2"
+                style={{ borderRight: '1px solid var(--v-hairline-subtle)' }}
+              >
+                <div
+                  className="v-caption-mono text-[10px] uppercase"
+                  style={{ color: 'var(--v-mute)' }}
+                >
+                  Hit rate
+                </div>
+                <div
+                  className="v-mono text-xs font-semibold mt-0.5"
+                  style={{ color: 'var(--v-bull)' }}
+                >
+                  {user.accuracy}
+                </div>
               </div>
-              <div>
-                <div className="text-[11px] text-zinc-500 font-sans">평균 오차</div>
-                <div className="text-xs font-medium text-zinc-300 mt-0.5">{user.avgMae}</div>
+              <div className="py-2.5 px-2">
+                <div
+                  className="v-caption-mono text-[10px] uppercase"
+                  style={{ color: 'var(--v-mute)' }}
+                >
+                  Mean error
+                </div>
+                <div
+                  className="v-mono text-xs font-semibold mt-0.5"
+                  style={{ color: 'var(--v-body)' }}
+                >
+                  {user.avgMae}
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Full Leaderboard Table */}
-      <div className="bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
+      {/* ZONE 3: Full Semantic Leaderboard Table */}
+      <div>
+        <div
+          className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-3"
+          style={{
+            backgroundColor: 'var(--v-canvas-soft)',
+            borderBottom: '1px solid var(--v-hairline)',
+          }}
+        >
+          <span
+            className="v-caption-mono uppercase"
+            style={{ color: 'var(--v-ink)' }}
+          >
+            Verified forecaster directory ({filtered.length})
+          </span>
+
+          <div className="flex items-center gap-1">
+            {(
+              [
+                { id: 'all', label: 'All strategies' },
+                { id: 'tech', label: 'Big Tech' },
+                { id: 'momentum', label: 'Momentum' },
+                { id: 'macro', label: 'Macro' },
+              ] as const
+            ).map(tab => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className="px-2.5 py-0.5 rounded-[4px] v-caption-mono transition"
+                  style={{
+                    backgroundColor: active
+                      ? 'var(--v-canvas-soft-2)'
+                      : 'transparent',
+                    color: active ? 'var(--v-ink)' : 'var(--v-mute)',
+                    boxShadow: active ? 'var(--v-shadow-border)' : 'none',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-xs sm:text-sm">
-            <thead className="bg-zinc-900/60 text-zinc-400 text-xs border-b border-zinc-800">
+          <table className="v-audit-table">
+            <thead>
               <tr>
-                <th className="py-3 px-4 text-left font-medium">순위</th>
-                <th className="py-3 px-4 text-left font-medium">참여자</th>
-                <th className="py-3 px-4 text-left font-medium">티어</th>
-                <th className="py-3 px-4 text-left font-medium hidden md:table-cell">분야</th>
-                <th className="py-3 px-4 text-right font-medium">평균 점수</th>
-                <th className="py-3 px-4 text-right font-medium">Elo 레이팅</th>
-                <th className="py-3 px-4 text-right font-medium"></th>
+                <th scope="col">Rank</th>
+                <th scope="col">Forecaster</th>
+                <th scope="col">Tier</th>
+                <th scope="col" className="hidden md:table-cell">
+                  Focus strategy
+                </th>
+                <th scope="col" className="v-numeric">
+                  Settled / Total
+                </th>
+                <th scope="col" className="v-numeric">
+                  Mean score
+                </th>
+                <th scope="col" className="v-numeric">
+                  Hit rate
+                </th>
+                <th scope="col" className="v-numeric">
+                  Mean error
+                </th>
+                <th scope="col" className="v-numeric">
+                  Elo rating
+                </th>
+                <th scope="col" className="v-numeric">
+                  Dossier
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/60">
-              {filtered.map((user) => (
+            <tbody>
+              {filtered.map(user => (
                 <tr
                   key={user.id}
                   onClick={() => navigate(`/u/${user.handle}`)}
-                  className="hover:bg-zinc-900/40 transition cursor-pointer"
+                  className="cursor-pointer"
                 >
-                  <td className="py-3 px-4 text-left font-mono font-medium text-zinc-400">
+                  <td className="v-mono font-medium" style={{ color: 'var(--v-mute)' }}>
                     #{user.rank}
                   </td>
-                  <td className="py-3 px-4 text-left">
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.name}
-                        className="w-7 h-7 rounded-full object-cover border border-zinc-800"
-                      />
-                      <div>
-                        <div className="font-medium text-zinc-100 flex items-center gap-1 text-xs sm:text-sm">
-                          <span>{user.name}</span>
-                          <CheckCircle2 size={12} className="text-zinc-400" />
-                        </div>
-                        <div className="text-[11px] text-zinc-500 font-mono">
-                          @{user.handle}
-                        </div>
-                      </div>
+                  <td>
+                    <div className="flex items-baseline gap-2">
+                      <span
+                        className="v-mono text-xs font-semibold hover:underline"
+                        style={{ color: 'var(--v-ink)' }}
+                      >
+                        @{user.handle}
+                      </span>
+                      <span
+                        className="v-caption hidden sm:inline"
+                        style={{ color: 'var(--v-mute)' }}
+                      >
+                        {user.name}
+                      </span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-left">
-                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-medium border ${user.tierInfo.badgeClass}`}>
+                  <td>
+                    <span
+                      className="v-caption-mono px-1.5 py-0.5 rounded-[4px]"
+                      style={{
+                        backgroundColor: 'var(--v-canvas-soft-2)',
+                        boxShadow: 'var(--v-shadow-border)',
+                        color: 'var(--v-body)',
+                      }}
+                    >
                       {user.tierInfo.tier}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-left text-xs text-zinc-400 hidden md:table-cell">
+                  <td
+                    className="hidden md:table-cell v-caption"
+                    style={{ color: 'var(--v-mute)' }}
+                  >
                     {user.specialty}
                   </td>
-                  <td className="py-3 px-4 text-right text-xs font-mono text-zinc-200">
-                    {user.score}점
+                  <td className="v-numeric" style={{ color: 'var(--v-body)' }}>
+                    {user.verifiedCount} / {user.totalCount}
                   </td>
-                  <td className="py-3 px-4 text-right font-mono">
-                    <span className="font-semibold text-zinc-100 text-xs sm:text-sm">
-                      {user.liveElo.toLocaleString()} LP
-                    </span>
+                  <td className="v-numeric font-medium">
+                    {user.score.toFixed(1)}
+                  </td>
+                  <td
+                    className="v-numeric"
+                    style={{ color: 'var(--v-bull)' }}
+                  >
+                    {user.accuracy}
+                  </td>
+                  <td
+                    className="v-numeric"
+                    style={{ color: 'var(--v-mute)' }}
+                  >
+                    {user.avgMae}
+                  </td>
+                  <td className="v-numeric font-semibold">
+                    <span>{user.liveElo} LP</span>
                     {user.netLpDelta !== 0 && (
-                      <span className={`ml-1.5 text-xs font-medium ${user.netLpDelta >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <span
+                        className="ml-1.5 text-[11px]"
+                        style={{
+                          color:
+                            user.netLpDelta >= 0
+                              ? 'var(--v-bull)'
+                              : 'var(--v-bear)',
+                        }}
+                      >
                         ({formatSignedLp(user.netLpDelta)})
                       </span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-right">
-                    <ArrowRight size={13} className="inline text-zinc-500" />
+                  <td className="v-numeric">
+                    <span
+                      className="v-caption-mono hover:underline"
+                      style={{ color: 'var(--v-mute)' }}
+                    >
+                      Inspect →
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -298,3 +558,4 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
     </div>
   );
 }
+export default LeaderboardPage;

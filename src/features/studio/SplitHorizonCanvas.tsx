@@ -9,6 +9,45 @@ export interface OverlayRival {
   colorVar: string;
 }
 
+interface RightLaneLabel {
+  id: string;
+  rawY: number;
+  y: number;
+  text: string;
+  color: string;
+  bold?: boolean;
+}
+
+function resolveRightLaneLabels(
+  items: Omit<RightLaneLabel, 'y'>[],
+  minGap: number,
+  minY: number,
+  maxY: number
+): RightLaneLabel[] {
+  const sorted = [...items]
+    .sort((a, b) => a.rawY - b.rawY)
+    .map(item => ({ ...item, y: Math.max(minY, Math.min(maxY, item.rawY)) }));
+
+  // Forward pass: push down overlapping labels
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].y - sorted[i - 1].y < minGap) {
+      sorted[i].y = sorted[i - 1].y + minGap;
+    }
+  }
+
+  // Backward pass: keep within bottom boundary
+  if (sorted.length > 0 && sorted[sorted.length - 1].y > maxY) {
+    sorted[sorted.length - 1].y = maxY;
+    for (let i = sorted.length - 2; i >= 0; i--) {
+      if (sorted[i + 1].y - sorted[i].y < minGap) {
+        sorted[i].y = Math.max(minY, sorted[i + 1].y - minGap);
+      }
+    }
+  }
+
+  return sorted;
+}
+
 interface SplitHorizonCanvasProps {
   ticker: string;
   baseDate: string;
@@ -71,7 +110,7 @@ export function SplitHorizonCanvas({
     return upToBase.slice(-15);
   }, [allBars, baseDate]);
 
-  // Actual bars for evalDates that have settled
+  // Actual bars for evalDates that have settled (only when currentDateStr > baseDate)
   const actualEvalBars = useMemo(() => {
     const map = new Map(allBars.map(b => [b.date, b]));
     return evalDates.map(d => {
@@ -82,7 +121,6 @@ export function SplitHorizonCanvas({
     });
   }, [allBars, evalDates, currentDateStr, baseDate]);
 
-  // Active trajectory prices
   const activePrices: number[] = useMemo(() => {
     if (lockedForecast && lockedForecast.path && lockedForecast.path.length > 0) {
       return evalDates.map((d, i) => {
@@ -93,7 +131,6 @@ export function SplitHorizonCanvas({
     return draftPrices;
   }, [lockedForecast, draftPrices, evalDates, basePrice]);
 
-  // Crowd distribution (P20, Median, P80)
   const crowdBand = useMemo(() => {
     const valid = allTickerForecasts.filter(
       f => f.mode === 'path' && f.path && f.path.length >= 5 && f.basePrice > 0
@@ -124,14 +161,16 @@ export function SplitHorizonCanvas({
     [ticker, basePrice]
   );
 
-  // Price domain
+  // Tighter Y-axis domain so price curves look dynamic without excessive vertical whitespace
   const { minPrice, maxPrice } = useMemo(() => {
     const prices: number[] = [basePrice, ...activePrices];
     historyBars.forEach(b => {
       prices.push(b.high, b.low);
     });
-    landmarks.forEach(l => prices.push(l.price));
-    if (crowdBand) {
+    if (showLandmarks) {
+      landmarks.forEach(l => prices.push(l.price));
+    }
+    if (showCrowdBand && crowdBand) {
       crowdBand.forEach(c => prices.push(c.p20, c.p80));
     }
     overlaidRivals.forEach(r => {
@@ -144,15 +183,15 @@ export function SplitHorizonCanvas({
       });
     });
     actualEvalBars.forEach(b => {
-      if (b) prices.push(b.close, b.high, b.low);
+      if (b) prices.push(b.close);
     });
 
-    const fiveDayMove = basePrice * stockMeta.volatility * Math.sqrt(5) * 1.4;
+    const fiveDayMove = basePrice * stockMeta.volatility * Math.sqrt(5) * 0.85;
     prices.push(basePrice + fiveDayMove, basePrice - fiveDayMove);
 
     const rawMin = Math.min(...prices);
     const rawMax = Math.max(...prices);
-    const pad = Math.max((rawMax - rawMin) * 0.12, basePrice * 0.02);
+    const pad = Math.max((rawMax - rawMin) * 0.08, basePrice * 0.012);
     return {
       minPrice: rawMin - pad,
       maxPrice: rawMax + pad,
@@ -162,20 +201,22 @@ export function SplitHorizonCanvas({
     activePrices,
     historyBars,
     landmarks,
+    showLandmarks,
     crowdBand,
+    showCrowdBand,
     overlaidRivals,
     actualEvalBars,
     stockMeta.volatility,
   ]);
 
-  // SVG Geometry Constants
+  // Compact, well-proportioned SVG Geometry
   const SVG_W = 920;
-  const SVG_H = 440;
-  const PAD_TOP = 32;
-  const PAD_BOTTOM = 44;
-  const PLOT_LEFT = 56;
-  const ANCHOR_X = 416;
-  const SANDBOX_RIGHT = 744;
+  const SVG_H = 368;
+  const PAD_TOP = 28;
+  const PAD_BOTTOM = 38;
+  const PLOT_LEFT = 54;
+  const ANCHOR_X = 412;
+  const SANDBOX_RIGHT = 736;
   const PLOT_H = SVG_H - PAD_TOP - PAD_BOTTOM;
 
   const priceToY = (p: number) => {
@@ -338,11 +379,80 @@ export function SplitHorizonCanvas({
     return Array.from({ length: count }, (_, i) => minPrice + i * step);
   }, [minPrice, maxPrice]);
 
+  // Build collision-free Right Lane Direct Labels
+  const rightLaneLabels = useMemo(() => {
+    const rawItems: Omit<RightLaneLabel, 'y'>[] = [];
+
+    if (showLandmarks) {
+      landmarks.forEach(lm => {
+        rawItems.push({
+          id: `lm-${lm.id}`,
+          rawY: priceToY(lm.price),
+          text: `${lm.shortLabel} $${lm.price.toFixed(1)}`,
+          color: 'var(--v-mute)',
+        });
+      });
+    }
+
+    if (showCrowdBand && crowdBand) {
+      rawItems.push({
+        id: 'crowd-med',
+        rawY: priceToY(crowdBand[4].med),
+        text: `CROWD $${crowdBand[4].med.toFixed(1)}`,
+        color: 'var(--v-link)',
+      });
+    }
+
+    overlaidRivals.forEach(rival => {
+      if (!rival.forecast.path || rival.forecast.basePrice <= 0) return;
+      const lastPt = rival.forecast.path[rival.forecast.path.length - 1];
+      if (!lastPt) return;
+      const pct = (lastPt.price - rival.forecast.basePrice) / rival.forecast.basePrice;
+      const projected = basePrice * (1 + pct);
+      rawItems.push({
+        id: `rival-${rival.forecast.id}`,
+        rawY: priceToY(projected),
+        text: `@${rival.authorHandle} ${pct >= 0 ? '+' : ''}${(pct * 100).toFixed(1)}%`,
+        color: rival.colorVar,
+      });
+    });
+
+    rawItems.push({
+      id: 'active-user',
+      rawY: priceToY(endPrice),
+      text: `${lockedForecast ? 'LOCKED' : 'YOUR DRAW'} ${
+        endChangePct >= 0 ? '+' : ''
+      }${endChangePct.toFixed(2)}%`,
+      color: activeStrokeColor,
+      bold: true,
+    });
+
+    return resolveRightLaneLabels(
+      rawItems,
+      15,
+      PAD_TOP + 8,
+      PAD_TOP + PLOT_H - 6
+    );
+  }, [
+    showLandmarks,
+    landmarks,
+    showCrowdBand,
+    crowdBand,
+    overlaidRivals,
+    basePrice,
+    endPrice,
+    endChangePct,
+    lockedForecast,
+    activeStrokeColor,
+    minPrice,
+    maxPrice,
+  ]);
+
   return (
-    <div className="relative flex flex-col h-full justify-between">
+    <div className="relative flex flex-col h-full justify-between min-w-0">
       {/* Top Canvas Toolbar */}
       <div
-        className="px-5 py-3 flex flex-wrap items-center justify-between gap-3"
+        className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-2"
         style={{ borderBottom: '1px solid var(--v-hairline)' }}
       >
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -392,7 +502,6 @@ export function SplitHorizonCanvas({
           )}
         </div>
 
-        {/* Layer Controls */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
@@ -470,7 +579,6 @@ export function SplitHorizonCanvas({
           aria-label={`${ticker} 15-day history and 5-day trajectory studio`}
         >
           <defs>
-            {/* Signature Vercel Architectural Dot Matrix for Future Sandbox */}
             <pattern
               id="v-sandbox-dots"
               width="14"
@@ -480,7 +588,6 @@ export function SplitHorizonCanvas({
               <circle cx="2" cy="2" r="0.85" fill="var(--v-dot-color)" />
             </pattern>
 
-            {/* Signature Vercel 45-degree Diagonal Hatch for Crowd Dispersion Band */}
             <pattern
               id="v-crowd-hatch"
               width="7"
@@ -499,7 +606,6 @@ export function SplitHorizonCanvas({
               />
             </pattern>
 
-            {/* Monochrome Area Fade for Historical Price Line */}
             <linearGradient id="v-history-fade" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--v-ink)" stopOpacity="0.10" />
               <stop offset="100%" stopColor="var(--v-ink)" stopOpacity="0.0" />
@@ -529,7 +635,7 @@ export function SplitHorizonCanvas({
                   strokeWidth="1"
                 />
                 <text
-                  x={PLOT_LEFT - 10}
+                  x={PLOT_LEFT - 8}
                   y={y + 3.5}
                   textAnchor="end"
                   className="v-caption-mono"
@@ -561,7 +667,7 @@ export function SplitHorizonCanvas({
                 />
                 <text
                   x={x}
-                  y={SVG_H - 22}
+                  y={SVG_H - 18}
                   textAnchor="middle"
                   className="v-caption-mono"
                   fill={isHovered ? 'var(--v-ink)' : 'var(--v-mute)'}
@@ -571,11 +677,11 @@ export function SplitHorizonCanvas({
                 </text>
                 <text
                   x={x}
-                  y={SVG_H - 8}
+                  y={SVG_H - 6}
                   textAnchor="middle"
                   className="v-caption-mono"
                   fill="var(--v-dim)"
-                  fontSize="10"
+                  fontSize="9.5"
                 >
                   {d.slice(5)}
                 </text>
@@ -586,7 +692,7 @@ export function SplitHorizonCanvas({
           {/* Zone Captions */}
           <text
             x={PLOT_LEFT + 4}
-            y={PAD_TOP - 10}
+            y={PAD_TOP - 9}
             className="v-caption-mono"
             fill="var(--v-mute)"
             fontSize="10"
@@ -595,12 +701,12 @@ export function SplitHorizonCanvas({
           </text>
           <text
             x={ANCHOR_X + 8}
-            y={PAD_TOP - 10}
+            y={PAD_TOP - 9}
             className="v-caption-mono"
             fill="var(--v-ink)"
             fontSize="10"
           >
-            FORECAST HORIZON (5D) — DRAG NODES TO SCULPT
+            FORECAST HORIZON (5D) · DRAG NODES TO SCULPT
           </text>
 
           {/* Horizontal Base Price Reference across Sandbox */}
@@ -614,35 +720,25 @@ export function SplitHorizonCanvas({
             strokeWidth="1"
           />
 
-          {/* LAYER 1: Market Landmarks (Wall St. Target & Options Support) */}
+          {/* LAYER 1: Market Landmarks Guide Lines */}
           {showLandmarks &&
             landmarks.map(lm => {
               const y = priceToY(lm.price);
               return (
-                <g key={lm.id}>
-                  <line
-                    x1={ANCHOR_X}
-                    y1={y}
-                    x2={SANDBOX_RIGHT}
-                    y2={y}
-                    stroke="var(--v-hairline-strong)"
-                    strokeDasharray="4 4"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={SANDBOX_RIGHT + 10}
-                    y={y + 3}
-                    className="v-caption-mono"
-                    fill="var(--v-mute)"
-                    fontSize="10"
-                  >
-                    {lm.shortLabel} ${lm.price.toFixed(1)}
-                  </text>
-                </g>
+                <line
+                  key={lm.id}
+                  x1={ANCHOR_X}
+                  y1={y}
+                  x2={SANDBOX_RIGHT}
+                  y2={y}
+                  stroke="var(--v-hairline-strong)"
+                  strokeDasharray="4 4"
+                  strokeWidth="1"
+                />
               );
             })}
 
-          {/* LAYER 2: Crowd Consensus Band (Diagonal Hatch + Median Line) */}
+          {/* LAYER 2: Crowd Consensus Band */}
           {showCrowdBand && crowdBand && (
             <g>
               <polygon
@@ -669,15 +765,6 @@ export function SplitHorizonCanvas({
                   ...crowdBand.map((c, i) => `${getEvalX(i)},${priceToY(c.med)}`),
                 ].join(' ')}
               />
-              <text
-                x={SANDBOX_RIGHT + 10}
-                y={priceToY(crowdBand[4].med) + 3}
-                className="v-caption-mono"
-                fill="var(--v-link)"
-                fontSize="10"
-              >
-                CROWD ${crowdBand[4].med.toFixed(1)}
-              </text>
             </g>
           )}
 
@@ -707,11 +794,11 @@ export function SplitHorizonCanvas({
                   <text
                     key={b.date}
                     x={getHistoryX(idx)}
-                    y={SVG_H - 8}
+                    y={SVG_H - 6}
                     textAnchor="middle"
                     className="v-caption-mono"
                     fill="var(--v-dim)"
-                    fontSize="10"
+                    fontSize="9.5"
                   >
                     {b.date.slice(5)}
                   </text>
@@ -751,11 +838,11 @@ export function SplitHorizonCanvas({
                   {idx % 4 === 0 && (
                     <text
                       x={x}
-                      y={SVG_H - 8}
+                      y={SVG_H - 6}
                       textAnchor="middle"
                       className="v-caption-mono"
                       fill="var(--v-dim)"
-                      fontSize="10"
+                      fontSize="9.5"
                     >
                       {bar.date.slice(5)}
                     </text>
@@ -776,7 +863,7 @@ export function SplitHorizonCanvas({
           />
           <text
             x={ANCHOR_X}
-            y={SVG_H - 22}
+            y={SVG_H - 18}
             textAnchor="middle"
             className="v-caption-mono"
             fill="var(--v-ink)"
@@ -786,11 +873,11 @@ export function SplitHorizonCanvas({
           </text>
           <text
             x={ANCHOR_X}
-            y={SVG_H - 8}
+            y={SVG_H - 6}
             textAnchor="middle"
             className="v-caption-mono"
             fill="var(--v-mute)"
-            fontSize="10"
+            fontSize="9.5"
           >
             {baseDate.slice(5)}
           </text>
@@ -802,13 +889,12 @@ export function SplitHorizonCanvas({
               const pct =
                 (pt.price - rival.forecast.basePrice) / rival.forecast.basePrice;
               const projected = basePrice * (1 + pct);
-              return { x: getEvalX(idx), y: priceToY(projected), pct: pct * 100 };
+              return { x: getEvalX(idx), y: priceToY(projected) };
             });
             const poly = [
               `${ANCHOR_X},${anchorY}`,
               ...pts.map(p => `${p.x},${p.y}`),
             ].join(' ');
-            const lastPt = pts[pts.length - 1];
 
             return (
               <g key={rival.forecast.id}>
@@ -828,23 +914,11 @@ export function SplitHorizonCanvas({
                     fill={rival.colorVar}
                   />
                 ))}
-                {lastPt && (
-                  <text
-                    x={SANDBOX_RIGHT + 10}
-                    y={lastPt.y + 3}
-                    className="v-caption-mono"
-                    fill={rival.colorVar}
-                    fontSize="10"
-                  >
-                    @{rival.authorHandle} {lastPt.pct >= 0 ? '+' : ''}
-                    {lastPt.pct.toFixed(1)}%
-                  </text>
-                )}
               </g>
             );
           })}
 
-          {/* LAYER 4: Error Area & Actual Closes (When Time-Warp > D-0) */}
+          {/* LAYER 4: Error Area & Actual Closes (Only when Time-Warp > D-0) */}
           {errorPolygonPoints && (
             <polygon
               points={errorPolygonPoints}
@@ -878,7 +952,7 @@ export function SplitHorizonCanvas({
               ))}
               <text
                 x={settledPoints[settledPoints.length - 1].x + 8}
-                y={settledPoints[settledPoints.length - 1].y - 8}
+                y={settledPoints[settledPoints.length - 1].y + 14}
                 className="v-caption-mono"
                 fill="var(--v-ink)"
                 fontSize="10"
@@ -930,9 +1004,9 @@ export function SplitHorizonCanvas({
                   <g>
                     <rect
                       x={x - 38}
-                      y={y - 26}
+                      y={y - 25}
                       width="76"
-                      height="18"
+                      height="17"
                       rx="3"
                       fill="var(--v-canvas)"
                       stroke="var(--v-hairline-strong)"
@@ -940,7 +1014,7 @@ export function SplitHorizonCanvas({
                     />
                     <text
                       x={x}
-                      y={y - 14}
+                      y={y - 13.5}
                       textAnchor="middle"
                       className="v-caption-mono"
                       fill="var(--v-ink)"
@@ -955,24 +1029,37 @@ export function SplitHorizonCanvas({
             );
           })}
 
-          {/* Direct Label in Right Lane */}
-          <text
-            x={SANDBOX_RIGHT + 10}
-            y={priceToY(endPrice) + 3.5}
-            className="v-caption-mono"
-            fill={activeStrokeColor}
-            fontSize="10.5"
-            fontWeight="600"
-          >
-            {lockedForecast ? 'LOCKED' : 'ACTIVE'}{' '}
-            {endChangePct >= 0 ? '+' : ''}
-            {endChangePct.toFixed(2)}%
-          </text>
+          {/* Collision-Free Right-Lane Direct Labels */}
+          {rightLaneLabels.map(lbl => {
+            const shifted = Math.abs(lbl.y - lbl.rawY) > 2;
+            return (
+              <g key={lbl.id}>
+                {shifted && (
+                  <polyline
+                    fill="none"
+                    stroke="var(--v-hairline-strong)"
+                    strokeWidth="0.75"
+                    points={`${SANDBOX_RIGHT + 2},${lbl.rawY} ${SANDBOX_RIGHT + 7},${lbl.y}`}
+                  />
+                )}
+                <text
+                  x={SANDBOX_RIGHT + 10}
+                  y={lbl.y + 3.5}
+                  className="v-caption-mono"
+                  fill={lbl.color}
+                  fontSize="10"
+                  fontWeight={lbl.bold ? '600' : '400'}
+                >
+                  {lbl.text}
+                </text>
+              </g>
+            );
+          })}
         </svg>
 
         {/* Overlaid Rivals Strip */}
         {overlaidRivals.length > 0 && (
-          <div className="px-5 pb-2.5 flex items-center gap-2 flex-wrap">
+          <div className="px-5 pb-2 flex items-center gap-2 flex-wrap">
             <span className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
               pinned series:
             </span>

@@ -4,12 +4,12 @@ import { SEED_USERS, generateSeedForecasts, SEED_COMMENTS, SEED_NOTIFICATIONS } 
 import { deriveForecastStatus } from '../domain/lifecycle';
 
 const KEYS = {
-  FORECASTS: 'stoxdraw_v5_forecasts',
-  USERS: 'stoxdraw_v5_users',
-  LIKES: 'stoxdraw_v5_likes',
-  FOLLOWS: 'stoxdraw_v5_follows',
-  COMMENTS: 'stoxdraw_v5_comments',
-  NOTIFICATIONS: 'stoxdraw_v5_notifications',
+  FORECASTS: 'stoxdraw_v6_forecasts',
+  USERS: 'stoxdraw_v6_users',
+  LIKES: 'stoxdraw_v6_likes',
+  FOLLOWS: 'stoxdraw_v6_follows',
+  COMMENTS: 'stoxdraw_v6_comments',
+  NOTIFICATIONS: 'stoxdraw_v6_notifications',
 };
 
 class LocalRepository implements Repository {

@@ -33,11 +33,15 @@ function buildInitialDraft(ticker: string, basePrice: number): number[] {
 interface TrajectoryStudioPageProps {
   currentDateStr: string;
   onDateChange: (date: string) => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 export function TrajectoryStudioPage({
   currentDateStr,
   onDateChange,
+  theme: propTheme,
+  onToggleTheme: propToggleTheme,
 }: TrajectoryStudioPageProps) {
   const params = useParams<{ ticker?: string }>();
   const [searchParams] = useSearchParams();
@@ -48,10 +52,29 @@ export function TrajectoryStudioPage({
     'NVDA'
   ).toUpperCase();
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [localTheme, setLocalTheme] = useState<'dark' | 'light'>('dark');
+  const theme = propTheme ?? localTheme;
+  const handleToggleTheme =
+    propToggleTheme ??
+    (() => setLocalTheme(prev => (prev === 'dark' ? 'light' : 'dark')));
+
   const [selectedTicker, setSelectedTicker] = useState<string>(
     STOCKS.some(s => s.ticker === initialTicker) ? initialTicker : 'NVDA'
   );
+
+  useEffect(() => {
+    if (params.ticker) {
+      const upper = params.ticker.toUpperCase();
+      if (STOCKS.some(s => s.ticker === upper) && upper !== selectedTicker) {
+        setSelectedTicker(upper);
+      }
+    }
+  }, [params.ticker, selectedTicker]);
+
+  // Unified timeline date from App.tsx (defaults to '2026-10-02' D-0 Lock)
+  const studioDateStr = currentDateStr;
+  const setStudioDateStr = onDateChange;
+
   const [currentUser, setCurrentUser] = useState<User | null>(() =>
     getCurrentUser()
   );
@@ -143,9 +166,9 @@ export function TrajectoryStudioPage({
     const base = currentUser?.elo ?? DEFAULT_ELO;
     let delta = 0;
     myForecasts.forEach(f => {
-      if (deriveForecastStatus(f, currentDateStr) === 'RESOLVED') {
+      if (deriveForecastStatus(f, studioDateStr) === 'RESOLVED') {
         const bars = getStockHistory(f.ticker).filter(
-          b => b.date <= currentDateStr
+          b => b.date <= studioDateStr
         );
         const res = resolveForecast(f, bars);
         if (res.eloSettlement) {
@@ -154,7 +177,7 @@ export function TrajectoryStudioPage({
       }
     });
     return base + delta;
-  }, [currentUser, myForecasts, currentDateStr]);
+  }, [currentUser, myForecasts, studioDateStr]);
 
   const lockedForecast = useMemo(
     () =>
@@ -246,9 +269,10 @@ export function TrajectoryStudioPage({
     setActiveForecastId(created.id);
   };
 
+  const cleanAnonSuffix = anonId.replace(/^anon[_-]?/i, '').slice(0, 4) || 'guest';
   const userHandle = currentUser
     ? currentUser.handle
-    : `anon_${anonId.slice(0, 4)}`;
+    : `guest_${cleanAnonSuffix}`;
 
   const stockMeta = STOCKS.find(s => s.ticker === selectedTicker) || STOCKS[0];
   const crowdPct = crowdAggregate.consensusChangePct ?? 0;
@@ -258,8 +282,8 @@ export function TrajectoryStudioPage({
       {/* ZONE 1: Top Command Bar */}
       <StudioCommandBar
         ticker={selectedTicker}
-        currentDateStr={currentDateStr}
-        onDateChange={onDateChange}
+        studioDateStr={studioDateStr}
+        onStudioDateChange={setStudioDateStr}
         userHandle={userHandle}
         liveElo={liveElo}
         myForecasts={myForecasts}
@@ -274,20 +298,18 @@ export function TrajectoryStudioPage({
           }
         }}
         theme={theme}
-        onToggleTheme={() =>
-          setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))
-        }
+        onToggleTheme={handleToggleTheme}
       />
 
-      {/* ZONE 2: 10-Ticker Instrument Strip */}
+      {/* ZONE 2: Slim 1-Row Instrument Strip */}
       <TickerTensionStrip
         selectedTicker={selectedTicker}
         onSelectTicker={handleSelectTicker}
         forecasts={allForecasts}
-        currentDateStr={currentDateStr}
+        currentDateStr={baseDate}
       />
 
-      {/* VERCEL ARCHITECTURAL MASTHEAD BAND (Full-bleed horizontal rule + 1360px rails + Crosshairs) */}
+      {/* VERCEL ARCHITECTURAL MASTHEAD BAND */}
       <div
         className="w-full"
         style={{ borderBottom: '1px solid var(--v-hairline)' }}
@@ -299,7 +321,6 @@ export function TrajectoryStudioPage({
             borderRight: '1px solid var(--v-hairline)',
           }}
         >
-          {/* Architectural Intersection Crosshairs (+) */}
           <span className="v-crosshair" style={{ top: -6, left: -6 }} />
           <span className="v-crosshair" style={{ top: -6, right: -6 }} />
           <span className="v-crosshair" style={{ bottom: -6, left: -6 }} />
@@ -307,10 +328,13 @@ export function TrajectoryStudioPage({
 
           {/* Left 7 Cols: Signature Vercel Dual-Tone Inline Headline */}
           <div
-            className="lg:col-span-7 px-5 py-6 flex flex-col justify-center gap-2.5"
+            className="lg:col-span-7 px-5 py-5 flex flex-col justify-center gap-2 min-w-0"
             style={{ borderRight: '1px solid var(--v-hairline)' }}
           >
-            <div className="flex items-center gap-2 flex-wrap v-caption-mono" style={{ color: 'var(--v-mute)' }}>
+            <div
+              className="flex items-center gap-2 flex-wrap v-caption-mono"
+              style={{ color: 'var(--v-mute)' }}
+            >
               <span style={{ color: 'var(--v-ink)' }}>01 Draw 5D path</span>
               <span style={{ color: 'var(--v-dim)' }}>→</span>
               <span>02 Lock prediction</span>
@@ -327,14 +351,20 @@ export function TrajectoryStudioPage({
             </h1>
           </div>
 
-          {/* Right 5 Cols: Flush 3-Column Stat Strip (.vbg-stat-strip) */}
-          <div className="lg:col-span-5 grid grid-cols-3 divide-x" style={{ borderColor: 'var(--v-hairline)' }}>
-            <div className="p-5 flex flex-col justify-between">
+          {/* Right 5 Cols: Flush 3-Column Stat Strip with Dark Hairline Borders */}
+          <div className="lg:col-span-5 grid grid-cols-3 min-w-0">
+            <div
+              className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
+              style={{ borderRight: '1px solid var(--v-hairline)' }}
+            >
               <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
                 Anchor close
               </span>
               <div className="mt-2">
-                <p className="v-mono text-xl font-semibold tracking-tight" style={{ color: 'var(--v-ink)' }}>
+                <p
+                  className="v-mono text-xl font-semibold tracking-tight"
+                  style={{ color: 'var(--v-ink)' }}
+                >
                   ${basePrice.toFixed(2)}
                 </p>
                 <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
@@ -343,7 +373,10 @@ export function TrajectoryStudioPage({
               </div>
             </div>
 
-            <div className="p-5 flex flex-col justify-between">
+            <div
+              className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
+              style={{ borderRight: '1px solid var(--v-hairline)' }}
+            >
               <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
                 Crowd median
               </span>
@@ -361,12 +394,15 @@ export function TrajectoryStudioPage({
               </div>
             </div>
 
-            <div className="p-5 flex flex-col justify-between">
+            <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
               <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
                 Daily volatility
               </span>
               <div className="mt-2">
-                <p className="v-mono text-xl font-semibold tracking-tight" style={{ color: 'var(--v-ink)' }}>
+                <p
+                  className="v-mono text-xl font-semibold tracking-tight"
+                  style={{ color: 'var(--v-ink)' }}
+                >
                   {(stockMeta.volatility * 100).toFixed(1)}%
                 </p>
                 <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
@@ -378,7 +414,7 @@ export function TrajectoryStudioPage({
         </div>
       </div>
 
-      {/* MAIN STUDIO WORKSPACE CONTAINER (12-Column Architectural Hairline Grid) */}
+      {/* MAIN STUDIO WORKSPACE CONTAINER */}
       <main
         id="main"
         className="relative max-w-[1360px] mx-auto"
@@ -387,13 +423,12 @@ export function TrajectoryStudioPage({
           borderRight: '1px solid var(--v-hairline)',
         }}
       >
-        {/* Top Stage: Zone 3 (8 Cols Split-Horizon Canvas) + Zone 4 (4 Cols Telemetry & Mint Console) */}
         <div className="relative grid grid-cols-1 lg:grid-cols-12">
           <span className="v-crosshair" style={{ bottom: -6, left: -6 }} />
           <span className="v-crosshair" style={{ bottom: -6, right: -6 }} />
 
           <div
-            className="lg:col-span-8"
+            className="lg:col-span-8 min-w-0"
             style={{ borderRight: '1px solid var(--v-hairline)' }}
           >
             <SplitHorizonCanvas
@@ -401,7 +436,7 @@ export function TrajectoryStudioPage({
               baseDate={baseDate}
               basePrice={basePrice}
               evalDates={evalDates}
-              currentDateStr={currentDateStr}
+              currentDateStr={studioDateStr}
               draftPrices={currentDraftPrices}
               onChangeDraftPrices={handleUpdateDraftPrices}
               lockedForecast={lockedForecast}
@@ -419,13 +454,13 @@ export function TrajectoryStudioPage({
             />
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-4 min-w-0">
             <TelemetryMintConsole
               ticker={selectedTicker}
               baseDate={baseDate}
               basePrice={basePrice}
               evalDates={evalDates}
-              currentDateStr={currentDateStr}
+              currentDateStr={studioDateStr}
               draftPrices={currentDraftPrices}
               onChangeDraftPrices={handleUpdateDraftPrices}
               crowdChangePct={crowdAggregate.consensusChangePct}
@@ -437,13 +472,13 @@ export function TrajectoryStudioPage({
           </div>
         </div>
 
-        {/* Bottom Deck: Zone 5 (Social Battleground, Price Distribution & Full-Width Settlement Ledger) */}
+        {/* Bottom Deck: Zone 5 */}
         <BattlegroundDeck
           ticker={selectedTicker}
           baseDate={baseDate}
           basePrice={basePrice}
           evalDates={evalDates}
-          currentDateStr={currentDateStr}
+          currentDateStr={studioDateStr}
           draftPrices={currentDraftPrices}
           lockedForecast={lockedForecast}
           onSelectForecastToAudit={f => {
@@ -457,7 +492,7 @@ export function TrajectoryStudioPage({
         />
       </main>
 
-      {/* Quiet Vercel Authorship Footer (per vercel.com/design.md) */}
+      {/* Quiet Vercel Authorship Footer */}
       <footer
         className="w-full"
         style={{

@@ -6,9 +6,9 @@ export const SEED_USERS: User[] = [
   {
     id: 'u_alpha',
     handle: 'alpha_seeker',
-    name: '알파헌터',
+    name: 'Alpha Seeker',
     avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-    bio: '빅테크 및 반도체 섹터의 단기 변곡점과 수급을 분석합니다.',
+    bio: 'Semiconductor & hyperscaler inflection curves, gamma positioning, and 5D flow analysis.',
     elo: 1760,
     forecastsCount: 16,
     completedCount: 12,
@@ -16,9 +16,9 @@ export const SEED_USERS: User[] = [
   {
     id: 'u_quant',
     handle: 'quant_craft',
-    name: '퀀트크래프트',
+    name: 'Quant Craft',
     avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
-    bio: '변동성 정규화 경로와 컨센서스 괴리율을 기반으로 5D 종가를 추정합니다.',
+    bio: 'Volatility-normalized trajectory modeling and consensus divergence mean-reversion.',
     elo: 1920,
     forecastsCount: 24,
     completedCount: 19,
@@ -26,9 +26,9 @@ export const SEED_USERS: User[] = [
   {
     id: 'u_bull',
     handle: 'tech_bull',
-    name: '실리콘불',
+    name: 'Silicon Bull',
     avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    bio: 'AI 인프라 및 빅테크 실적 모멘텀 중심의 5거래일 추세 분석.',
+    bio: 'AI compute infrastructure momentum and earnings revision breakout trajectories.',
     elo: 1490,
     forecastsCount: 11,
     completedCount: 8,
@@ -36,9 +36,9 @@ export const SEED_USERS: User[] = [
   {
     id: 'u_macro',
     handle: 'macro_desk',
-    name: '매크로데스크',
+    name: 'Macro Desk',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    bio: '금리와 유동성 지표에 따른 단기 주가 스윙 및 리스크 관리.',
+    bio: 'Rates-driven equity swing trajectories and liquidity regime risk management.',
     elo: 1320,
     forecastsCount: 19,
     completedCount: 15,
@@ -56,7 +56,7 @@ export function generateSeedForecasts(): Forecast[] {
   const forecasts: Forecast[] = [];
 
   // =========================================================================
-  // 1. [NVDA — 기본 메인 종목] 6건 (LIVE 5건 + RESOLVED 1건)
+  // 1. [NVDA — Core Semiconductor Arena] 6 Forecasts (5 LIVE + 1 RESOLVED)
   // =========================================================================
   const nvdaBars = getStockHistory('NVDA');
   const pastNvdaBase = nvdaBars.find(b => b.date === '2026-09-21')?.close || 120.0;
@@ -68,7 +68,7 @@ export function generateSeedForecasts(): Forecast[] {
     ticker: 'NVDA',
     horizon: '5D',
     mode: 'path',
-    comment: '블랙웰 출하 모멘텀 본격화로 5거래일 연속 우상향 돌파 궤적.',
+    comment: '[Breakout] Blackwell rack shipment acceleration driving 5-day consecutive channel expansion.',
     lockedAt: '2026-09-21T10:00:00Z',
     basePrice: pastNvdaBase,
     baseDate: '2026-09-21',
@@ -85,35 +85,35 @@ export function generateSeedForecasts(): Forecast[] {
     {
       id: 'fc_nvda_live_root',
       authorId: 'u_bull',
-      comment: '데이터센터 증설 가이던스 상향 기대. D+2 단기 숨고르기 후 전고점 돌파 궤적.',
+      comment: '[Earnings] Hyperscaler data center capex guide raise; brief D+2 consolidation before +6.8% breakout.',
       lockedAt: '2026-10-02T09:20:00Z',
       steps: [0.018, 0.008, 0.032, 0.051, 0.068],
     },
     {
       id: 'fc_nvda_live_duel_1',
       authorId: 'u_macro',
-      comment: '국채금리 반등 구간 진입으로 주 초반 눌림목(-3.2%) 소화 후 제한적 반등 예상.',
+      comment: '[Macro] 10Y yield backup triggers early-week -3.2% dip before recovering into Friday options close.',
       lockedAt: '2026-10-02T10:45:00Z',
       steps: [-0.016, -0.032, -0.021, -0.008, 0.006],
     },
     {
       id: 'fc_nvda_live_3',
       authorId: 'u_alpha',
-      comment: '옵션 만기 수급 집중으로 주 후반으로 갈수록 상승 기울기가 가팔라지는 경로.',
+      comment: '[Gamma] Call wall dealer hedging steepens upward slope into D+4 and D+5 settlement.',
       lockedAt: '2026-10-02T11:30:00Z',
       steps: [0.009, 0.019, 0.028, 0.042, 0.055],
     },
     {
       id: 'fc_nvda_live_4',
       authorId: 'u_quant',
-      comment: '단기 과열 해소 구간 진입. 고점 저항 확인 후 -2.8% 조정을 거치는 역발상 경로.',
+      comment: '[Mean reversion] Short-term RSI exhaustion; fade overhead resistance toward -2.8% Friday close.',
       lockedAt: '2026-10-02T13:15:00Z',
       steps: [0.005, -0.011, -0.019, -0.024, -0.028],
     },
     {
       id: 'fc_nvda_live_5',
       authorId: 'u_alpha',
-      comment: '빅테크 AI CAPEX 재확인 구간, 완만한 +3.6% 우상향 추세.',
+      comment: '[Breakout] Cloud GPU cluster utilization check confirms steady +3.6% institutional accumulation.',
       lockedAt: '2026-10-02T15:10:00Z',
       steps: [0.007, 0.014, 0.021, 0.029, 0.036],
     },
@@ -140,7 +140,7 @@ export function generateSeedForecasts(): Forecast[] {
   });
 
   // =========================================================================
-  // 2. [TSLA — 고변동 모멘텀 종목] 6건 (LIVE 5건 + RESOLVED 1건)
+  // 2. [TSLA — High-Beta Momentum Arena] 6 Forecasts (5 LIVE + 1 RESOLVED)
   // =========================================================================
   const tslaBars = getStockHistory('TSLA');
   const pastTslaBase = tslaBars.find(b => b.date === '2026-09-21')?.close || 232.0;
@@ -152,7 +152,7 @@ export function generateSeedForecasts(): Forecast[] {
     ticker: 'TSLA',
     horizon: '5D',
     mode: 'path',
-    comment: 'FSD V13 배포 기대감으로 5거래일 전고점 돌파 궤적.',
+    comment: '[Breakout] FSD v13 fleet rollout momentum driving 5-day upside continuation.',
     lockedAt: '2026-09-21T09:30:00Z',
     basePrice: pastTslaBase,
     baseDate: '2026-09-21',
@@ -169,35 +169,35 @@ export function generateSeedForecasts(): Forecast[] {
     {
       id: 'fc_tsla_live_root',
       authorId: 'u_alpha',
-      comment: '로보택시 이벤트 기대감 유입으로 +7.0% 상방 돌파 궤적.',
+      comment: '[Breakout] Autonomous fleet catalyst positioning; momentum squeeze targeting +7.0% by D+5.',
       lockedAt: '2026-10-02T09:15:00Z',
       steps: [0.012, 0.026, 0.041, 0.056, 0.070],
     },
     {
       id: 'fc_tsla_live_derived_1',
       authorId: 'u_quant',
-      comment: '이벤트 직전 차익실현 물량으로 D+2까지 -3.5% 눌림목 후 V자 반등 예상.',
+      comment: '[Mean reversion] Pre-event de-risking pulls price to -3.5% on D+2 before V-shaped recovery.',
       lockedAt: '2026-10-02T11:45:00Z',
       steps: [-0.020, -0.035, -0.018, 0.002, 0.015],
     },
     {
       id: 'fc_tsla_live_3',
       authorId: 'u_bull',
-      comment: '중국 인도량 서프라이즈 반영, 주 중반 변동성 소화 후 +4.8% 안착.',
+      comment: '[Earnings] China delivery beat absorbed mid-week, setting up +4.8% Friday close.',
       lockedAt: '2026-10-02T12:30:00Z',
       steps: [0.015, 0.009, 0.024, 0.036, 0.048],
     },
     {
       id: 'fc_tsla_live_4',
       authorId: 'u_macro',
-      comment: '단기 밸류에이션 부담 구간, 5거래일 계단식 조정(-4.2%) 경로.',
+      comment: '[Macro] Implied volatility crush and valuation headwind driving -4.2% stair-step pullback.',
       lockedAt: '2026-10-02T14:00:00Z',
       steps: [-0.008, -0.017, -0.026, -0.035, -0.042],
     },
     {
       id: 'fc_tsla_live_5',
       authorId: 'u_quant',
-      comment: '20일 지지선 확인 후 D+4 변곡점에서 상방 이탈하는 +3.2% 스윙.',
+      comment: '[Gamma] 20D moving average defense holds; D+4 inflection breakout to +3.2%.',
       lockedAt: '2026-10-02T15:20:00Z',
       steps: [-0.004, 0.002, 0.011, 0.024, 0.032],
     },
@@ -224,7 +224,7 @@ export function generateSeedForecasts(): Forecast[] {
   });
 
   // =========================================================================
-  // 3. [AAPL — 안정형 컨센서스 종목] 6건 (LIVE 5건 + RESOLVED 1건)
+  // 3. [AAPL — Low-Vol Consensus Arena] 6 Forecasts (5 LIVE + 1 RESOLVED)
   // =========================================================================
   const aaplBars = getStockHistory('AAPL');
   const pastAaplBase = aaplBars.find(b => b.date === '2026-09-21')?.close || 222.0;
@@ -236,7 +236,7 @@ export function generateSeedForecasts(): Forecast[] {
     ticker: 'AAPL',
     horizon: '5D',
     mode: 'path',
-    comment: '신형 아이폰 프로 라인업 리드타임 확대로 완만한 우상향 달성.',
+    comment: '[Earnings] Pro lineup lead-time expansion supporting steady +2.8% weekly grind.',
     lockedAt: '2026-09-21T11:00:00Z',
     basePrice: pastAaplBase,
     baseDate: '2026-09-21',
@@ -249,11 +249,11 @@ export function generateSeedForecasts(): Forecast[] {
   const aaplPrice = getCurrentStockPrice('AAPL', '2026-10-02');
   const aaplEvals = getNextTradingDays('2026-10-02', 5);
   const aaplComments = [
-    '아이폰 초기 수요 호조세 반영, 저변동 우상향(+2.6%) 예상.',
-    '기관 리밸런싱 물량 소화 후 주 후반 반등 궤적.',
-    '서비스 매출 성장세 견조, 5일 내내 방어적 상승 흐름.',
-    '환율 역풍 우려로 주 중반 -1.5% 약세 조정 예상.',
-    '빅테크 중 변동성 대비 샤프 비율 최상위 구간, +3.1% 목표.',
+    '[Earnings] Early cycle upgrade demand supporting low-volatility +1.4% upward drift.',
+    '[Gamma] Institutional rebalancing absorbed by D+2; late-week bid to +1.8%.',
+    '[Breakout] Services gross margin expansion driving defensive +2.2% outperformance.',
+    '[Macro] FX headwind and hardware multiple compression triggering -1.5% dip.',
+    '[Breakout] Top risk-adjusted Sharpe among mega-caps; targeting +3.0% Friday close.',
   ];
   for (let i = 0; i < 5; i++) {
     const delta = (i === 3 ? -0.015 : 0.014 + i * 0.004);
@@ -288,10 +288,10 @@ export const SEED_NOTIFICATIONS: Notification[] = [
     userId: 'u_alpha',
     type: 'resolved',
     actorHandle: 'STOXDRAW',
-    actorName: 'Elo 정산',
+    actorName: 'Elo Settlement',
     forecastId: 'fc_tsla_resolved_1',
     ticker: 'TSLA',
-    message: 'TSLA 5D 궤적 정산 완료: 정확도 88점 달성으로 +21 LP가 반영되었습니다.',
+    message: 'TSLA 5D trajectory settled: 88.4 hybrid score achieved (+21 LP credited).',
     createdAt: '2026-09-28T16:00:00Z',
     read: false,
   },
@@ -300,10 +300,10 @@ export const SEED_NOTIFICATIONS: Notification[] = [
     userId: 'u_alpha',
     type: 'resolved',
     actorHandle: 'STOXDRAW',
-    actorName: '시장 컨센서스',
+    actorName: 'Crowd Consensus',
     forecastId: 'fc_nvda_live_3',
     ticker: 'NVDA',
-    message: 'NVDA W2026-41 라운드 시장 컨센서스가 업데이트되었습니다 (+3.6%).',
+    message: 'NVDA W2026-41 crowd median updated to +4.50% across 6 locked trajectories.',
     createdAt: '2026-10-02T15:30:00Z',
     read: true,
   },

@@ -306,3 +306,41 @@
   font-family: 'Geist Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
+
+/* Light-mode adaptation for secondary workspace views (Overview, Leaderboard, Record, Detail) */
+.v-studio-root[data-theme="light"] .bg-zinc-950,
+.v-studio-root[data-theme="light"] .bg-black {
+  background-color: var(--v-canvas) !important;
+  color: var(--v-ink) !important;
+}
+
+.v-studio-root[data-theme="light"] .bg-zinc-900,
+.v-studio-root[data-theme="light"] .bg-zinc-900\/60,
+.v-studio-root[data-theme="light"] .bg-zinc-900\/40,
+.v-studio-root[data-theme="light"] .bg-zinc-900\/30 {
+  background-color: var(--v-canvas-soft) !important;
+}
+
+.v-studio-root[data-theme="light"] .border-zinc-800,
+.v-studio-root[data-theme="light"] .border-zinc-800\/80,
+.v-studio-root[data-theme="light"] .border-zinc-900,
+.v-studio-root[data-theme="light"] .divide-zinc-800 > :not([hidden]) ~ :not([hidden]),
+.v-studio-root[data-theme="light"] .divide-zinc-800\/60 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--v-hairline) !important;
+}
+
+.v-studio-root[data-theme="light"] .text-zinc-100,
+.v-studio-root[data-theme="light"] .text-zinc-200,
+.v-studio-root[data-theme="light"] .text-white {
+  color: var(--v-ink) !important;
+}
+
+.v-studio-root[data-theme="light"] .text-zinc-300,
+.v-studio-root[data-theme="light"] .text-zinc-400 {
+  color: var(--v-body) !important;
+}
+
+.v-studio-root[data-theme="light"] .text-zinc-500 {
+  color: var(--v-mute) !important;
+}
+
