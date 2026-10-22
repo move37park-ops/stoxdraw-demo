@@ -1,6 +1,12 @@
 import type { Forecast, PathPoint } from '../domain/types';
-import { getStockHistory } from '../data/market';
+import { getStockHistory, getStockLandmarks } from '../data/market';
 import { deriveForecastStatus } from '../domain/lifecycle';
+
+export interface OverlayForecast {
+  forecast: Forecast;
+  color: string;
+  label?: string;
+}
 
 interface ForecastChartProps {
   forecast: Forecast;
@@ -9,6 +15,8 @@ interface ForecastChartProps {
   crowdPath?: PathPoint[];
   currentDateStr?: string;
   className?: string;
+  overlays?: OverlayForecast[];
+  showLandmarks?: boolean;
 }
 
 export function ForecastChart({
@@ -18,9 +26,12 @@ export function ForecastChart({
   crowdPath,
   currentDateStr = '2026-10-05',
   className = '',
+  overlays = [],
+  showLandmarks = true,
 }: ForecastChartProps) {
   const stockBars = getStockHistory(forecast.ticker);
   const status = deriveForecastStatus(forecast, currentDateStr);
+  const landmarks = showLandmarks ? getStockLandmarks(forecast.ticker, forecast.basePrice) : [];
 
   // 1. 기준일 이전 과거 15거래일 추출
   const pastBars = stockBars
@@ -43,6 +54,7 @@ export function ForecastChart({
   // 4. 가격 범위 계산 (Min & Max Price)
   const allPrices: number[] = [
     ...pastBars.flatMap(b => [b.high, b.low, b.close]),
+    ...landmarks.map(l => l.price),
     forecast.basePrice,
   ];
 
@@ -51,6 +63,12 @@ export function ForecastChart({
   } else if (forecast.mode === 'breakout' && forecast.breakout) {
     allPrices.push(forecast.breakout.price);
   }
+
+  overlays.forEach(o => {
+    if (o.forecast.path) {
+      o.forecast.path.forEach(p => allPrices.push(p.price));
+    }
+  });
 
   actualEvalBars.forEach(b => allPrices.push(b.close));
   if (showCrowd && crowdPath) {
@@ -113,13 +131,18 @@ export function ForecastChart({
     });
   }
 
-  // D. Crowd Consensus Path
+  // D. Crowd Consensus Wave Path & Area
   let crowdPathD = '';
+  let crowdAreaD = '';
   if (showCrowd && crowdPath && crowdPath.length > 0) {
     crowdPathD = `M ${baseX} ${baseY}`;
+    crowdAreaD = `M ${baseX} ${baseY}`;
     crowdPath.forEach(p => {
       crowdPathD += ` L ${getX(p.date)} ${getY(p.price)}`;
+      crowdAreaD += ` L ${getX(p.date)} ${getY(p.price)}`;
     });
+    const lastCrowd = crowdPath[crowdPath.length - 1];
+    crowdAreaD += ` L ${getX(lastCrowd.date)} ${baseY} Z`;
   }
 
   const isUpTrend = forecast.mode === 'path' && forecast.path && forecast.path.length > 0
@@ -131,7 +154,7 @@ export function ForecastChart({
 
   return (
     <div
-      className={`relative w-full rounded-2xl overflow-hidden bg-[#050507] border border-white/10 flex items-center justify-center ${className}`}
+      className={`relative w-full overflow-hidden bg-black flex items-center justify-center ${className}`}
       style={{ aspectRatio: `${width}/${height}` }}
     >
       <svg
@@ -140,12 +163,16 @@ export function ForecastChart({
       >
         <defs>
           <linearGradient id={`grad-past-${forecast.id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#71767b" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#71767b" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#71717a" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#71717a" stopOpacity="0.0" />
           </linearGradient>
           <linearGradient id={`grad-forecast-${forecast.id}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={forecastColor} stopOpacity="0.18" />
             <stop offset="100%" stopColor={forecastColor} stopOpacity="0.0" />
+          </linearGradient>
+          <linearGradient id={`grad-crowd-wave-${forecast.id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a1a1aa" stopOpacity="0.16" />
+            <stop offset="100%" stopColor="#a1a1aa" stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
@@ -155,10 +182,40 @@ export function ForecastChart({
           y1={paddingY}
           x2={baseX}
           y2={height - paddingY}
-          stroke="var(--border-strong, #272a33)"
+          stroke="#27272a"
           strokeWidth="1.5"
           strokeDasharray="3 3"
         />
+
+        {/* Market Landmarks */}
+        {landmarks.map(lm => {
+          const ly = getY(lm.price);
+          const isRes = lm.category === 'resistance';
+          const strokeCol = isRes ? '#52525b' : '#a1a1aa';
+          const textCol = isRes ? '#a1a1aa' : '#e4e4e7';
+          return (
+            <g key={lm.id}>
+              <line
+                x1={baseX}
+                y1={ly}
+                x2={width - paddingX}
+                y2={ly}
+                stroke={strokeCol}
+                strokeWidth="1"
+                strokeDasharray="4 4"
+              />
+              <text
+                x={width - paddingX - 4}
+                y={isRes ? ly - 4 : ly + 10}
+                textAnchor="end"
+                fill={textCol}
+                className="font-mono text-[8.5px]"
+              >
+                {lm.shortLabel} ${lm.price.toFixed(1)}
+              </text>
+            </g>
+          );
+        })}
 
         {/* 과거 시세 캔들스틱 (Candlesticks) */}
         {pastBars.map((bar) => {
@@ -219,19 +276,22 @@ export function ForecastChart({
           </g>
         )}
 
-        {/* Crowd Path (30% Supporting Secondary Soft Blue 점선) */}
+        {/* Market Consensus Area & Path */}
+        {showCrowd && crowdAreaD && (
+          <path d={crowdAreaD} fill={`url(#grad-crowd-wave-${forecast.id})`} />
+        )}
         {showCrowd && crowdPathD && (
           <path
             d={crowdPathD}
             fill="none"
-            stroke="#78ABFF"
+            stroke="#a1a1aa"
             strokeWidth="2.5"
             strokeDasharray="4 4"
             strokeLinecap="round"
           />
         )}
 
-        {/* Forecast Path (일렉트릭 블루/로즈) */}
+        {/* Forecast Path */}
         {forecastPathD && (
           <g>
             <path
@@ -242,7 +302,6 @@ export function ForecastChart({
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {/* Forecast 꼭짓점 포인트들 */}
             {forecast.path?.map((p, idx) => (
               <circle
                 key={idx}
@@ -250,68 +309,104 @@ export function ForecastChart({
                 cy={getY(p.price)}
                 r="3.5"
                 fill={forecastColor}
-                stroke="var(--bg-app, #090a0d)"
+                stroke="#000000"
                 strokeWidth="1.5"
               />
             ))}
           </g>
         )}
 
-        {/* 실제 시세 라인 (Actual Market - 테마 연동 실선) */}
+        {/* 실제 시세 라인 (Actual Market) */}
         {actualPathD && (
           <g>
             <path
               d={actualPathD}
               fill="none"
-              stroke="var(--text-primary, #ffffff)"
+              stroke="#ffffff"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {/* 현재/종료 시점 Actual 점 */}
             {actualEvalBars.length > 0 && (
               <circle
                 cx={getX(actualEvalBars[actualEvalBars.length - 1].date)}
                 cy={getY(actualEvalBars[actualEvalBars.length - 1].close)}
                 r="4"
-                fill="var(--text-primary, #ffffff)"
-                stroke="var(--bg-app, #090a0d)"
+                fill="#ffffff"
+                stroke="#000000"
                 strokeWidth="2"
               />
             )}
           </g>
         )}
 
+        {/* Overlays */}
+        {overlays.map((o, idx) => {
+          if (!o.forecast.path || o.forecast.path.length === 0) return null;
+          let oPathD = `M ${getX(o.forecast.baseDate)} ${getY(o.forecast.basePrice)}`;
+          o.forecast.path.forEach(p => {
+            oPathD += ` L ${getX(p.date)} ${getY(p.price)}`;
+          });
+          const lastPt = o.forecast.path[o.forecast.path.length - 1];
+
+          return (
+            <g key={o.forecast.id || idx}>
+              <path
+                d={oPathD}
+                fill="none"
+                stroke={o.color}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="5 3"
+              />
+              <circle
+                cx={getX(lastPt.date)}
+                cy={getY(lastPt.price)}
+                r="4"
+                fill={o.color}
+                stroke="#000000"
+                strokeWidth="1.5"
+              />
+            </g>
+          );
+        })}
+
         {/* 기준점 (Base Price Point) */}
         <circle
           cx={baseX}
           cy={baseY}
           r="4.5"
-          fill="var(--text-primary, #ffffff)"
-          stroke="var(--bg-app, #090a0d)"
+          fill="#ffffff"
+          stroke="#000000"
           strokeWidth="2"
         />
       </svg>
 
       {/* 우측 상단 범례 태그 */}
-      <div className="chart-legend absolute top-2 right-2.5 flex items-center gap-2 text-[11px] font-medium bg-black/80 backdrop-blur px-2.5 py-0.5 rounded-full border border-white/10">
+      <div className="chart-legend absolute top-2 right-2.5 flex flex-wrap items-center gap-2 text-[11px] font-mono bg-zinc-950/90 px-2.5 py-1 rounded border border-zinc-800 max-w-[85%]">
         <span className="flex items-center gap-1 text-emerald-400">
-          <span className="w-2 h-0.5 bg-emerald-400 rounded-full" /> Forecast
+          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" /> Forecast
         </span>
+        {overlays.map((o, idx) => (
+          <span key={idx} className="flex items-center gap-1" style={{ color: o.color }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: o.color }} /> {o.label || '비교 예측'}
+          </span>
+        ))}
         {actualEvalBars.length > 0 && (
-          <span className="flex items-center gap-1 text-white">
-            <span className="w-2 h-0.5 bg-white rounded-full" /> Actual
+          <span className="flex items-center gap-1 text-zinc-100">
+            <span className="w-1.5 h-1.5 bg-zinc-100 rounded-full" /> Actual
           </span>
         )}
         {showCrowd && (
-          <span className="flex items-center gap-1 text-[#78ABFF]">
-            <span className="w-2 h-0.5 bg-[#78ABFF] rounded-full" /> Crowd
+          <span className="flex items-center gap-1 text-zinc-400">
+            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full" /> Consensus
           </span>
         )}
       </div>
 
       {/* 좌측 하단 기준가 표기 */}
-      <div className="absolute bottom-1.5 left-2.5 text-[11px] text-zinc-400 font-mono">
+      <div className="absolute bottom-1.5 left-2.5 text-[11px] text-zinc-500 font-mono">
         기준가: ${forecast.basePrice.toFixed(2)}
       </div>
     </div>

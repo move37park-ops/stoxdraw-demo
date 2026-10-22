@@ -1,7 +1,7 @@
-import { X, ArrowRight } from 'lucide-react';
+import { X, ArrowRight, Lock } from 'lucide-react';
 import type { CrowdAggregate, Forecast, Horizon, Mode } from '../../domain/types';
 import type { ArenaSummary } from '../../domain/arena';
-import { getStockHistory } from '../../data/market';
+import { getStockHistory, getStockLandmarks } from '../../data/market';
 import { getNextTradingDays, getHorizonTradingDays } from '../../domain/tradingCalendar';
 import { formatPct } from '../../domain/format';
 
@@ -13,13 +13,14 @@ interface ArenaHeroStageProps {
   crowd: CrowdAggregate;
   arenaSummary: ArenaSummary;
   activeLayerForecasts: Forecast[];
+  hasParticipated: boolean;
   onHorizonChange?: (h: Horizon) => void;
   onModeChange?: (m: Mode) => void;
   onDrawClick: () => void;
   onRemoveLayer: (forecastId: string) => void;
 }
 
-const LAYER_COLORS = ['#DFC15D', '#78ABFF', '#1F7DFF', '#f59e0b', '#f43f5e'];
+const LAYER_COLORS = ['#DFC15D', '#10b981', '#f43f5e'];
 
 export function ArenaHeroStage({
   ticker,
@@ -28,6 +29,7 @@ export function ArenaHeroStage({
   crowd,
   arenaSummary,
   activeLayerForecasts,
+  hasParticipated,
   onDrawClick,
   onRemoveLayer,
 }: ArenaHeroStageProps) {
@@ -35,22 +37,23 @@ export function ArenaHeroStage({
   const tradingDaysCount = getHorizonTradingDays(horizon);
   const evalDates = getNextTradingDays(currentDateStr, tradingDaysCount);
 
-  // Past 15 bars up to currentDateStr
   const pastBars = stockBars.filter(b => b.date <= currentDateStr).slice(-15);
   const basePrice = arenaSummary.currentPrice;
+  const landmarks = getStockLandmarks(ticker, basePrice);
 
-  // Compute all prices for vertical scale
-  const allPrices: number[] = [...pastBars.flatMap(b => [b.high, b.low, b.close]), basePrice];
+  const allPrices: number[] = [
+    ...pastBars.flatMap(b => [b.high, b.low, b.close]),
+    basePrice,
+    ...landmarks.map(l => l.price),
+  ];
 
-  if (crowd.consensusPath) {
+  if (hasParticipated && crowd.consensusPath) {
     crowd.consensusPath.forEach(p => allPrices.push(p.price));
   }
 
   activeLayerForecasts.forEach(f => {
     if (f.mode === 'path' && f.path) {
       f.path.forEach(p => allPrices.push(p.price));
-    } else if (f.mode === 'breakout' && f.breakout) {
-      allPrices.push(f.breakout.price);
     }
   });
 
@@ -61,7 +64,6 @@ export function ArenaHeroStage({
   const maxPrice = rawMax + pad;
   const priceRange = maxPrice - minPrice || 1;
 
-  // Dimensions
   const allXDates = [...pastBars.map(b => b.date), ...evalDates];
   const width = 800;
   const height = 300;
@@ -84,29 +86,9 @@ export function ArenaHeroStage({
   const baseX = getX(currentDateStr);
   const baseY = getY(basePrice);
 
-  // 1. Past Bars Path & Area
-  let pastPathD = '';
-  let pastAreaD = '';
-  pastBars.forEach((b, i) => {
-    const x = getX(b.date);
-    const y = getY(b.close);
-    if (i === 0) {
-      pastPathD += `M ${x} ${y}`;
-      pastAreaD += `M ${x} ${height - padY} L ${x} ${y}`;
-    } else {
-      pastPathD += ` L ${x} ${y}`;
-      pastAreaD += ` L ${x} ${y}`;
-    }
-  });
-  if (pastBars.length > 0) {
-    const lastPast = pastBars[pastBars.length - 1];
-    pastAreaD += ` L ${getX(lastPast.date)} ${height - padY} Z`;
-  }
-
-  // 2. Crowd Consensus Path
   let consensusPathD = '';
   let consensusAreaD = '';
-  if (crowd.consensusPath && crowd.consensusPath.length > 0) {
+  if (hasParticipated && crowd.consensusPath && crowd.consensusPath.length > 0) {
     consensusPathD = `M ${baseX} ${baseY}`;
     consensusAreaD = `M ${baseX} ${baseY}`;
     crowd.consensusPath.forEach(p => {
@@ -117,100 +99,67 @@ export function ArenaHeroStage({
     consensusAreaD += ` L ${getX(lastP.date)} ${baseY} Z`;
   }
 
-  // Grid levels
   const gridSteps = [0.2, 0.4, 0.6, 0.8];
 
   return (
-    <div className="relative w-full bg-[#0d0d10] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-none mb-6">
-      {/* Top Controls: Ticker Info & Horizon/Mode Switchers */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-        <div>
-          <div className="flex items-center gap-3">
-            <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              ${ticker}
-            </span>
-            <span className="text-xs sm:text-sm text-zinc-400 font-medium">
-              {arenaSummary.name}
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-900 border border-white/10 text-white">
-              ${basePrice.toFixed(2)}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1.5">
-            <span className="font-medium">
-              {arenaSummary.participantsCount}명 참여 중
-            </span>
-            <span>·</span>
-            <span className="text-emerald-400 font-semibold font-mono">
-              Bull {arenaSummary.bullPct}%
-            </span>
-            <span>·</span>
-            <span className="text-rose-400 font-semibold font-mono">
-              Bear {arenaSummary.bearPct}%
-            </span>
-          </div>
-        </div>
-
-        {/* Core MVP: 5D Path Focus */}
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1.5 rounded-full bg-zinc-900 text-zinc-200 border border-white/10 text-xs font-medium">
-            5D 궤적 배틀
+    <div className="relative w-full bg-zinc-950 border border-zinc-800 rounded-lg divide-y divide-zinc-800 overflow-hidden mb-5">
+      {/* Top Bar */}
+      <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="text-lg sm:text-xl font-bold text-zinc-100 tracking-tight font-mono">
+            ${ticker}
+          </span>
+          <span className="px-2 py-0.5 rounded text-xs font-mono font-medium bg-zinc-900 border border-zinc-800 text-zinc-200 tabular-nums">
+            ${basePrice.toFixed(2)}
+          </span>
+          <span className="text-xs text-zinc-400 font-mono tabular-nums">
+            {arenaSummary.participantsCount}명 참여 · <span className="text-emerald-400">BULL {arenaSummary.bullPct}%</span> / <span className="text-rose-400">BEAR {arenaSummary.bearPct}%</span>
           </span>
         </div>
+
+        {/* Active Layer Forecasters Badge Bar */}
+        {activeLayerForecasts.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {activeLayerForecasts.map((f, idx) => {
+              const color = LAYER_COLORS[idx % LAYER_COLORS.length];
+              const author = f.authorId ? f.authorId.replace('u_', '') : '익명';
+
+              return (
+                <div
+                  key={f.id}
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono border bg-zinc-900 flex-shrink-0"
+                  style={{ borderColor: `${color}80`, color }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+                  <span>@{author}</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveLayer(f.id)}
+                    className="p-0.5 hover:bg-zinc-800 rounded transition"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Active Layer Forecasters Badge Bar */}
-      {activeLayerForecasts.length > 0 && (
-        <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
-          <span className="text-xs text-zinc-500 font-medium flex-shrink-0">
-            비교 오버레이:
-          </span>
-          {activeLayerForecasts.map((f, idx) => {
-            const color = LAYER_COLORS[idx % LAYER_COLORS.length];
-            const author = f.authorId ? f.authorId.replace('u_', '') : '익명';
-
-            return (
-              <div
-                key={f.id}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-white dark:bg-zinc-800/80 flex-shrink-0 shadow-sm"
-                style={{ borderColor: `${color}80`, color }}
-              >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                <span>@{author}</span>
-                <button
-                  type="button"
-                  onClick={() => onRemoveLayer(f.id)}
-                  className="p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-full transition ml-0.5"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Main Integrated Chart Canvas */}
-      <div className="relative w-full aspect-[16/9] max-h-[380px] rounded-2xl bg-[#050507] border border-white/10 overflow-hidden select-none">
+      {/* Main Integrated Chart Canvas (No Nested Border) */}
+      <div className="relative w-full aspect-[16/9] min-h-[300px] max-h-[400px] bg-black overflow-hidden select-none">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="w-full h-full block"
           preserveAspectRatio="none"
         >
           <defs>
-            <linearGradient id="arenaPastGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#586B60" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#586B60" stopOpacity="0.0" />
-            </linearGradient>
-
             <linearGradient id="arenaConsensusGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#78ABFF" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#78ABFF" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#a1a1aa" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#a1a1aa" stopOpacity="0.01" />
             </linearGradient>
           </defs>
 
-          {/* Grid lines & price labels */}
           {gridSteps.map(stepRatio => {
             const y = padY + chartH * stepRatio;
             const priceVal = maxPrice - priceRange * stepRatio;
@@ -224,12 +173,12 @@ export function ArenaHeroStage({
                   stroke="currentColor"
                   strokeWidth="1"
                   strokeDasharray="2 3"
-                  className="text-zinc-200 dark:text-zinc-800"
+                  className="text-zinc-850"
                 />
                 <text
                   x={width - padX + 4}
                   y={y + 3}
-                  className="fill-zinc-400 font-mono text-[9px]"
+                  className="fill-zinc-500 font-mono text-[9px]"
                   textAnchor="start"
                 >
                   ${priceVal.toFixed(0)}
@@ -238,16 +187,46 @@ export function ArenaHeroStage({
             );
           })}
 
-          {/* Dividing vertical line at Base Date (Now) */}
+          {landmarks.map(lm => {
+            const ly = getY(lm.price);
+            const isRes = lm.category !== 'support';
+            const color = isRes ? '#71717a' : '#d4d4d8';
+            return (
+              <g key={lm.id}>
+                <line
+                  x1={baseX}
+                  y1={ly}
+                  x2={width - padX}
+                  y2={ly}
+                  stroke={color}
+                  strokeWidth="1"
+                  strokeDasharray="2 4"
+                  opacity="0.5"
+                />
+                <text
+                  x={width - padX - 4}
+                  y={ly - 4}
+                  fill={color}
+                  fontSize="8.5"
+                  fontFamily="monospace"
+                  textAnchor="end"
+                  opacity="0.85"
+                >
+                  {lm.shortLabel} ${lm.price.toFixed(1)}
+                </text>
+              </g>
+            );
+          })}
+
           <line
             x1={baseX}
             y1={padY - 10}
             x2={baseX}
             y2={height - padY + 10}
-            stroke="currentColor"
-            strokeWidth="1.5"
+            stroke="#a1a1aa"
+            strokeWidth="1.2"
             strokeDasharray="4 4"
-            className="text-zinc-300 dark:text-zinc-700"
+            opacity="0.4"
           />
           <text
             x={baseX}
@@ -255,10 +234,9 @@ export function ArenaHeroStage({
             className="fill-zinc-400 font-mono text-[10px]"
             textAnchor="middle"
           >
-            NOW (기준 시점)
+            {currentDateStr.slice(5)}
           </text>
 
-          {/* Past Market Candlesticks (캔들스틱) */}
           {pastBars.map((bar) => {
             const x = getX(bar.date);
             const isUp = bar.close >= bar.open;
@@ -273,7 +251,6 @@ export function ArenaHeroStage({
 
             return (
               <g key={bar.date}>
-                {/* Wick */}
                 <line
                   x1={x}
                   y1={yHigh}
@@ -282,7 +259,6 @@ export function ArenaHeroStage({
                   stroke={color}
                   strokeWidth={1.3}
                 />
-                {/* Body */}
                 <rect
                   x={x - candleW / 2}
                   y={bodyTop}
@@ -295,31 +271,29 @@ export function ArenaHeroStage({
             );
           })}
 
-          {/* 30% Supporting Crowd Consensus Area & Line (Soft Blue #78ABFF) */}
-          {consensusAreaD && <path d={consensusAreaD} fill="url(#arenaConsensusGrad)" />}
-          {consensusPathD && (
+          {hasParticipated && consensusAreaD && <path d={consensusAreaD} fill="url(#arenaConsensusGrad)" />}
+          {hasParticipated && consensusPathD && (
             <g>
               <path
                 d={consensusPathD}
                 fill="none"
-                stroke="#78ABFF"
-                strokeWidth="3"
+                stroke="#e4e4e7"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeDasharray="6 4"
+                strokeDasharray="5 4"
               />
               {crowd.consensusPath && crowd.consensusPath.length > 0 && (
                 <circle
                   cx={getX(crowd.consensusPath[crowd.consensusPath.length - 1].date)}
                   cy={getY(crowd.consensusPath[crowd.consensusPath.length - 1].price)}
-                  r="5"
-                  fill="#78ABFF"
+                  r="4.5"
+                  fill="#ffffff"
                 />
               )}
             </g>
           )}
 
-          {/* Active Forecasters' Layers */}
           {activeLayerForecasts.map((f, idx) => {
             const color = LAYER_COLORS[idx % LAYER_COLORS.length];
             if (f.mode === 'path' && f.path && f.path.length > 0) {
@@ -335,14 +309,14 @@ export function ArenaHeroStage({
                     d={pathD}
                     fill="none"
                     stroke={color}
-                    strokeWidth="2.5"
+                    strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                   <circle
                     cx={getX(lastP.date)}
                     cy={getY(lastP.price)}
-                    r="4.5"
+                    r="4"
                     fill={color}
                   />
                 </g>
@@ -351,31 +325,42 @@ export function ArenaHeroStage({
             return null;
           })}
 
-          {/* Base Anchor Point */}
-          <circle cx={baseX} cy={baseY} r="5" fill="#ffffff" />
-          <circle cx={baseX} cy={baseY} r="8" fill="none" stroke="#78ABFF" strokeWidth="2" />
+          <circle cx={baseX} cy={baseY} r="4.5" fill="#ffffff" />
+          <circle cx={baseX} cy={baseY} r="7.5" fill="none" stroke="#a1a1aa" strokeWidth="1.5" />
         </svg>
 
-        {/* Floating HUD Label */}
-        <div className="absolute top-3.5 left-3.5 flex flex-wrap items-center gap-2 pointer-events-none">
-          <div className="px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-md border border-white/10 text-xs font-mono text-zinc-200 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#78ABFF]" />
-            <span>군중 중간값: </span>
-            <span className={arenaSummary.medianChangePct >= 0 ? 'text-emerald-400 font-bold font-mono' : 'text-rose-400 font-bold font-mono'}>
-              {formatPct(arenaSummary.medianChangePct)} (${arenaSummary.medianTargetPrice})
-            </span>
-          </div>
+        {/* Top-Left Consensus HUD */}
+        <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
+          {hasParticipated ? (
+            <div className="px-2.5 py-1 rounded-md bg-zinc-950/90 border border-zinc-800 text-xs font-mono text-zinc-300 flex items-center gap-2 tabular-nums">
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-100" />
+              <span>시장 컨센서스</span>
+              <span className={arenaSummary.medianChangePct >= 0 ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
+                {formatPct(arenaSummary.medianChangePct)} (${arenaSummary.medianTargetPrice})
+              </span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onDrawClick}
+              className="px-2.5 py-1 rounded-md bg-zinc-950/90 hover:bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 flex items-center gap-1.5 transition"
+            >
+              <Lock size={11} className="text-zinc-500" />
+              <span>시장 컨센서스 잠김 ·</span>
+              <span className="text-zinc-200 font-medium">내 예측 그리기 →</span>
+            </button>
+          )}
         </div>
 
-        {/* Floating Primary CTA: Signature Green Button */}
-        <div className="absolute bottom-3.5 right-3.5 z-10">
+        {/* Bottom-Right Primary CTA */}
+        <div className="absolute bottom-3 right-3 z-10">
           <button
             type="button"
             onClick={onDrawClick}
-            className="btn-signature-draw px-5 py-2.5 rounded-full text-xs sm:text-sm tracking-wide"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-white hover:bg-zinc-200 text-black font-medium text-xs transition"
           >
-            <span>DRAW</span>
-            <ArrowRight size={14} className="stroke-[2.5]" />
+            <span>${ticker} 예측 그리기</span>
+            <ArrowRight size={13} />
           </button>
         </div>
       </div>

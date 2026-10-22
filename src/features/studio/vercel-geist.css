@@ -1,0 +1,308 @@
+/* ==========================================================================
+   Vercel Geist Design System (design.md & design.dark.md) — Authentic Edition
+   Scoped to .v-studio-root so existing pages remain 100% untouched.
+   ========================================================================== */
+
+.v-studio-root,
+.v-studio-root[data-theme="dark"] {
+  /* Geist 10-Step Dark Polarity (design.dark.md) */
+  --v-canvas: #000000;
+  --v-canvas-soft: #0a0a0a;
+  --v-canvas-soft-2: #111111;
+  --v-surface-elevated: #141414;
+  --v-surface-hover: #1a1a1a;
+
+  /* Ink Hierarchy */
+  --v-primary: #ededed;
+  --v-on-primary: #000000;
+  --v-ink: #ededed;
+  --v-body: #a1a1aa;
+  --v-mute: #888888;
+  --v-dim: #555555;
+
+  /* 1px Structural Hairlines & Shadow-as-Border */
+  --v-hairline: #222222;
+  --v-hairline-subtle: #161616;
+  --v-hairline-strong: #444444;
+  --v-shadow-border: 0 0 0 1px #222222;
+  --v-shadow-border-hover: 0 0 0 1px #444444;
+  --v-shadow-stack: 0 0 0 1px #262626, 0 8px 24px rgba(0, 0, 0, 0.75);
+
+  /* Geist Semantic Pipeline Colors (Develop / Preview / Ship) */
+  --v-link: #3291ff;
+  --v-link-deep: #0070f3;
+  --v-link-soft: rgba(0, 112, 243, 0.12);
+
+  --v-bull: #00e599;
+  --v-bull-soft: rgba(0, 229, 153, 0.10);
+  --v-bull-deep: #00a86b;
+
+  --v-bear: #ff4d4d;
+  --v-bear-soft: rgba(255, 77, 77, 0.10);
+  --v-bear-deep: #ee0000;
+
+  --v-warning: #f5a623;
+  --v-warning-soft: rgba(245, 166, 35, 0.12);
+
+  --v-violet: #c084fc;
+  --v-violet-soft: rgba(168, 85, 247, 0.14);
+  --v-cyan: #50e3c2;
+  --v-cyan-soft: rgba(80, 227, 194, 0.12);
+  --v-magenta: #ff0080;
+
+  /* Chart & Architectural Textures */
+  --v-chart-grid: #141414;
+  --v-chart-divider: #333333;
+  --v-dot-color: rgba(255, 255, 255, 0.12);
+}
+
+.v-studio-root[data-theme="light"] {
+  /* Geist 10-Step Light Polarity (design.md) */
+  --v-canvas: #ffffff;
+  --v-canvas-soft: #fafafa;
+  --v-canvas-soft-2: #f2f2f2;
+  --v-surface-elevated: #ffffff;
+  --v-surface-hover: #f5f5f5;
+
+  /* Ink Hierarchy */
+  --v-primary: #171717;
+  --v-on-primary: #ffffff;
+  --v-ink: #171717;
+  --v-body: #4d4d4d;
+  --v-mute: #666666;
+  --v-dim: #999999;
+
+  /* 1px Structural Hairlines & Shadow-as-Border */
+  --v-hairline: #eaeaea;
+  --v-hairline-subtle: #f3f3f3;
+  --v-hairline-strong: #999999;
+  --v-shadow-border: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --v-shadow-border-hover: 0 0 0 1px rgba(0, 0, 0, 0.24);
+  --v-shadow-stack: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+
+  /* Geist Semantic Pipeline Colors */
+  --v-link: #0070f3;
+  --v-link-deep: #0761d1;
+  --v-link-soft: rgba(0, 112, 243, 0.08);
+
+  --v-bull: #008236;
+  --v-bull-soft: rgba(0, 168, 107, 0.08);
+  --v-bull-deep: #00662b;
+
+  --v-bear: #e00000;
+  --v-bear-soft: rgba(224, 0, 0, 0.08);
+  --v-bear-deep: #c50000;
+
+  --v-warning: #ab570a;
+  --v-warning-soft: #ffefcf;
+
+  --v-violet: #7928ca;
+  --v-violet-soft: #f3e8ff;
+  --v-cyan: #0d9488;
+  --v-cyan-soft: #ccfbf1;
+  --v-magenta: #eb367f;
+
+  /* Chart & Architectural Textures */
+  --v-chart-grid: #f2f2f2;
+  --v-chart-divider: #cccccc;
+  --v-dot-color: rgba(0, 0, 0, 0.12);
+}
+
+.v-studio-root {
+  background-color: var(--v-canvas);
+  color: var(--v-ink);
+  font-family: 'Geist', 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  min-height: 100vh;
+  letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
+  selection-background-color: var(--v-primary);
+  selection-color: var(--v-on-primary);
+}
+
+/* Typography Scale from Vercel DESIGN.md */
+.v-display-hero {
+  font-size: clamp(24px, 2.5vw, 34px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.v-display-md {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -0.035em;
+}
+
+.v-heading-16 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  letter-spacing: -0.02em;
+}
+
+.v-body-sm {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.01em;
+}
+
+.v-body-sm-strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.01em;
+}
+
+.v-caption {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  letter-spacing: 0px;
+}
+
+.v-mono {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+.v-caption-mono {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Geist Buttons */
+.v-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--v-primary);
+  color: var(--v-on-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  transition: opacity 0.12s ease, transform 0.08s ease;
+}
+
+.v-btn-primary:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.v-btn-primary:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.v-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: var(--v-canvas);
+  color: var(--v-ink);
+  box-shadow: var(--v-shadow-border);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+}
+
+.v-btn-secondary:hover {
+  background-color: var(--v-surface-hover);
+  box-shadow: var(--v-shadow-border-hover);
+}
+
+.v-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  line-height: 14px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background-color: var(--v-canvas-soft-2);
+  box-shadow: var(--v-shadow-border);
+  color: var(--v-mute);
+}
+
+/* Architectural Intersection Crosshair (+) */
+.v-crosshair {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  pointer-events: none;
+  z-index: 20;
+}
+.v-crosshair::before,
+.v-crosshair::after {
+  content: '';
+  position: absolute;
+  background-color: var(--v-hairline-strong);
+}
+.v-crosshair::before {
+  top: 5px;
+  left: 0;
+  width: 11px;
+  height: 1px;
+}
+.v-crosshair::after {
+  top: 0;
+  left: 5px;
+  width: 1px;
+  height: 11px;
+}
+
+/* Semantic Audit Table (vercel.com/design.md) */
+.v-audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.v-audit-table th {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--v-mute);
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--v-hairline);
+  background-color: var(--v-canvas-soft);
+  vertical-align: bottom;
+}
+
+.v-audit-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--v-hairline-subtle);
+  color: var(--v-ink);
+  vertical-align: baseline;
+}
+
+.v-audit-table tr:last-child td {
+  border-bottom: none;
+}
+
+.v-audit-table tr:hover td {
+  background-color: var(--v-canvas-soft);
+}
+
+.v-audit-table th.v-numeric,
+.v-audit-table td.v-numeric {
+  text-align: right;
+  font-family: 'Geist Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}

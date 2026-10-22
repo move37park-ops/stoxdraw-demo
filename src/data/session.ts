@@ -36,12 +36,13 @@ function notifySession(user: User | null) {
 export function loginWithProvider(provider: 'google' | 'kakao'): User {
   const defaultUser: User = {
     id: 'user_my_account',
-    handle: provider === 'google' ? 'google_trader' : 'kakao_investor',
-    name: provider === 'google' ? '성공한 예측가' : '카카오 트레이더',
+    handle: provider === 'google' ? 'google_user' : 'kakao_user',
+    name: provider === 'google' ? '구글 애널리스트' : '카카오 애널리스트',
     avatarUrl: provider === 'google'
       ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
       : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    bio: 'STOXDRAW에서 미래 차트를 직접 그리고 기록합니다.',
+    bio: '5거래일 주가 경로 예측 및 Elo 정산 기록입니다.',
+    elo: 1200,
     forecastsCount: 1,
     completedCount: 0,
   };

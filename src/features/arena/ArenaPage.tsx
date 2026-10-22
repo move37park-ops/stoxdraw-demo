@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { repository } from '../../data/localRepository';
+import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
 import { computeArenaSummary, getHotArenas } from '../../domain/arena';
 import { aggregateCrowd } from '../../domain/crowd';
 import { deriveForecastStatus } from '../../domain/lifecycle';
 import { ArenaHeader } from './ArenaHeader';
 import { ArenaHeroStage } from './ArenaHeroStage';
 import { ForecasterDuelDeck } from './ForecasterDuelDeck';
-import { CrowdDistributionView } from './CrowdDistributionView';
 import { CompactForecastCard } from '../../components/CompactForecastCard';
 import type { Forecast, Horizon, Mode } from '../../domain/types';
 
@@ -15,19 +15,28 @@ interface ArenaPageProps {
   currentDateStr: string;
 }
 
-type ArenaTab = 'duel' | 'distribution' | 'resolved';
+type ArenaTab = 'live' | 'resolved';
 
 export function ArenaPage({ currentDateStr }: ArenaPageProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { ticker: paramTicker } = useParams<{ ticker?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const urlTicker = searchParams.get('ticker') || localStorage.getItem('last_arena_ticker') || 'NVDA';
-  const [ticker, setTicker] = useState<string>(urlTicker.toUpperCase());
-  const [horizon, setHorizon] = useState<Horizon>('5D');
-  const [mode, setMode] = useState<Mode>('path');
-  const [activeTab, setActiveTab] = useState<ArenaTab>('duel');
+  const activeTicker = (paramTicker || searchParams.get('ticker') || localStorage.getItem('last_arena_ticker') || 'NVDA').toUpperCase();
+  const [ticker, setTicker] = useState<string>(activeTicker);
+  const [horizon] = useState<Horizon>('5D');
+  const [mode] = useState<Mode>('path');
+  const [activeTab, setActiveTab] = useState<ArenaTab>('live');
   const [activeLayerIds, setActiveLayerIds] = useState<string[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>(() => repository.listFeed('all', currentDateStr));
+
+  useEffect(() => {
+    if (activeTicker && activeTicker !== ticker) {
+      setTicker(activeTicker);
+      localStorage.setItem('last_arena_ticker', activeTicker);
+      setActiveLayerIds([]);
+    }
+  }, [activeTicker, ticker]);
 
   const loadData = useCallback(() => {
     setForecasts(repository.listFeed('all', currentDateStr));
@@ -39,17 +48,13 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
     return () => unsub();
   }, [loadData]);
 
-  // Keep ticker in sync with URL
   const handleSelectTicker = (newTicker: string) => {
     setTicker(newTicker);
     localStorage.setItem('last_arena_ticker', newTicker);
-    const params = new URLSearchParams(searchParams);
-    params.set('ticker', newTicker);
-    setSearchParams(params);
-    setActiveLayerIds([]); // Reset overlaid layers when switching asset
+    setActiveLayerIds([]);
+    navigate(`/arena/${newTicker}`);
   };
 
-  // Toggle layer on main chart (max 3 layers)
   const handleToggleLayer = (forecastId: string) => {
     setActiveLayerIds(prev => {
       if (prev.includes(forecastId)) {
@@ -67,14 +72,9 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
   };
 
   const handleDrawClick = () => {
-    navigate(`/draw?ticker=${ticker}&horizon=${horizon}&mode=${mode}`);
+    navigate(`/draw?ticker=${ticker}`);
   };
 
-  const handleDuel = (targetForecast: Forecast) => {
-    navigate(`/draw?parent=${targetForecast.id}&ticker=${targetForecast.ticker}&horizon=${targetForecast.horizon}&mode=${targetForecast.mode}`);
-  };
-
-  // Computed Arena Data
   const hotArenas = useMemo(
     () => getHotArenas(forecasts, currentDateStr, horizon),
     [forecasts, currentDateStr, horizon]
@@ -95,34 +95,43 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
     [forecasts, activeLayerIds]
   );
 
+  const liveForecasts = useMemo(
+    () => arenaSummary.topForecasts.filter(f => deriveForecastStatus(f, currentDateStr) !== 'RESOLVED'),
+    [arenaSummary.topForecasts, currentDateStr]
+  );
+
   const resolvedForecasts = useMemo(
     () => forecasts.filter(f => f.ticker === ticker && deriveForecastStatus(f, currentDateStr) === 'RESOLVED'),
     [forecasts, ticker, currentDateStr]
   );
 
+  const currentUser = getCurrentUser();
+  const anonId = getOrCreateAnonId();
+  const hasParticipated = useMemo(() => {
+    return forecasts.some(
+      f =>
+        f.ticker === ticker &&
+        ((currentUser && f.authorId === currentUser.id) || (!currentUser && f.anonId === anonId))
+    );
+  }, [forecasts, ticker, currentUser, anonId]);
+
   return (
     <div className="w-full flex flex-col">
-      {/* Editorial Header (OpenAI Style) */}
-      <div className="mb-6">
-        <div className="text-xs font-medium text-zinc-400 tracking-wider mb-1">
-          아레나 · 종목별 5D 궤적 배틀
-        </div>
-        <h1 className="type-h2 text-white font-bold tracking-tight mb-1">
-          실시간 궤적 아레나
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-zinc-100 tracking-tight">
+          마켓 컨센서스
         </h1>
-        <p className="type-caption text-zinc-400">
-          과거의 차트를 넘어, 5일 뒤 미래 주가 궤적을 직접 그리고 군중 컨센서스와 대결합니다.
-        </p>
+        <span className="text-xs text-zinc-400">
+          종목별 시장 컨센서스 및 참여자 5D 예측 현황
+        </span>
       </div>
 
-      {/* 1. Hot Arenas Carousel Header */}
       <ArenaHeader
         hotArenas={hotArenas}
         selectedTicker={ticker}
         onSelectTicker={handleSelectTicker}
       />
 
-      {/* 2. Main Hero Stage (Integrated Chart Canvas) */}
       <ArenaHeroStage
         ticker={ticker}
         horizon={horizon}
@@ -131,89 +140,63 @@ export function ArenaPage({ currentDateStr }: ArenaPageProps) {
         crowd={crowd}
         arenaSummary={arenaSummary}
         activeLayerForecasts={activeLayerForecasts}
-        onHorizonChange={setHorizon}
-        onModeChange={setMode}
+        hasParticipated={hasParticipated}
         onDrawClick={handleDrawClick}
         onRemoveLayer={handleRemoveLayer}
       />
 
-      {/* 3. Sub-Tab Navigator & Deck */}
-      <div className="w-full mt-4">
-        {/* Navigation Tabs - Flat Pill Buttons */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+      <div className="w-full">
+        <div className="flex items-center gap-2 mb-4 border-b border-zinc-800 pb-3">
           <button
             type="button"
-            onClick={() => setActiveTab('duel')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
-              activeTab === 'duel'
-                ? 'bg-white text-black'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+            onClick={() => setActiveTab('live')}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition ${
+              activeTab === 'live'
+                ? 'bg-zinc-100 text-black'
+                : 'text-zinc-400 hover:text-zinc-200 bg-zinc-900 border border-zinc-800'
             }`}
           >
-            궤적 배틀 덱 ({arenaSummary.topForecasts.length})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('distribution')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
-              activeTab === 'distribution'
-                ? 'bg-white text-black'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-            }`}
-          >
-            군중 기대치 분포
+            진행 중 ({liveForecasts.length})
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('resolved')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition ${
+            className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition ${
               activeTab === 'resolved'
-                ? 'bg-white text-black'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                ? 'bg-zinc-100 text-black'
+                : 'text-zinc-400 hover:text-zinc-200 bg-zinc-900 border border-zinc-800'
             }`}
           >
-            검증 결과 아카이브 ({resolvedForecasts.length})
+            정산 완료 ({resolvedForecasts.length})
           </button>
         </div>
 
-        {/* Tab 1: Duel Deck */}
-        {activeTab === 'duel' && (
+        {activeTab === 'live' ? (
           <ForecasterDuelDeck
-            forecasts={arenaSummary.topForecasts}
+            forecasts={liveForecasts}
+            currentDateStr={currentDateStr}
             activeLayerIds={activeLayerIds}
             onToggleLayer={handleToggleLayer}
-            onDuel={handleDuel}
             onDrawFirst={handleDrawClick}
           />
-        )}
-
-        {/* Tab 2: Distribution View */}
-        {activeTab === 'distribution' && (
-          <CrowdDistributionView
-            ticker={ticker}
-            horizon={horizon}
-            basePrice={arenaSummary.currentPrice}
-            forecasts={forecasts}
-          />
-        )}
-
-        {/* Tab 3: Resolved Archive */}
-        {activeTab === 'resolved' && (
-          <div className="space-y-3">
+        ) : (
+          <div>
             {resolvedForecasts.length > 0 ? (
-              resolvedForecasts.map(f => (
-                <CompactForecastCard
-                  key={f.id}
-                  forecast={f}
-                  onDuel={handleDuel}
-                />
-              ))
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950 divide-y divide-zinc-800 overflow-hidden">
+                {resolvedForecasts.map(f => (
+                  <CompactForecastCard
+                    key={f.id}
+                    forecast={f}
+                    currentDateStr={currentDateStr}
+                    borderless={true}
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-16 px-4 rounded-2xl bg-[#0d0d10] border border-white/10">
-                <p className="text-xs sm:text-sm text-zinc-400">
-                  아직 {ticker} 종목의 검증 완료된 예측이 없습니다.
+              <div className="text-center py-12 px-4 rounded-lg bg-zinc-950 border border-zinc-800">
+                <p className="text-xs text-zinc-400">
+                  정산 완료된 기록이 없습니다. 상단 시점을 [10.12 만기]로 전환해 보세요.
                 </p>
               </div>
             )}

@@ -1,69 +1,98 @@
-import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, Share2 } from 'lucide-react';
-import { STOCKS, getCurrentStockPrice, getStockHistory } from '../../data/market';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { ArrowLeft, Check, Share2, Lock, FastForward } from 'lucide-react';
+import { CORE_STOCKS, getCurrentStockPrice, getStockHistory, getStockLandmarks } from '../../data/market';
 import { getNextTradingDays, getHorizonTradingDays } from '../../domain/tradingCalendar';
+import { getRoundFor, getCountdownRemaining } from '../../domain/round';
 import { repository } from '../../data/localRepository';
 import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
 import { aggregateCrowd } from '../../domain/crowd';
+import { resolveForecast } from '../../domain/resolution';
+import { formatPct } from '../../domain/format';
+import { calculateEloProjection, DEFAULT_ELO, formatSignedLp, getEloTierInfo } from '../../domain/elo';
 import { PathCanvas } from './PathCanvas';
 import { ForecastChart } from '../../components/ForecastChart';
+import { ShareTicketModal } from '../../components/ShareTicketModal';
 import { ConnectModal } from '../auth/ConnectModal';
-import { formatCurrency } from '../../domain/format';
+import { track } from '../../lib/analytics';
 import type { Horizon, Mode, PathPoint, Forecast } from '../../domain/types';
-
-type Step = 'stock' | 'draw' | 'preview' | 'reveal';
 
 interface DrawWizardProps {
   currentDateStr: string;
+  onDateChange?: (date: string) => void;
 }
 
-export function DrawWizard({ currentDateStr }: DrawWizardProps) {
+const QUICK_CHIPS = ['#실적모멘텀', '#눌림목반등', '#저항선돌파', '#단기차익실현'];
+
+export function DrawWizard({ currentDateStr, onDateChange }: DrawWizardProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // URL Params from [YOUR DRAW]
-  const parentId = searchParams.get('parent') || undefined;
-  const initialTicker = searchParams.get('ticker') || 'NVDA';
-  const horizon: Horizon = '5D'; // MVP 단일화: 5거래일(5D) 고정
-  const mode: Mode = 'path';      // MVP 단일화: Path(경로 그리기) 고정
+  const urlTicker = searchParams.get('ticker');
+  const incomingState = location.state as { ticker?: string; path?: PathPoint[] } | null;
+  const initialTicker = incomingState?.ticker || urlTicker || 'NVDA';
+  const initialPath = incomingState?.path || [];
 
-  const isResponse = Boolean(parentId);
-  const [step, setStep] = useState<Step>(isResponse || searchParams.get('ticker') ? 'draw' : 'stock');
-
-  const [ticker, setTicker] = useState<string>(initialTicker);
-  const [path, setPath] = useState<PathPoint[]>([]);
+  const [ticker, setTicker] = useState<string>(initialTicker.toUpperCase());
+  const [path, setPath] = useState<PathPoint[]>(initialPath);
   const [comment, setComment] = useState<string>('');
-
+  const [isLocked, setIsLocked] = useState(false);
   const [lockedForecast, setLockedForecast] = useState<Forecast | null>(null);
   const [isConnectOpen, setIsConnectOpen] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
-  // Stock metadata & dates
-  const basePrice = getCurrentStockPrice(ticker, currentDateStr);
+  const effectiveBaseDate = lockedForecast ? lockedForecast.baseDate : currentDateStr;
+  const round = useMemo(() => getRoundFor(ticker, effectiveBaseDate), [ticker, effectiveBaseDate]);
+  const [countdown, setCountdown] = useState(() => getCountdownRemaining(round.cutoffAt));
+
+  useEffect(() => {
+    setCountdown(getCountdownRemaining(round.cutoffAt));
+    const timer = setInterval(() => {
+      setCountdown(getCountdownRemaining(round.cutoffAt));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [round.cutoffAt]);
+
+  const horizon: Horizon = '5D';
+  const mode: Mode = 'path';
+
+  const basePrice = lockedForecast ? lockedForecast.basePrice : getCurrentStockPrice(ticker, currentDateStr);
   const tradingDaysCount = getHorizonTradingDays(horizon);
-  const evalDates = React.useMemo(() => getNextTradingDays(currentDateStr, tradingDaysCount), [currentDateStr, tradingDaysCount]);
+  const evalDates = useMemo(
+    () => (lockedForecast ? lockedForecast.evalDates : getNextTradingDays(currentDateStr, tradingDaysCount)),
+    [lockedForecast, currentDateStr, tradingDaysCount]
+  );
   const stockBars = getStockHistory(ticker);
-  const pastBars = React.useMemo(() => stockBars.filter(b => b.date <= currentDateStr).slice(-15), [stockBars, currentDateStr]);
+  const pastBars = useMemo(
+    () => stockBars.filter(b => b.date <= effectiveBaseDate).slice(-15),
+    [stockBars, effectiveBaseDate]
+  );
+  const stockMeta = CORE_STOCKS.find(s => s.ticker === ticker) || CORE_STOCKS[0];
+  const landmarks = useMemo(() => getStockLandmarks(ticker, basePrice), [ticker, basePrice]);
 
   const lastEvalDate = evalDates[evalDates.length - 1];
-  const hasEndTarget = path.some(p => p.date === lastEvalDate);
+  const isPathComplete = path.length === evalDates.length && path.some(p => p.date === lastEvalDate);
 
-  const handleStockSelect = (selectedTicker: string) => {
-    setTicker(selectedTicker);
-    setStep('draw');
+  const handleTickerSwitch = (newTicker: string) => {
+    if (newTicker === ticker) return;
+    setTicker(newTicker);
+    setPath([]);
+    track('ticker_switched', { from: ticker, to: newTicker });
   };
 
-  const canProceedFromDraw = path.length > 0 && hasEndTarget;
-
-  const handleProceedToPreview = () => {
-    setStep('preview');
+  const handleChipClick = (chip: string) => {
+    if (comment.includes(chip)) return;
+    setComment(prev => (prev ? `${prev} ${chip}` : chip));
   };
 
-  // Lock Forecast
   const handleLock = () => {
+    if (!isPathComplete) return;
+
     const currentUser = getCurrentUser();
     const anonId = getOrCreateAnonId();
+
+    const pathPct = path.map(p => parseFloat(((p.price - basePrice) / basePrice).toFixed(4)));
 
     const created = repository.createForecast({
       authorId: currentUser ? currentUser.id : null,
@@ -73,236 +102,272 @@ export function DrawWizard({ currentDateStr }: DrawWizardProps) {
       mode: 'path',
       comment: comment.trim() || `${ticker} 5D 궤적 예측`,
       basePrice,
-      baseDate: currentDateStr,
+      baseDate: effectiveBaseDate,
       evalDates,
       path,
-      parentId,
+      pathPct,
+      roundId: round.id,
+    });
+
+    track('forecast_locked', {
+      ticker,
+      roundId: round.id,
+      hasComment: Boolean(comment.trim()),
     });
 
     setLockedForecast(created);
-    setStep('reveal');
+    setIsLocked(true);
   };
 
-  // Crowd computation for reveal step
   const allForecasts = repository.listFeed('all', currentDateStr);
   const crowd = aggregateCrowd(allForecasts, ticker, horizon, mode);
+  const currentUser = getCurrentUser();
+  const userElo = currentUser?.elo ?? DEFAULT_ELO;
+
+  const lockedResult = useMemo(() => {
+    if (!lockedForecast) return null;
+    const visibleBars = stockBars.filter(b => b.date <= currentDateStr);
+    return resolveForecast(lockedForecast, visibleBars, crowd.consensusChangePct);
+  }, [lockedForecast, stockBars, currentDateStr, crowd.consensusChangePct]);
+
+  const draftTargetPrice = path[path.length - 1]?.price ?? basePrice;
+  const draftChangePct = ((draftTargetPrice - basePrice) / basePrice) * 100;
+  const draftProjection = useMemo(
+    () => calculateEloProjection(draftChangePct, crowd.consensusChangePct, stockMeta.volatility),
+    [draftChangePct, crowd.consensusChangePct, stockMeta.volatility]
+  );
+
+  const myTargetPrice = lockedForecast?.path?.[lockedForecast.path.length - 1]?.price ?? basePrice;
+  const myChangePct = lockedForecast
+    ? ((myTargetPrice - lockedForecast.basePrice) / lockedForecast.basePrice) * 100
+    : 0;
+  const crowdChangePct = crowd.consensusChangePct ?? 0;
+  const divergencePct = myChangePct - crowdChangePct;
+
+  const lockedEloProjection = useMemo(() => {
+    if (!lockedForecast) return null;
+    return calculateEloProjection(myChangePct, crowd.consensusChangePct, stockMeta.volatility);
+  }, [lockedForecast, myChangePct, crowd.consensusChangePct, stockMeta.volatility]);
+
+  const handleTimeSlipToResolved = () => {
+    if (!lockedForecast || !onDateChange) return;
+    const finalEvalDate = lockedForecast.evalDates[lockedForecast.evalDates.length - 1] || '2026-10-12';
+    onDateChange(finalEvalDate);
+  };
+
+  const effectiveElo = userElo + (lockedResult?.eloSettlement?.deltaLp ?? 0);
+  const userTier = getEloTierInfo(effectiveElo);
 
   return (
-    <div className="w-full max-w-3xl mx-auto py-2">
-      {/* Top Navigation Step Indicators */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="w-full max-w-5xl mx-auto">
+      {/* Top Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <button
-          onClick={() => {
-            if (step === 'stock' || isResponse) navigate(-1);
-            else if (step === 'draw') {
-              if (isResponse) navigate(-1);
-              else setStep('stock');
-            }
-            else if (step === 'preview') setStep('draw');
-            else navigate('/record');
-          }}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white transition"
         >
-          <ArrowLeft size={16} />
-          <span>이전</span>
+          <ArrowLeft size={15} />
+          <span>뒤로</span>
         </button>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-          <span className={step === 'stock' ? 'text-zinc-900 dark:text-white font-bold' : ''}>1. 종목 선택</span>
-          <span>·</span>
-          <span className={step === 'draw' ? 'text-zinc-900 dark:text-white font-bold' : ''}>2. 궤적 그리기 (5D)</span>
-          <span>·</span>
-          <span className={step === 'preview' || step === 'reveal' ? 'text-zinc-900 dark:text-white font-bold' : ''}>3. 제출 및 잠금</span>
+        <div className="flex items-center gap-2">
+          <span className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-medium border ${userTier.badgeClass}`}>
+            {userTier.tier} · {effectiveElo} LP
+          </span>
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-xs font-mono">
+            <span className="text-zinc-500">{round.id}</span>
+            <span className="text-zinc-700">/</span>
+            <span className="text-zinc-300 font-medium">마감 {countdown.formatted}</span>
+          </div>
         </div>
       </div>
 
-      {/* Main Wizard Container Card */}
-      <div className="rounded-3xl bg-[#0d0d10] border border-white/10 p-6 sm:p-10 shadow-none">
-        {/* Step 1: Stock Selection */}
-        {step === 'stock' && (
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">
-              예측할 종목을 선택하세요
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400 mb-6">
-              미래 주가 궤적을 제시할 주요 테크 및 모멘텀 자산
-            </p>
+      {/* Step 1: Active Draw View (Single 1px Hairline Container, No Nested Cards) */}
+      {!isLocked ? (
+        <div className="rounded-lg bg-zinc-950 border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
+          {/* Header & Stock Switching Pills */}
+          <div className="px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold tracking-tight text-white">
+                5D 주가 예측 작도
+              </h2>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {STOCKS.map(s => {
-                const price = getCurrentStockPrice(s.ticker, currentDateStr);
+            <div className="flex items-center gap-1 p-0.5 rounded-md bg-zinc-900 border border-zinc-800">
+              {CORE_STOCKS.map(s => {
+                const isSelected = s.ticker === ticker;
                 return (
                   <button
                     key={s.ticker}
-                    onClick={() => handleStockSelect(s.ticker)}
-                    className="flex items-center justify-between p-4 rounded-2xl bg-[#141418] hover:bg-[#181822] border border-white/10 transition text-left group"
+                    type="button"
+                    onClick={() => handleTickerSwitch(s.ticker)}
+                    className={`px-3 py-1 rounded text-xs font-mono font-medium transition ${
+                      isSelected
+                        ? 'bg-zinc-800 text-white'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs text-white shadow-sm"
-                        style={{ backgroundColor: s.logoColor }}
-                      >
-                        {s.ticker.slice(0, 2)}
-                      </div>
-                      <div>
-                        <div className="font-bold text-white text-sm">
-                          ${s.ticker}
-                        </div>
-                        <div className="text-xs text-zinc-400">{s.name}</div>
-                      </div>
-                    </div>
-                    <div className="text-right font-semibold text-white text-sm">
-                      {formatCurrency(price)}
-                    </div>
+                    ${s.ticker}
                   </button>
                 );
               })}
             </div>
           </div>
-        )}
 
-        {/* Step 2: Draw Canvas Interaction (5D Path) */}
-        {step === 'draw' && (
-          <div>
-            {parentId && (
-              <div className="mb-4 px-4 py-2.5 rounded-2xl bg-[#141418] border border-white/10 text-white text-xs flex items-center justify-between">
-                <span className="font-semibold">
-                  YOUR DRAW : 상대 궤적에 맞서는 내 선 그리기
-                </span>
-                <span className="text-[11px] text-zinc-400">1:1 대결 모드</span>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full bg-white text-black font-semibold text-xs">
-                  ${ticker}
-                </span>
-                <span className="px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 text-zinc-300 text-xs font-medium">
-                  5D (5거래일)
-                </span>
-                <span className="text-xs text-zinc-400">
-                  미래 궤적 그리기
-                </span>
-              </div>
-              <div className="text-xs font-semibold text-white">
-                기준가: {formatCurrency(basePrice)}
-              </div>
-            </div>
-
+          {/* Canvas Component */}
+          <div className="p-5 w-full" key={ticker}>
             <PathCanvas
               basePrice={basePrice}
               evalDates={evalDates}
               pastBars={pastBars}
               initialPath={path}
+              volatility={stockMeta.volatility}
+              landmarks={landmarks}
+              crowdChangePct={crowd.consensusChangePct}
               onPathChange={setPath}
             />
-            <div className="mt-3 px-4 py-2.5 rounded-xl bg-[#141418] border border-white/10 flex items-center justify-between text-xs">
-              <span className="text-zinc-400">평가 시작일: {evalDates[0]}</span>
-              <span className={hasEndTarget ? 'text-[#DFC15D] font-semibold' : 'text-zinc-400 font-semibold'}>
-                {hasEndTarget ? '✓ 만료일 점 등록됨' : `만료일(${lastEvalDate}) 점을 찍어주세요`}
-              </span>
-            </div>
-
-            {/* Bottom Next Pill Button */}
-            <div className="mt-6">
-              <button
-                type="button"
-                disabled={!canProceedFromDraw}
-                onClick={handleProceedToPreview}
-                className="w-full py-3.5 rounded-full bg-white hover:bg-zinc-200 text-black font-semibold text-sm disabled:opacity-40 transition"
-              >
-                {path.length === 0
-                  ? '차트에 점을 찍어 궤적을 그려주세요'
-                  : !hasEndTarget
-                  ? `만료일(${lastEvalDate}) 점을 찍어주세요`
-                  : '다음: 예측 검토하기'}
-              </button>
-            </div>
           </div>
-        )}
 
-        {/* Step 5: Preview */}
-        {step === 'preview' && (
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">
-              예측을 확인하세요
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400 mb-5">
-              확정(Lock) 후에는 위변조 방지를 위해 타임스탬프와 함께 불변 객체로 박제됩니다.
-            </p>
+          {/* Slide-Up Confirmation & Elo Stake Section (Separated by 1px Hairline) */}
+          {isPathComplete && (
+            <div className="p-5 bg-zinc-950 space-y-3.5">
+              {/* Live Elo Stake Summary */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-800 text-xs font-mono tabular-nums">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800 font-sans font-medium text-[11px]">
+                    {draftProjection.difficultyLabel}
+                  </span>
+                  <span className="text-zinc-500 font-sans">예상 정산</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span className="text-emerald-400">적중 {formatSignedLp(draftProjection.expectedWinLp)}</span>
+                  <span className="text-zinc-600">/</span>
+                  <span className="text-rose-400">실패 {formatSignedLp(draftProjection.expectedLossLp)}</span>
+                </div>
+              </div>
 
-            {/* Preview Chart */}
-            <div className="mb-5 rounded-2xl bg-[#050507] p-3 border border-white/10">
-              <ForecastChart
-                forecast={{
-                  id: 'preview_temp',
-                  authorId: null,
-                  anonId: 'preview',
-                  ticker,
-                  horizon,
-                  mode,
-                  comment: '',
-                  lockedAt: `${currentDateStr}T09:00:00Z`,
-                  basePrice,
-                  baseDate: currentDateStr,
-                  evalDates,
-                  path,
-                  rulesVersion: 'v1',
-                }}
-                height={230}
-                currentDateStr={currentDateStr}
-              />
-            </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-medium text-zinc-300">
+                  한 줄 근거 메모 (선택)
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {QUICK_CHIPS.map(chip => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => handleChipClick(chip)}
+                      className={`px-2 py-0.5 rounded text-[11px] font-mono border transition ${
+                        comment.includes(chip)
+                          ? 'bg-zinc-800 border-zinc-600 text-white font-medium'
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Optional Comment Input */}
-            <div className="mb-6">
-              <label className="text-xs text-zinc-400 block mb-1.5 font-medium">예측 근거나 생각 (선택)</label>
               <textarea
-                rows={3}
-                placeholder={`${ticker}에 대한 나의 생각이나 관점을 적어주세요...`}
+                rows={2}
+                placeholder={`${ticker} 5일 예측 근거 입력...`}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                className="w-full p-3.5 rounded-2xl bg-[#141418] border border-white/10 text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-white/30"
+                className="w-full p-2.5 rounded-md bg-zinc-900 border border-zinc-800 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-zinc-700"
               />
-            </div>
 
-            {/* Actions: 수정하기 / 확정하기 */}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setStep('draw')}
-                className="btn-flat-dark flex-1 py-3.5 text-sm"
-              >
-                수정하기
-              </button>
               <button
                 type="button"
                 onClick={handleLock}
-                className="btn-signature-draw flex-1 py-3.5 text-sm"
+                className="w-full py-2.5 rounded-md bg-white hover:bg-zinc-200 text-black font-medium text-sm flex items-center justify-center gap-2 transition"
               >
-                확정하기 (Lock)
+                <Lock size={14} className="stroke-[2.2]" />
+                <span>예측 확정 및 시장 컨센서스 보기</span>
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Step 6: Locked & Crowd Reveal */}
-        {step === 'reveal' && lockedForecast && (
-          <div className="text-center py-4">
-            <div className="w-14 h-14 rounded-full bg-[#C5A059]/15 text-[#DFC15D] flex items-center justify-center mx-auto mb-4 border border-[#C5A059]/30">
-              <Check size={28} className="stroke-[2.5]" />
+          )}
+        </div>
+      ) : (
+        /* Step 2: Reveal & Elo Settlement View (Single 1px Hairline Container, No Nested Cards) */
+        <div className="rounded-lg bg-zinc-950 border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
+          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                <Check size={14} className="stroke-[2.2]" />
+              </div>
+              <h2 className="text-base font-bold tracking-tight text-white">
+                ${ticker} 예측 확정 완료
+              </h2>
             </div>
 
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">
-              Forecast Locked!
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400 mb-6 max-w-md mx-auto">
-              예측이 불변으로 확정되었습니다. 이제 Crowd의 집단 예측과 내 예측을 비교할 수 있습니다.
-            </p>
+            {onDateChange && lockedForecast && currentDateStr < lockedForecast.evalDates[lockedForecast.evalDates.length - 1] && (
+              <button
+                type="button"
+                onClick={handleTimeSlipToResolved}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-mono font-medium transition"
+              >
+                <FastForward size={12} />
+                <span>5일 뒤 정산 시뮬레이션</span>
+              </button>
+            )}
+          </div>
 
-            {/* My vs Crowd Comparison Chart */}
-            <div className="mb-6 rounded-2xl bg-[#050507] p-4 border border-white/10">
+          {/* 4-Column Metric Strip (1px Hairline Grid) */}
+          {lockedForecast && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-zinc-800 text-left font-mono tabular-nums">
+              <div className="p-4">
+                <div className="text-[11px] text-zinc-500 mb-1 font-sans">내 목표 수익률</div>
+                <div className={`text-base font-semibold ${myChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {formatPct(myChangePct)} <span className="text-xs text-zinc-500 font-normal">(${myTargetPrice.toFixed(1)})</span>
+                </div>
+              </div>
+
+              <div className="p-4">
+                <div className="text-[11px] text-zinc-500 mb-1 font-sans">
+                  시장 컨센서스 ({crowd.participantsCount}명)
+                </div>
+                <div className="text-base font-semibold text-white">
+                  {formatPct(crowdChangePct)}
+                </div>
+              </div>
+
+              <div className="p-4">
+                <div className="text-[11px] text-zinc-500 mb-1 font-sans">예측 난이도</div>
+                <div className="text-xs sm:text-sm font-medium text-white font-sans flex items-center gap-1.5">
+                  <span>{lockedEloProjection?.difficultyLabel}</span>
+                  <span className="font-mono text-[11px] text-zinc-500">
+                    ({divergencePct >= 0 ? '+' : ''}{divergencePct.toFixed(1)}%p)
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4">
+                <div className="text-[11px] text-zinc-500 mb-1 font-sans">
+                  {lockedResult?.eloSettlement ? 'Elo 정산 완료' : '예상 Elo 변동'}
+                </div>
+                {lockedResult?.eloSettlement ? (
+                  <div className="text-base font-semibold flex items-center gap-1.5">
+                    <span className={lockedResult.eloSettlement.deltaLp >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                      {formatSignedLp(lockedResult.eloSettlement.deltaLp)}
+                    </span>
+                    <span className="text-xs text-zinc-500">
+                      ({lockedResult.score?.total}점)
+                    </span>
+                  </div>
+                ) : lockedEloProjection ? (
+                  <div className="text-sm font-semibold flex items-center gap-1">
+                    <span className="text-emerald-400">{formatSignedLp(lockedEloProjection.expectedWinLp)}</span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="text-rose-400">{formatSignedLp(lockedEloProjection.expectedLossLp)}</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          {/* Comparison Chart */}
+          {lockedForecast && (
+            <div className="p-5 bg-black text-left">
               <ForecastChart
                 forecast={lockedForecast}
                 height={260}
@@ -311,42 +376,54 @@ export function DrawWizard({ currentDateStr }: DrawWizardProps) {
                 currentDateStr={currentDateStr}
               />
             </div>
+          )}
 
-            {/* Social Share & Detail Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
+          {/* Action CTAs */}
+          <div className="px-5 py-3.5 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/arena/${ticker}`)}
+              className="px-3.5 py-2 rounded-md text-xs font-medium bg-zinc-900 text-zinc-300 border border-zinc-800 hover:text-white hover:border-zinc-700 transition"
+            >
+              마켓 보기
+            </button>
+
+            {lockedForecast && (
               <button
+                type="button"
                 onClick={() => navigate(`/f/${lockedForecast.id}`)}
-                className="btn-flat-white text-xs sm:text-sm px-5 py-3"
+                className="px-3.5 py-2 rounded-md text-xs font-medium bg-zinc-900 text-white border border-zinc-800 hover:border-zinc-700 transition"
               >
-                예측 상세 보기
+                상세 성적표
               </button>
-              <button
-                onClick={() => navigate('/record')}
-                className="btn-flat-dark text-xs sm:text-sm px-5 py-3"
-              >
-                내 기록 (Record) 확인
-              </button>
-              <button
-                onClick={() => navigate(`/arena?ticker=${ticker}`)}
-                className="btn-flat-dark text-xs sm:text-sm px-5 py-3"
-              >
-                아레나로 돌아가기
-              </button>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/f/${lockedForecast.id}`);
-                  setIsCopied(true);
-                  setTimeout(() => setIsCopied(false), 2000);
-                }}
-                className="btn-flat-dark text-xs sm:text-sm px-4 py-3 flex items-center justify-center gap-1.5"
-              >
-                <Share2 size={14} />
-                <span>{isCopied ? '복사됨!' : '공유'}</span>
-              </button>
-            </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsShareOpen(true)}
+              className="px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-black font-medium text-xs flex items-center gap-1.5 transition"
+            >
+              <Share2 size={13} />
+              <span>티켓 공유 (PNG)</span>
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {lockedForecast && (
+        <ShareTicketModal
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+          forecast={lockedForecast}
+          authorHandle={currentUser?.handle || 'device_user'}
+          crowdPath={crowd.consensusPath}
+          crowdChangePct={crowd.consensusChangePct}
+          scoreTotal={lockedResult?.score?.total}
+          scoreGrade={lockedResult?.score?.grade}
+          eloDeltaLp={lockedResult?.eloSettlement?.deltaLp}
+          authorElo={effectiveElo}
+        />
+      )}
 
       <ConnectModal
         isOpen={isConnectOpen}
@@ -356,3 +433,5 @@ export function DrawWizard({ currentDateStr }: DrawWizardProps) {
     </div>
   );
 }
+
+export default DrawWizard;

@@ -5,21 +5,21 @@ import { CompactForecastCard } from '../../components/CompactForecastCard';
 
 interface ForecasterDuelDeckProps {
   forecasts: Forecast[];
+  currentDateStr?: string;
   activeLayerIds: string[];
   onToggleLayer: (id: string) => void;
-  onDuel: (forecast: Forecast) => void;
   onDrawFirst: () => void;
 }
 
 type StanceFilter = 'all' | 'bull' | 'bear';
 
-const LAYER_COLORS = ['#f59e0b', '#c084fc', '#10b981', '#f43f5e', '#0284c7'];
+const LAYER_COLORS = ['#DFC15D', '#10b981', '#f43f5e'];
 
 export function ForecasterDuelDeck({
   forecasts,
+  currentDateStr = '2026-10-05',
   activeLayerIds,
   onToggleLayer,
-  onDuel,
   onDrawFirst,
 }: ForecasterDuelDeckProps) {
   const [stanceFilter, setStanceFilter] = useState<StanceFilter>('all');
@@ -52,52 +52,50 @@ export function ForecasterDuelDeck({
 
   return (
     <div className="w-full">
-      {/* Sub Header: Stance Filter Pills */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setStanceFilter('all')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+            className={`px-3 py-1 rounded-md text-xs font-medium transition ${
               stanceFilter === 'all'
-                ? 'bg-white text-black'
-                : 'bg-[#141418] text-zinc-400 hover:text-white border border-white/10'
+                ? 'bg-zinc-100 text-black'
+                : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
             }`}
           >
-            전체 ({forecasts.length})
+            전체 {forecasts.length}
           </button>
           <button
             type="button"
             onClick={() => setStanceFilter('bull')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+            className={`px-3 py-1 rounded-md text-xs font-medium transition ${
               stanceFilter === 'bull'
-                ? 'bg-emerald-500 text-black font-bold'
-                : 'bg-[#141418] text-emerald-400 hover:bg-zinc-800 border border-white/10'
+                ? 'bg-emerald-500 text-black font-semibold'
+                : 'bg-zinc-900 text-emerald-400 border border-zinc-800 hover:bg-zinc-850'
             }`}
           >
-            Bull 진영 ({bullForecasts.length})
+            Bull {bullForecasts.length}
           </button>
           <button
             type="button"
             onClick={() => setStanceFilter('bear')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
+            className={`px-3 py-1 rounded-md text-xs font-medium transition ${
               stanceFilter === 'bear'
-                ? 'bg-rose-500 text-white font-bold'
-                : 'bg-[#141418] text-rose-400 hover:bg-zinc-800 border border-white/10'
+                ? 'bg-rose-500 text-white font-semibold'
+                : 'bg-zinc-900 text-rose-400 border border-zinc-800 hover:bg-zinc-850'
             }`}
           >
-            Bear 진영 ({bearForecasts.length})
+            Bear {bearForecasts.length}
           </button>
         </div>
 
-        <div className="hidden sm:flex items-center text-xs text-zinc-400 font-medium">
-          YOUR DRAW 버튼으로 맞불 궤적 대결
-        </div>
+        <span className="hidden sm:inline text-xs text-zinc-500">
+          최대 3개 예측 경로 중첩 비교 가능
+        </span>
       </div>
 
-      {/* Forecast Cards Deck */}
       {filtered.length > 0 ? (
-        <div className="flex flex-col gap-2.5">
+        <div className="rounded-lg border border-zinc-800 bg-zinc-950 divide-y divide-zinc-800 overflow-hidden">
           {filtered.map(forecast => {
             const activeIdx = activeLayerIds.indexOf(forecast.id);
             const isActive = activeIdx !== -1;
@@ -107,29 +105,27 @@ export function ForecasterDuelDeck({
               <CompactForecastCard
                 key={forecast.id}
                 forecast={forecast}
+                currentDateStr={currentDateStr}
                 isActiveLayer={isActive}
                 layerColor={layerColor}
                 onToggleLayer={onToggleLayer}
-                onDuel={onDuel}
+                borderless={true}
               />
             );
           })}
         </div>
       ) : (
-        <div className="text-center py-16 px-4 rounded-2xl bg-[#0d0d10] border border-white/10">
-          <h3 className="text-sm font-bold text-white mb-1">
-            아직 이 조건의 예측이 없습니다
-          </h3>
-          <p className="text-xs text-zinc-400 mb-5">
-            가장 먼저 미래 궤적을 제시하고 군중의 첫 기준점을 세워보세요!
+        <div className="text-center py-12 px-4 rounded-lg bg-zinc-950 border border-zinc-800">
+          <p className="text-xs text-zinc-400 mb-4">
+            등록된 예측이 없습니다.
           </p>
           <button
             type="button"
             onClick={onDrawFirst}
-            className="btn-signature-draw px-5 py-2.5 rounded-full text-xs tracking-wide"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-white hover:bg-zinc-200 text-black font-medium text-xs transition"
           >
-            <span>DRAW</span>
-            <ArrowRight size={13} className="stroke-[2.5]" />
+            <span>첫 5D 예측 그리기</span>
+            <ArrowRight size={13} />
           </button>
         </div>
       )}

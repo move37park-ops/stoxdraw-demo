@@ -1,8 +1,12 @@
 import type { Forecast, ForecastResult, MarketBar } from './types';
+import { calculateForecastScore } from './scoring';
+import { settleEloRating } from './elo';
+import { STOCKS } from '../data/market';
 
 export function resolveForecast(
   forecast: Forecast,
-  actualBars: MarketBar[]
+  actualBars: MarketBar[],
+  crowdChangePct?: number
 ): ForecastResult {
   const basePrice = forecast.basePrice;
   const barsMap = new Map(actualBars.map(b => [b.date, b]));
@@ -68,11 +72,36 @@ export function resolveForecast(
     ? (Math.abs(forecastEnd - actualEnd) / actualEnd) * 100
     : 0;
 
+  // Calculate 100-pt hybrid score if we have predictions and actual prices
+  const forecastPrices: number[] = [];
+  const actualPrices: number[] = [];
+  for (const date of evalDates) {
+    const pt = path.find(p => p.date === date);
+    const act = barsMap.get(date);
+    if (pt && act) {
+      forecastPrices.push(pt.price);
+      actualPrices.push(act.close);
+    }
+  }
+
+  const stockMeta = STOCKS.find(s => s.ticker === forecast.ticker);
+  const vol = stockMeta?.volatility || 0.03;
+
+  const score = forecastPrices.length > 0
+    ? calculateForecastScore(forecastPrices, actualPrices, basePrice, vol)
+    : undefined;
+
+  const eloSettlement = score
+    ? settleEloRating(score, forecastChangePct, crowdChangePct, vol)
+    : undefined;
+
   return {
     mode: 'path',
     forecastChangePct: parseFloat(forecastChangePct.toFixed(2)),
     actualChangePct: parseFloat(actualChangePct.toFixed(2)),
     directionHit,
     endErrorPct: parseFloat(endErrorPct.toFixed(2)),
+    score,
+    eloSettlement,
   };
 }

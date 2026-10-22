@@ -1,31 +1,43 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ThumbsUp, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, ThumbsUp } from 'lucide-react';
 import type { Forecast } from '../domain/types';
 import { repository } from '../data/localRepository';
-import { formatPct } from '../domain/format';
+import { getStockHistory, STOCKS } from '../data/market';
+import { deriveForecastStatus } from '../domain/lifecycle';
+import { resolveForecast } from '../domain/resolution';
+import { formatPct, formatRelativeTime } from '../domain/format';
+import {
+  getEloTierInfo,
+  DEFAULT_ELO,
+  calculateEloProjection,
+  formatSignedLp,
+} from '../domain/elo';
 
 interface CompactForecastCardProps {
   forecast: Forecast;
+  currentDateStr?: string;
   isActiveLayer?: boolean;
   layerColor?: string;
   onToggleLayer?: (forecastId: string) => void;
-  onDuel?: (forecast: Forecast) => void;
+  borderless?: boolean;
 }
 
 export function CompactForecastCard({
   forecast,
+  currentDateStr = '2026-10-05',
   isActiveLayer = false,
-  layerColor = '#0284c7',
+  layerColor = '#e4e4e7',
   onToggleLayer,
-  onDuel,
+  borderless = false,
 }: CompactForecastCardProps) {
   const navigate = useNavigate();
   const author = forecast.authorId ? repository.getUser(forecast.authorId) : null;
+  const authorElo = author?.elo ?? DEFAULT_ELO;
+  const tierInfo = getEloTierInfo(authorElo);
   const isLiked = repository.isLiked(forecast.id);
   const likesCount = repository.getLikesCount(forecast.id);
 
-  // Target price and change pct calculation
   let targetPrice = forecast.basePrice;
   if (forecast.mode === 'path' && forecast.path && forecast.path.length > 0) {
     targetPrice = forecast.path[forecast.path.length - 1].price;
@@ -39,28 +51,23 @@ export function CompactForecastCard({
 
   const isBull = changePct >= 0;
 
-  // Mini sparkline SVG generator
+  const status = deriveForecastStatus(forecast, currentDateStr);
+  const stockMeta = STOCKS.find(s => s.ticker === forecast.ticker) || STOCKS[0];
+
+  const resolvedData = React.useMemo(() => {
+    if (status !== 'RESOLVED') return null;
+    const bars = getStockHistory(forecast.ticker).filter(b => b.date <= currentDateStr);
+    return resolveForecast(forecast, bars);
+  }, [forecast, status, currentDateStr]);
+
+  const eloProjection = React.useMemo(
+    () => calculateEloProjection(changePct, undefined, stockMeta.volatility),
+    [changePct, stockMeta.volatility]
+  );
+
   const renderSparkline = () => {
     if (forecast.mode !== 'path' || !forecast.path || forecast.path.length === 0) {
-      return (
-        <svg width="84" height="28" viewBox="0 0 84 28" className="overflow-visible">
-          <line
-            x1="2"
-            y1={isBull ? 22 : 6}
-            x2="80"
-            y2={isBull ? 6 : 22}
-            stroke={isBull ? '#10b981' : '#f43f5e'}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-          <circle
-            cx="80"
-            cy={isBull ? 6 : 22}
-            r="3.5"
-            fill={isBull ? '#10b981' : '#f43f5e'}
-          />
-        </svg>
-      );
+      return null;
     }
 
     const prices = [forecast.basePrice, ...forecast.path.map(p => p.price)];
@@ -68,8 +75,8 @@ export function CompactForecastCard({
     const max = Math.max(...prices);
     const range = max - min || 1;
     const w = 84;
-    const h = 28;
-    const pad = 4;
+    const h = 26;
+    const pad = 3;
 
     const points = prices.map((p, idx) => {
       const x = pad + (idx / (prices.length - 1)) * (w - pad * 2);
@@ -89,14 +96,14 @@ export function CompactForecastCard({
           d={d}
           fill="none"
           stroke={isActiveLayer ? layerColor : (isBull ? '#10b981' : '#f43f5e')}
-          strokeWidth={isActiveLayer ? "2.5" : "2"}
+          strokeWidth={isActiveLayer ? '2.2' : '1.75'}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <circle
           cx={lastX}
           cy={lastY}
-          r="3"
+          r="2.5"
           fill={isActiveLayer ? layerColor : (isBull ? '#10b981' : '#f43f5e')}
         />
       </svg>
@@ -117,120 +124,140 @@ export function CompactForecastCard({
     if (onToggleLayer) onToggleLayer(forecast.id);
   };
 
-  const handleDuelClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onDuel) {
-      onDuel(forecast);
-    } else {
-      navigate(`/draw?parent=${forecast.id}&ticker=${forecast.ticker}&horizon=${forecast.horizon}&mode=${forecast.mode}`);
-    }
-  };
-
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
-        isActiveLayer
-          ? 'bg-[#181820] border-white/30 text-white shadow-none'
-          : 'bg-[#0d0d10] border-white/10 hover:border-white/20 text-white shadow-none'
+      className={`group relative flex items-center justify-between gap-4 px-4 py-3.5 transition-colors cursor-pointer ${
+        borderless
+          ? isActiveLayer
+            ? 'bg-zinc-900/80 text-zinc-100'
+            : 'bg-zinc-950 hover:bg-zinc-900/40 text-zinc-100'
+          : isActiveLayer
+          ? 'rounded-lg border border-zinc-600 bg-zinc-900 text-zinc-100'
+          : 'rounded-lg border border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900/30 text-zinc-100'
       }`}
     >
-      {/* Active Layer Indicator Line */}
       {isActiveLayer && (
         <span
-          className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full"
+          className="absolute left-0 top-2 bottom-2 w-1 rounded-r"
           style={{ backgroundColor: layerColor }}
         />
       )}
 
-      {/* Left: Author & Stance */}
-      <div className="flex items-center gap-3 min-w-0 pr-2">
-        <img
-          src={author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
-          alt={author?.name || '익명'}
-          className="w-9 h-9 rounded-full object-cover border border-white/10 flex-shrink-0"
-        />
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[13px] font-semibold text-white truncate max-w-[90px] sm:max-w-[120px]">
-              {author?.name || '익명 예측가'}
-            </span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-900 border border-white/10 text-zinc-300">
+      {/* Column 1: Deployment Target & Thesis */}
+      <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-shrink-0 font-mono">
+            <span
+              className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                status === 'RESOLVED'
+                  ? resolvedData?.directionHit
+                    ? 'bg-emerald-400'
+                    : 'bg-zinc-500'
+                  : 'bg-emerald-400'
+              }`}
+              title={status === 'RESOLVED' ? '정산 완료' : '진행 중'}
+            />
+            <span className="text-xs font-semibold text-zinc-100">
               ${forecast.ticker}
             </span>
-            <span className="text-[10px] text-zinc-400">
-              {forecast.horizon}
-            </span>
-            {author && author.completedCount > 5 && (
-              <CheckCircle2 size={13} className="text-[#DFC15D] flex-shrink-0" />
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 mt-0.5">
             <span
-              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                isBull
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+              className={`text-xs font-semibold ${
+                isBull ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
-              {isBull ? '▲' : '▼'} {formatPct(changePct)}
+              {formatPct(changePct)}
             </span>
-            <span className="text-xs text-zinc-300 font-medium">
-              ${targetPrice.toFixed(1)}
+            <span className="text-xs text-zinc-400">
+              (${targetPrice.toFixed(1)})
             </span>
           </div>
+
+          {forecast.comment && (
+            <span className="text-xs text-zinc-400 truncate max-w-[360px]">
+              {forecast.comment}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Center: Sparkline */}
-      <div className="hidden sm:flex items-center justify-center px-2 flex-shrink-0">
+      {/* Column 2: 5D Sparkline & Quantitative Elo Stake / Settlement */}
+      <div className="hidden md:flex items-center gap-4 flex-shrink-0">
         {renderSparkline()}
+
+        <div className="w-32 text-right font-mono">
+          {resolvedData?.eloSettlement ? (
+            <div className="inline-flex items-center gap-1.5 text-xs">
+              {resolvedData.score && (
+                <span className="text-zinc-400">{resolvedData.score.total}점</span>
+              )}
+              <span
+                className={`font-semibold ${
+                  resolvedData.eloSettlement.deltaLp >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              >
+                {formatSignedLp(resolvedData.eloSettlement.deltaLp)}
+              </span>
+            </div>
+          ) : (
+            <div className="text-[11px] text-zinc-400">
+              <span className="text-emerald-400 font-medium">+{eloProjection.expectedWinLp}</span>
+              <span className="text-zinc-600"> / </span>
+              <span className="text-rose-400">{eloProjection.expectedLossLp} LP</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Right: Actions */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        {/* Layer View Toggle Button */}
+      {/* Column 3: Author Scope & Actions */}
+      <div className="flex items-center gap-2.5 flex-shrink-0">
+        <div className="hidden sm:flex items-center gap-2 text-right">
+          <div className="flex items-center gap-1.5 font-mono text-xs">
+            <span className="text-zinc-300 font-sans font-medium truncate max-w-[90px]">
+              {author?.name || '익명'}
+            </span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded border ${tierInfo.badgeClass}`}>
+              {tierInfo.tier}
+            </span>
+            <span className="text-zinc-500 text-[11px] hidden lg:inline">
+              {formatRelativeTime(forecast.lockedAt)}
+            </span>
+          </div>
+          <img
+            src={author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
+            alt={author?.name || '익명'}
+            className="w-6 h-6 rounded-full object-cover border border-zinc-800 flex-shrink-0"
+          />
+        </div>
+
         {onToggleLayer && forecast.mode === 'path' && (
           <button
             type="button"
             onClick={handleToggle}
-            title={isActiveLayer ? "메인 차트에서 숨기기" : "메인 차트에 오버레이하기"}
-            className={`px-2.5 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 transition ${
+            className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition ${
               isActiveLayer
-                ? 'bg-white text-black font-semibold'
-                : 'bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white'
+                ? 'bg-zinc-100 text-black'
+                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700'
             }`}
           >
-            {isActiveLayer ? <Eye size={13} /> : <EyeOff size={13} />}
+            {isActiveLayer ? <Eye size={12} /> : <EyeOff size={12} />}
             <span className="text-[11px] hidden sm:inline">
-              {isActiveLayer ? '차트 On' : '오버레이'}
+              {isActiveLayer ? '표시 중' : '비교'}
             </span>
           </button>
         )}
 
-        {/* 10% Accent YOUR DRAW Button */}
-        <button
-          type="button"
-          onClick={handleDuelClick}
-          title="이 예측에 맞서는 내 궤적 그리기"
-          className="btn-your-draw"
-        >
-          <span>YOUR DRAW</span>
-        </button>
-
-        {/* Agree / Like Button */}
         <button
           type="button"
           onClick={handleLike}
-          className={`px-2.5 py-1.5 rounded-full text-xs font-mono flex items-center gap-1 border transition ${
+          className={`px-2 py-1 rounded-md text-xs font-mono flex items-center gap-1 border transition ${
             isLiked
               ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-              : 'bg-zinc-900 text-zinc-400 border-white/10 hover:text-white'
+              : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-100 hover:border-zinc-700'
           }`}
         >
-          <ThumbsUp size={12} className={isLiked ? 'fill-rose-500' : ''} />
-          <span className="text-[11px] font-bold">{likesCount}</span>
+          <ThumbsUp size={11} className={isLiked ? 'fill-rose-500' : ''} />
+          <span className="text-[11px]">{likesCount}</span>
         </button>
       </div>
     </div>

@@ -5,10 +5,11 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
-    <title>STOXDRAW — Social Forecasting Platform</title>
-    <meta name="description" content="미래 주가를 직접 그리고, 공개하고, Crowd와 비교하며, 실제 시장과의 결과를 검증 가능한 Record로 축적하는 소셜 포캐스팅 플랫폼" />
+    <title>STOXDRAW — 5D Stock Path & Elo Rating</title>
+    <meta name="description" content="5거래일 주가 경로 예측 및 실제 시장 종가 기반 정량 Elo 레이팅 검증 플랫폼." />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -18,13 +19,10 @@
           extend: {
             colors: {
               brand: {
-                // 10% Accent (Call to Action & Forecast Peak)
                 green: '#00D03A',
                 'green-aa': '#008236',
-                // 30% Supporting Secondary (Consensus & Meta Data)
                 blue: '#78ABFF',
                 'blue-aa': '#1F7DFF',
-                // 60% Dominant Base
                 'gray-light': '#EFF3EB',
                 'gray-100': '#E5ECE2',
                 'gray-200': '#C2CFC0',
@@ -36,26 +34,22 @@
             },
             fontFamily: {
               sans: [
+                '"Geist"',
                 '"Pretendard Variable"',
                 'Pretendard',
                 '-apple-system',
                 'BlinkMacSystemFont',
                 'system-ui',
-                'Roboto',
-                '"Helvetica Neue"',
-                '"Segoe UI"',
-                '"Apple SD Gothic Neo"',
-                '"Noto Sans KR"',
-                '"Malgun Gothic"',
                 'sans-serif'
               ],
               mono: [
-                '"Pretendard Variable"',
-                'Pretendard',
-                '-apple-system',
-                'BlinkMacSystemFont',
-                'system-ui',
-                'sans-serif'
+                '"Geist Mono"',
+                'ui-monospace',
+                'SFMono-Regular',
+                'Menlo',
+                'Monaco',
+                'Consolas',
+                'monospace'
               ],
             },
             fontSize: {

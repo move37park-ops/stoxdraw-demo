@@ -4,12 +4,12 @@ import { SEED_USERS, generateSeedForecasts, SEED_COMMENTS, SEED_NOTIFICATIONS } 
 import { deriveForecastStatus } from '../domain/lifecycle';
 
 const KEYS = {
-  FORECASTS: 'stoxdraw_v2_forecasts',
-  USERS: 'stoxdraw_v2_users',
-  LIKES: 'stoxdraw_v2_likes',
-  FOLLOWS: 'stoxdraw_v2_follows',
-  COMMENTS: 'stoxdraw_v2_comments',
-  NOTIFICATIONS: 'stoxdraw_v2_notifications',
+  FORECASTS: 'stoxdraw_v5_forecasts',
+  USERS: 'stoxdraw_v5_users',
+  LIKES: 'stoxdraw_v5_likes',
+  FOLLOWS: 'stoxdraw_v5_follows',
+  COMMENTS: 'stoxdraw_v5_comments',
+  NOTIFICATIONS: 'stoxdraw_v5_notifications',
 };
 
 class LocalRepository implements Repository {
@@ -99,6 +99,8 @@ class LocalRepository implements Repository {
     baseDate: string;
     evalDates: string[];
     path?: { date: string; price: number }[];
+    pathPct?: number[];
+    roundId?: string;
     breakout?: { direction: 'up' | 'down'; price: number };
     parentId?: string;
   }): Forecast {
@@ -167,7 +169,14 @@ class LocalRepository implements Repository {
 
   listAllUsers(): User[] {
     const raw = localStorage.getItem(KEYS.USERS);
-    return raw ? JSON.parse(raw) : SEED_USERS;
+    const parsed: User[] = raw ? JSON.parse(raw) : SEED_USERS;
+    return parsed.map(u => {
+      const seedMatch = SEED_USERS.find(s => s.id === u.id);
+      return {
+        ...u,
+        elo: u.elo ?? seedMatch?.elo ?? 1200,
+      };
+    });
   }
 
   isLiked(forecastId: string): boolean {

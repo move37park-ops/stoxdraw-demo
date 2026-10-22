@@ -1,5 +1,3 @@
-import { useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ArenaSummary } from '../../domain/arena';
 
 interface ArenaHeaderProps {
@@ -8,59 +6,21 @@ interface ArenaHeaderProps {
   onSelectTicker: (ticker: string) => void;
 }
 
+const CORE_TICKERS = ['NVDA', 'TSLA', 'AAPL'];
+
 export function ArenaHeader({
   hotArenas,
   selectedTicker,
   onSelectTicker,
 }: ArenaHeaderProps) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const offset = direction === 'left' ? -240 : 240;
-      scrollContainerRef.current.scrollBy({ left: offset, behavior: 'smooth' });
-    }
-  };
+  const displayedArenas = CORE_TICKERS.map(
+    t => hotArenas.find(a => a.ticker === t)
+  ).filter((a): a is ArenaSummary => Boolean(a));
 
   return (
-    <div className="w-full bg-[#0d0d10] border border-white/10 rounded-2xl p-4 mb-6 shadow-none">
-      {/* Title & Quick Info */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
-          <span>주요 예측 종목</span>
-          <span className="text-[11px] text-zinc-500 font-normal">
-            실시간 아레나
-          </span>
-        </div>
-
-        {/* Scroll Controls (Desktop) */}
-        <div className="hidden sm:flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => scroll('left')}
-            className="p-1 rounded-full bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white transition"
-            title="이전 종목"
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => scroll('right')}
-            className="p-1 rounded-full bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white transition"
-            title="다음 종목"
-          >
-            <ChevronRight size={14} />
-          </button>
-        </div>
-      </div>
-
-      {/* Horizontal Carousel */}
-      <div
-        ref={scrollContainerRef}
-        className="flex items-center gap-3 overflow-x-auto no-scrollbar scroll-smooth pb-1"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {hotArenas.map((arena) => {
+    <div className="w-full mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {displayedArenas.map((arena) => {
           const isSelected = arena.ticker === selectedTicker;
 
           return (
@@ -68,43 +28,29 @@ export function ArenaHeader({
               key={arena.ticker}
               type="button"
               onClick={() => onSelectTicker(arena.ticker)}
-              className={`flex flex-col justify-between flex-shrink-0 text-left p-3.5 rounded-xl border transition-all duration-150 min-w-[175px] sm:min-w-[190px] ${
+              className={`flex flex-col justify-between text-left p-4 rounded-lg border transition-all duration-150 ${
                 isSelected
-                  ? 'bg-[#181824] text-white border-[#C5A059] shadow-md ring-1 ring-[#C5A059]/40'
-                  : 'bg-[#121216] text-white border-white/10 hover:border-white/20 hover:bg-[#16161c]'
+                  ? 'bg-zinc-900 text-zinc-100 border-zinc-700 ring-1 ring-zinc-700'
+                  : 'bg-zinc-950 text-zinc-200 border-zinc-800 hover:border-zinc-700'
               }`}
             >
-              {/* Top row: Ticker + Live Count */}
               <div className="flex items-center justify-between mb-2 w-full">
-                <div className="flex items-center gap-1.5">
-                  <span className={`font-bold font-mono text-sm tracking-tight ${
-                    isSelected ? 'text-[#DFC15D]' : 'text-white'
+                <div className="flex items-center gap-2">
+                  <span className={`font-semibold font-mono text-base tracking-tight ${
+                    isSelected ? 'text-zinc-100' : 'text-zinc-200'
                   }`}>
                     ${arena.ticker}
                   </span>
-                  {isSelected && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#C5A059]/15 text-[#DFC15D] border border-[#C5A059]/30 leading-none">
-                      선택
-                    </span>
-                  )}
+                  <span className="text-xs text-zinc-400 truncate">
+                    {arena.name}
+                  </span>
                 </div>
-                <span className="text-[11px] font-mono text-zinc-400">
-                  {arena.participantsCount}명
+                <span className="text-xs font-mono text-zinc-300 font-medium">
+                  ${arena.currentPrice.toFixed(2)}
                 </span>
               </div>
 
-              {/* Price & Name */}
-              <div className="flex items-center justify-between text-xs mb-3 w-full">
-                <span className="text-zinc-400 truncate max-w-[95px]">
-                  {arena.name}
-                </span>
-                <span className="font-semibold font-mono text-white text-xs">
-                  ${arena.currentPrice.toFixed(1)}
-                </span>
-              </div>
-
-              {/* Bull vs Bear Mini Sentiment Bar */}
-              <div className="w-full pt-1.5 border-t border-white/5">
+              <div className="w-full pt-2 border-t border-zinc-850/60">
                 <div className="w-full h-1.5 rounded-full bg-zinc-800 flex overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 transition-all duration-300"
@@ -115,12 +61,15 @@ export function ArenaHeader({
                     style={{ width: `${arena.bearPct}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[10px] mt-1.5 font-mono">
+                <div className="flex items-center justify-between text-[11px] mt-1.5 font-mono">
                   <span className="text-emerald-400 font-medium">
-                    Bull {arena.bullPct}%
+                    BULL {arena.bullPct}%
+                  </span>
+                  <span className="text-zinc-500">
+                    {arena.participantsCount}명 참여
                   </span>
                   <span className="text-rose-400 font-medium">
-                    Bear {arena.bearPct}%
+                    BEAR {arena.bearPct}%
                   </span>
                 </div>
               </div>

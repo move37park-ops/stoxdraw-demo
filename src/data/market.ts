@@ -1,4 +1,4 @@
-import type { MarketBar } from '../domain/types';
+import type { MarketBar, MarketLandmark } from '../domain/types';
 import { isTradingDay, formatDateStr } from '../domain/tradingCalendar';
 
 export interface StockMeta {
@@ -9,10 +9,14 @@ export interface StockMeta {
   logoColor: string;
 }
 
-export const STOCKS: StockMeta[] = [
-  { ticker: 'TSLA', name: '테슬라', startPrice: 245.5, volatility: 0.035, logoColor: '#e82127' },
+export const CORE_STOCKS: StockMeta[] = [
   { ticker: 'NVDA', name: '엔비디아', startPrice: 128.8, volatility: 0.038, logoColor: '#76b900' },
+  { ticker: 'TSLA', name: '테슬라', startPrice: 245.5, volatility: 0.035, logoColor: '#e82127' },
   { ticker: 'AAPL', name: '애플', startPrice: 227.4, volatility: 0.018, logoColor: '#a2aaad' },
+];
+
+export const STOCKS: StockMeta[] = [
+  ...CORE_STOCKS,
   { ticker: 'MSFT', name: '마이크로소프트', startPrice: 422.3, volatility: 0.019, logoColor: '#00a4ef' },
   { ticker: 'AMZN', name: '아마존', startPrice: 186.2, volatility: 0.024, logoColor: '#ff9900' },
   { ticker: 'META', name: '메타', startPrice: 585.1, volatility: 0.028, logoColor: '#0668e1' },
@@ -111,4 +115,39 @@ export function getCurrentStockPrice(ticker: string, asOfDate: string = '2026-10
   const earlier = bars.filter(b => b.date <= asOfDate);
   if (earlier.length > 0) return earlier[earlier.length - 1].close;
   return bars[0].close;
+}
+
+/**
+ * 종목별 5D 변동성(σ)에 맞춘 객관적 시장 내비게이션 기준선(Waypoints) 반환
+ */
+export function getStockLandmarks(ticker: string, basePrice: number): MarketLandmark[] {
+  const meta = STOCKS.find(s => s.ticker === ticker.toUpperCase()) || CORE_STOCKS[0];
+  const fiveDaySigma = meta.volatility * Math.sqrt(5);
+
+  const upperPct = parseFloat((fiveDaySigma * 0.62 * 100).toFixed(1));
+  const lowerPct = parseFloat((-fiveDaySigma * 0.52 * 100).toFixed(1));
+
+  const upperPrice = parseFloat((basePrice * (1 + upperPct / 100)).toFixed(2));
+  const lowerPrice = parseFloat((basePrice * (1 + lowerPct / 100)).toFixed(2));
+
+  return [
+    {
+      id: `${meta.ticker}_wallst_target`,
+      label: '월가 단기 저항 · 목표선 (Wall St. Target)',
+      shortLabel: 'WALL ST TARGET',
+      category: 'resistance',
+      price: upperPrice,
+      changePct: upperPct,
+      benchmarkElo: 1650,
+    },
+    {
+      id: `${meta.ticker}_options_support`,
+      label: '옵션 맥스페인 · 지지선 (Options Support)',
+      shortLabel: 'OPTIONS SUPPORT',
+      category: 'support',
+      price: lowerPrice,
+      changePct: lowerPct,
+      benchmarkElo: 1520,
+    },
+  ];
 }

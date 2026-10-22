@@ -1,39 +1,38 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Heart, Share2, Lock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Heart, Share2, Lock, CheckCircle2, FastForward } from 'lucide-react';
 import { repository } from '../../data/localRepository';
 import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
-import { getStockHistory } from '../../data/market';
+import { getStockHistory, STOCKS } from '../../data/market';
 import { deriveForecastStatus } from '../../domain/lifecycle';
 import { resolveForecast } from '../../domain/resolution';
 import { aggregateCrowd } from '../../domain/crowd';
+import { buildDailySettlementRows } from '../../domain/audit';
+import { calculateEloProjection, DEFAULT_ELO, formatSignedLp, getEloTierInfo } from '../../domain/elo';
 import { ForecastChart } from '../../components/ForecastChart';
 import { StatusBadge } from '../../components/StatusBadge';
-import { ResponseBanner } from '../../components/ResponseBanner';
+import { ShareTicketModal } from '../../components/ShareTicketModal';
 import { formatPct, formatRelativeTime, formatCurrency } from '../../domain/format';
 import type { Forecast } from '../../domain/types';
 
 interface DetailPageProps {
   currentDateStr: string;
+  onDateChange?: (date: string) => void;
 }
 
-export function DetailPage({ currentDateStr }: DetailPageProps) {
+export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [forecast, setForecast] = useState<Forecast | undefined>(() => id ? repository.getForecast(id) : undefined);
-  const [children, setChildren] = useState<Forecast[]>([]);
-  const [showCrowd, setShowCrowd] = useState(false);
+  const [showCrowd, setShowCrowd] = useState(true);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const currentUser = getCurrentUser();
 
   const reloadData = useCallback(() => {
     if (!id) return;
-    const f = repository.getForecast(id);
-    setForecast(f);
-    if (f) {
-      setChildren(repository.listChildren(f.id));
-    }
+    setForecast(repository.getForecast(id));
   }, [id]);
 
   useEffect(() => {
@@ -45,32 +44,45 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
   if (!forecast) {
     return (
       <div className="py-20 text-center text-zinc-500">
-        <p className="text-base font-semibold text-zinc-800 dark:text-zinc-200 mb-2">예측을 찾을 수 없습니다.</p>
+        <p className="text-sm font-medium text-zinc-300 mb-3">예측 기록을 찾을 수 없습니다.</p>
         <button
           onClick={() => navigate('/')}
-          className="px-5 py-2.5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-semibold text-xs transition"
+          className="px-4 py-2 rounded-md bg-white text-black font-medium text-xs hover:bg-zinc-200 transition"
         >
-          홈으로 돌아가기
+          홈으로 이동
         </button>
       </div>
     );
   }
 
   const author = forecast.authorId ? repository.getUser(forecast.authorId) : null;
-  const parent = forecast.parentId ? repository.getForecast(forecast.parentId) : null;
-  const parentAuthor = parent && parent.authorId ? repository.getUser(parent.authorId) : null;
+  const authorElo = author?.elo ?? DEFAULT_ELO;
 
   const isLiked = repository.isLiked(forecast.id);
   const likesCount = repository.getLikesCount(forecast.id);
   const status = deriveForecastStatus(forecast, currentDateStr);
   const stockBars = getStockHistory(forecast.ticker);
+  const stockMeta = STOCKS.find(s => s.ticker === forecast.ticker) || STOCKS[0];
   const visibleBars = stockBars.filter(b => b.date <= currentDateStr);
-  const result = resolveForecast(forecast, visibleBars);
-  const isHit = forecast.mode === 'breakout' ? result.breakoutHit : result.directionHit;
 
-  // Crowd 데이터 집계
   const allForecasts = repository.listFeed('all', currentDateStr);
   const crowd = aggregateCrowd(allForecasts, forecast.ticker, forecast.horizon, forecast.mode);
+
+  const result = resolveForecast(forecast, visibleBars, crowd.consensusChangePct);
+  const isHit = forecast.mode === 'breakout' ? result.breakoutHit : result.directionHit;
+
+  const settledElo = result.eloSettlement ? authorElo + result.eloSettlement.deltaLp : authorElo;
+  const authorTier = getEloTierInfo(settledElo);
+
+  const eloProjection = useMemo(
+    () => calculateEloProjection(result.forecastChangePct, crowd.consensusChangePct, stockMeta.volatility),
+    [result.forecastChangePct, crowd.consensusChangePct, stockMeta.volatility]
+  );
+
+  const settlementRows = useMemo(
+    () => buildDailySettlementRows(forecast, stockBars, currentDateStr),
+    [forecast, stockBars, currentDateStr]
+  );
 
   const anonId = getOrCreateAnonId();
   const myForecasts = allForecasts.filter(f =>
@@ -81,259 +93,319 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
     f.ticker === forecast.ticker && f.horizon === forecast.horizon && f.mode === forecast.mode
   ) || forecast.authorId === currentUser?.id || (!currentUser && forecast.anonId === anonId);
 
-  const handleDrawResponse = () => {
-    navigate(`/draw?parent=${forecast.id}&ticker=${forecast.ticker}&horizon=${forecast.horizon}&mode=${forecast.mode}`);
+  const handleDrawTicker = () => {
+    navigate(`/draw?ticker=${forecast.ticker}`);
   };
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `STOXDRAW — ${forecast.ticker} Forecast`,
-          text: forecast.comment || `${forecast.ticker} 미래 주가 예측 궤적을 확인해보세요.`,
-          url,
-        });
-      } catch {
-        // Fallback
-      }
-    } else {
-      navigator.clipboard.writeText(url);
-      alert('예측 링크가 클립보드에 복사되었습니다!');
-    }
+  const handleTimeSlipToResolved = () => {
+    if (!onDateChange) return;
+    const finalDate = forecast.evalDates[forecast.evalDates.length - 1] || '2026-10-12';
+    onDateChange(finalDate);
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-2">
-      {/* Back Button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white mb-6 transition"
-      >
-        <ArrowLeft size={16} />
-        <span>돌아가기</span>
-      </button>
+    <div className="w-full max-w-5xl mx-auto pb-12">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-100 transition"
+        >
+          <ArrowLeft size={15} />
+          <span>뒤로</span>
+        </button>
 
-      {/* Main Detail Card */}
-      <div className="rounded-3xl bg-[#0d0d10] border border-white/10 p-6 sm:p-9 shadow-none mb-6">
-        {/* Parent Reference banner if forked */}
-        {forecast.parentId && (
-          <div className="mb-5">
-            <ResponseBanner
-              parentAuthorHandle={parentAuthor?.handle}
-              parentId={forecast.parentId}
-            />
-          </div>
+        {onDateChange && status !== 'RESOLVED' && (
+          <button
+            type="button"
+            onClick={handleTimeSlipToResolved}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-mono transition"
+          >
+            <FastForward size={12} className="text-zinc-400" />
+            <span>만기 시점({forecast.evalDates[forecast.evalDates.length - 1]?.slice(5)}) 정산 보기</span>
+          </button>
         )}
+      </div>
 
-        {/* Forecaster Profile Header */}
-        <div className="flex items-center justify-between mb-6 pb-5 border-b border-white/10">
-          <div className="flex items-center gap-3.5">
-            <img
-              src={author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
-              alt={author?.name || '익명'}
-              className="w-12 h-12 rounded-full object-cover border border-white/10"
-            />
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-base text-white">
-                  {author?.name || '익명 예측가'}
-                </span>
-                {author && author.completedCount > 5 && (
-                  <CheckCircle2 size={15} className="text-[#DFC15D]" />
-                )}
+      {/* Main Detail Container (Single 1px Hairline Surface, No Nested Cards) */}
+      <div className="rounded-lg bg-zinc-950 border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
+        {/* 1. Header: Author + Ticker + Status + Thesis */}
+        <div className="p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div
+              onClick={() => author && navigate(`/u/${author.handle}`)}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <img
+                src={author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
+                alt={author?.name || '익명'}
+                className="w-10 h-10 rounded-full object-cover border border-zinc-800"
+              />
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-semibold text-sm sm:text-base text-zinc-100 group-hover:underline">
+                    {author?.name || '익명'}
+                  </span>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-medium border tabular-nums ${authorTier.badgeClass}`}>
+                    {authorTier.tier} · {settledElo} LP
+                  </span>
+                  {author && author.completedCount > 5 && (
+                    <CheckCircle2 size={13} className="text-zinc-400" />
+                  )}
+                </div>
+                <div className="text-xs text-zinc-500 font-mono mt-0.5">
+                  @{author?.handle || 'anon'} · {formatRelativeTime(forecast.lockedAt)}
+                </div>
               </div>
-              <div className="text-xs text-zinc-400">
-                @{author?.handle || 'anon'} · {formatRelativeTime(forecast.lockedAt)}
-              </div>
+            </div>
+
+            <div className="flex items-center gap-2 font-mono tabular-nums">
+              <span
+                onClick={() => navigate(`/arena/${forecast.ticker}`)}
+                className="px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-200 font-medium text-xs cursor-pointer hover:border-zinc-700 transition"
+              >
+                ${forecast.ticker} · {formatCurrency(forecast.basePrice)}
+              </span>
+              <StatusBadge
+                status={status}
+                isHit={isHit}
+                label="적중"
+              />
             </div>
           </div>
 
-          <StatusBadge
-            status={status}
-            isHit={isHit}
-            label={forecast.mode === 'breakout' ? '목표 도달' : '적중'}
-          />
+          {forecast.comment && (
+            <p className="text-sm text-zinc-300 leading-relaxed mt-4 pt-3.5 border-t border-zinc-800/80">
+              "{forecast.comment}"
+            </p>
+          )}
         </div>
 
-        {/* Stock & Horizon Pills */}
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="px-3 py-1 rounded-full bg-white text-black font-semibold text-xs">
-            ${forecast.ticker}
-          </span>
-          <span className="px-3 py-1 rounded-full bg-zinc-900 border border-white/10 text-zinc-300 text-xs font-medium">
-            {forecast.horizon === '5D' ? '1주일 (5D)' : '1개월 (30D)'}
-          </span>
-          <span className="px-3 py-1 rounded-full bg-zinc-900 border border-white/10 text-zinc-300 text-xs font-medium">
-            {forecast.mode === 'path' ? '경로 예측' : '돌파 예측'}
-          </span>
-          <span className="text-xs text-zinc-400 ml-auto">
-            기준가 ${forecast.basePrice.toFixed(2)}
-          </span>
+        {/* 2. 4-Column Metric Summary Strip (1px Hairline Grid) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-zinc-800 font-mono tabular-nums">
+          <div className="p-4">
+            <div className="text-[11px] text-zinc-400 font-sans mb-0.5">예측 목표</div>
+            <div className={`text-sm sm:text-base font-semibold ${result.forecastChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {formatPct(result.forecastChangePct)}
+            </div>
+          </div>
+
+          <div className="p-4">
+            <div className="text-[11px] text-zinc-400 font-sans mb-0.5">시장 컨센서스</div>
+            <div className="text-sm sm:text-base font-semibold text-zinc-100">
+              {hasParticipated && crowd.consensusChangePct !== undefined ? formatPct(crowd.consensusChangePct) : '잠김'}
+            </div>
+          </div>
+
+          <div className="p-4">
+            <div className="text-[11px] text-zinc-400 font-sans mb-0.5">예측 난이도</div>
+            <div className="text-xs sm:text-sm font-medium text-zinc-200 font-sans">
+              {eloProjection.difficultyLabel}
+            </div>
+          </div>
+
+          <div className="p-4">
+            <div className="text-[11px] text-zinc-400 font-sans mb-0.5">
+              {result.eloSettlement ? 'Elo 정산 완료' : 'Elo 스테이크'}
+            </div>
+            {result.eloSettlement ? (
+              <div className="text-sm sm:text-base font-semibold flex items-center gap-1.5">
+                <span className={result.eloSettlement.deltaLp >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                  {formatSignedLp(result.eloSettlement.deltaLp)}
+                </span>
+                {result.score && (
+                  <span className="text-xs text-zinc-400">({result.score.total}점)</span>
+                )}
+              </div>
+            ) : (
+              <div className="text-xs sm:text-sm font-medium">
+                <span className="text-emerald-400">{formatSignedLp(eloProjection.expectedWinLp)}</span>
+                <span className="text-zinc-600"> / </span>
+                <span className="text-rose-400">{formatSignedLp(eloProjection.expectedLossLp)}</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Comment quote */}
-        {forecast.comment && (
-          <p className="text-base text-zinc-200 leading-relaxed my-4">
-            {forecast.comment}
-          </p>
-        )}
+        {/* 3. Chart Area with Integrated Consensus Toggle */}
+        <div className="p-5 bg-black">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <span className="text-xs font-medium text-zinc-300">
+              5일 주가 경로 차트
+            </span>
+            {hasParticipated ? (
+              <button
+                type="button"
+                onClick={() => setShowCrowd(!showCrowd)}
+                className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition ${
+                  showCrowd
+                    ? 'bg-zinc-800 text-zinc-100 border border-zinc-700'
+                    : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+                }`}
+              >
+                {showCrowd ? '시장 컨센서스 표시 중' : '시장 컨센서스 숨김'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDrawTicker}
+                className="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1 font-medium"
+              >
+                <Lock size={11} className="text-zinc-400" />
+                <span>내 예측 그리고 컨센서스 보기 →</span>
+              </button>
+            )}
+          </div>
 
-        {/* Interactive Full Chart Area */}
-        <div className="my-6 rounded-2xl bg-[#050507] border border-white/10 p-4">
           <ForecastChart
             forecast={forecast}
-            height={280}
-            showCrowd={showCrowd}
+            height={310}
+            showCrowd={showCrowd && hasParticipated}
             crowdPath={crowd.consensusPath}
             currentDateStr={currentDateStr}
           />
         </div>
 
-        {/* Result & Evaluation Metrics */}
-        {(status === 'LIVE' || status === 'RESOLVED') && (
-          <div className="p-4 my-5 rounded-2xl bg-[#141418] border border-white/10">
-            <div className="grid grid-cols-3 gap-4 text-xs">
-              <div>
-                <span className="text-zinc-400 block text-[11px] mb-1">기준 가격</span>
-                <span className="font-bold text-white text-sm">
-                  {formatCurrency(forecast.basePrice)}
+        {/* 4. Compact Skill Score Bars (Only when scored) */}
+        {result.score && (
+          <div className="p-5 bg-zinc-950 text-xs font-mono tabular-nums">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-sans font-medium text-zinc-200">
+                정량 정확도 평가 ({result.score.total}점 · {result.score.grade}등급)
+              </span>
+              {result.eloSettlement && (
+                <span className={`font-semibold ${result.eloSettlement.deltaLp >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  Elo {formatSignedLp(result.eloSettlement.deltaLp)}
                 </span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <div className="flex justify-between text-zinc-400 mb-1">
+                  <span className="font-sans">경로 밀착</span>
+                  <span className="text-zinc-200 font-medium">{result.score.pathScore}/50</span>
+                </div>
+                <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
+                  <div className="h-full bg-zinc-300" style={{ width: `${(result.score.pathScore / 50) * 100}%` }} />
+                </div>
               </div>
               <div>
-                <span className="text-zinc-400 block text-[11px] mb-1">
-                  {forecast.mode === 'breakout' ? '목표 가격' : '예측 변화율'}
-                </span>
-                <span className={`font-bold text-sm ${result.forecastChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {forecast.mode === 'breakout'
-                    ? `${formatCurrency(forecast.breakout?.price || 0)} (${formatPct(result.forecastChangePct)})`
-                    : formatPct(result.forecastChangePct)}
-                </span>
+                <div className="flex justify-between text-zinc-400 mb-1">
+                  <span className="font-sans">방향 적중</span>
+                  <span className="text-zinc-200 font-medium">{result.score.directionScore}/30</span>
+                </div>
+                <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
+                  <div className="h-full bg-emerald-400" style={{ width: `${(result.score.directionScore / 30) * 100}%` }} />
+                </div>
               </div>
               <div>
-                <span className="text-zinc-400 block text-[11px] mb-1">
-                  {status === 'LIVE' ? '현재 시장 변화율' : '최종 시장 변화율'}
-                </span>
-                <span className={`font-bold text-sm ${result.actualChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {formatPct(result.actualChangePct)}{' '}
-                  {status === 'RESOLVED' && (
-                    <span className={result.directionHit ? 'text-[#DFC15D] font-bold' : 'text-zinc-500'}>
-                      {result.directionHit ? '(✓ 적중)' : '(빗나감)'}
-                    </span>
-                  )}
-                </span>
+                <div className="flex justify-between text-zinc-400 mb-1">
+                  <span className="font-sans">종가 정밀도</span>
+                  <span className="text-zinc-200 font-medium">{result.score.targetScore}/20</span>
+                </div>
+                <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
+                  <div className="h-full bg-zinc-400" style={{ width: `${(result.score.targetScore / 20) * 100}%` }} />
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Crowd Reveal / Blind Lock Card */}
-        <div className="my-5 p-4 rounded-2xl bg-[#141418] border border-white/10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white">
-                군중 컨센서스 (Crowd Consensus)
-              </span>
-              <span className="text-[11px] text-zinc-400">
-                {crowd.participantsCount}명 참여
-              </span>
-            </div>
-
-            {hasParticipated ? (
-              <button
-                type="button"
-                onClick={() => setShowCrowd(!showCrowd)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                  showCrowd
-                    ? 'bg-white text-black'
-                    : 'bg-zinc-900 text-zinc-300 border border-white/15'
-                }`}
-              >
-                {showCrowd ? '군중 선 숨기기' : '차트에 군중 선 띄우기'}
-              </button>
-            ) : (
-              <span className="text-xs text-zinc-400 flex items-center gap-1 font-medium">
-                <Lock size={12} />
-                내 예측을 제출해야 공개됩니다
-              </span>
-            )}
-          </div>
+        {/* 5. Clean 5-Day Settlement Table with exact Vercel right-aligned numeric headers */}
+        <div className="overflow-x-auto bg-zinc-950">
+          <table className="w-full text-xs font-mono tabular-nums">
+            <thead className="bg-zinc-900/60 text-zinc-400 text-xs border-b border-zinc-800">
+              <tr>
+                <th className="py-2.5 px-5 text-left font-medium">일자</th>
+                <th className="py-2.5 px-5 text-right font-medium">예측가</th>
+                <th className="py-2.5 px-5 text-right font-medium">실제 종가</th>
+                <th className="py-2.5 px-5 text-right font-medium">오차율</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800/60">
+              {settlementRows.map(row => (
+                <tr key={row.date} className="hover:bg-zinc-900/30 transition">
+                  <td className="py-2.5 px-5 text-left text-zinc-300">
+                    <span className="font-medium text-zinc-100 mr-2">{row.slot}</span>
+                    <span className="text-zinc-500">{row.date.slice(5)}</span>
+                  </td>
+                  <td className="py-2.5 px-5 text-right">
+                    <span className="text-zinc-200">${row.forecastPrice.toFixed(2)}</span>{' '}
+                    <span className={row.forecastChangePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                      ({formatPct(row.forecastChangePct)})
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-5 text-right">
+                    {row.settled && row.actualClose !== null ? (
+                      <span className="text-zinc-200">${row.actualClose.toFixed(2)}</span>
+                    ) : (
+                      <span className="text-zinc-600">대기</span>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-5 text-right">
+                    {row.settled && row.absErrorPct !== null ? (
+                      <span className={row.absErrorPct <= 2.0 ? 'text-emerald-400 font-medium' : 'text-zinc-300'}>
+                        ±{row.absErrorPct.toFixed(2)}%
+                      </span>
+                    ) : (
+                      <span className="text-zinc-600">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* Actions bar (Like, Share, Duel CTA) */}
-        <div className="flex items-center justify-between pt-5 border-t border-white/10">
+        {/* 6. Action Bar */}
+        <div className="px-5 py-3.5 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => repository.toggleLike(forecast.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition font-mono tabular-nums ${
                 isLiked
                   ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                  : 'bg-[#141418] hover:bg-[#1c1c24] text-zinc-300 border-white/10'
+                  : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:text-white hover:bg-zinc-800'
               }`}
             >
-              <Heart size={14} className={isLiked ? 'fill-rose-500' : ''} />
+              <Heart size={13} className={isLiked ? 'fill-rose-500' : ''} />
               <span>{likesCount}</span>
             </button>
 
             <button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-[#141418] hover:bg-[#1c1c24] text-zinc-300 border border-white/10 transition"
+              type="button"
+              onClick={() => setIsShareOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition"
             >
-              <Share2 size={14} />
-              <span>공유</span>
+              <Share2 size={13} />
+              <span>티켓 공유</span>
             </button>
           </div>
 
           <button
-            onClick={handleDrawResponse}
-            className="btn-signature-draw px-5 py-2.5 rounded-full text-xs sm:text-sm tracking-wide"
+            type="button"
+            onClick={handleDrawTicker}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-white hover:bg-zinc-200 text-black font-medium text-xs transition"
           >
-            <span>YOUR DRAW</span>
-            <ArrowRight size={14} className="stroke-[2.5]" />
+            <span>${forecast.ticker} 내 예측 그리기</span>
+            <ArrowRight size={13} />
           </button>
         </div>
       </div>
 
-      {/* Derived Responses Section */}
-      {children.length > 0 && (
-        <div className="rounded-3xl bg-[#0d0d10] border border-white/10 p-6 mb-6">
-          <h3 className="font-bold text-sm text-white mb-4 flex items-center gap-2">
-            <span>이 예측에 맞선 YOUR DRAW 궤적</span>
-            <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-[#DFC15D] border border-white/10 text-[11px] font-bold font-mono">
-              {children.length}
-            </span>
-          </h3>
-          <div className="space-y-2.5">
-            {children.map(child => {
-              const childAuthor = child.authorId ? repository.getUser(child.authorId) : null;
-              return (
-                <div
-                  key={child.id}
-                  onClick={() => navigate(`/f/${child.id}`)}
-                  className="p-3.5 rounded-2xl bg-[#141418] hover:bg-[#181822] border border-white/10 flex items-center justify-between cursor-pointer transition"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src={childAuthor?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
-                      alt=""
-                      className="w-7 h-7 rounded-full object-cover border border-white/10"
-                    />
-                    <div>
-                      <span className="font-semibold text-xs text-white">
-                        {childAuthor?.name || '익명'}의 대결 궤적
-                      </span>
-                      <p className="text-[11px] text-zinc-400 line-clamp-1">{child.comment}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-semibold text-[#DFC15D]">
-                    보기 →
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <ShareTicketModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        forecast={forecast}
+        authorHandle={author?.handle || 'anon_user'}
+        crowdPath={hasParticipated ? crowd.consensusPath : undefined}
+        crowdChangePct={hasParticipated ? crowd.consensusChangePct : undefined}
+        scoreTotal={result.score?.total}
+        scoreGrade={result.score?.grade}
+        eloDeltaLp={result.eloSettlement?.deltaLp}
+        authorElo={settledElo}
+      />
     </div>
   );
 }

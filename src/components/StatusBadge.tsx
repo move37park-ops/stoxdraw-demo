@@ -13,17 +13,17 @@ export function StatusBadge({ status, directionHit, isHit, label }: StatusBadgeP
 
   if (status === 'LOCKED') {
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-900 text-zinc-400 border border-white/10">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-900 text-zinc-400 border border-zinc-800">
         <Lock size={10} />
-        확정됨
+        확정
       </span>
     );
   }
 
   if (status === 'LIVE') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-900 text-zinc-200 border border-zinc-800">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
         진행 중
       </span>
     );
@@ -32,16 +32,15 @@ export function StatusBadge({ status, directionHit, isHit, label }: StatusBadgeP
   if (status === 'RESOLVED') {
     if (hit !== false) {
       return (
-        /* 월가 샴페인 골드 적중 뱃지 */
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#C5A059]/10 text-[#DFC15D] border border-[#C5A059]/25 font-mono">
-          <CheckCircle2 size={11} className="text-[#DFC15D]" />
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+          <CheckCircle2 size={11} className="text-emerald-400" />
           {label || '적중'}
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-900 text-zinc-400 border border-white/10">
-        <XCircle size={11} className="text-zinc-400" />
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-900 text-zinc-400 border border-zinc-800">
+        <XCircle size={11} className="text-zinc-500" />
         빗나감
       </span>
     );

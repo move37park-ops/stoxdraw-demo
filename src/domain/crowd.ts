@@ -100,7 +100,9 @@ export function aggregateCrowd(
     const changesAtStep: number[] = [];
 
     matches.forEach(f => {
-      if (f.basePrice > 0) {
+      if (f.pathPct && f.pathPct[i] !== undefined) {
+        changesAtStep.push(f.pathPct[i]);
+      } else if (f.basePrice > 0) {
         const estPrice = getEstimatedPriceAtDate(f, targetDate);
         if (estPrice !== null) {
           const pctChange = (estPrice - f.basePrice) / f.basePrice;

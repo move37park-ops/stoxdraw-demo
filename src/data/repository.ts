@@ -19,6 +19,8 @@ export interface Repository {
     baseDate: string;
     evalDates: string[];
     path?: { date: string; price: number }[];
+    pathPct?: number[];
+    roundId?: string;
     breakout?: { direction: 'up' | 'down'; price: number };
     parentId?: string;
   }): Forecast;
