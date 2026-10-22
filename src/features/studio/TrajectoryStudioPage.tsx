@@ -307,15 +307,22 @@ export function TrajectoryStudioPage({
 
           {/* Left 7 Cols: Signature Vercel Dual-Tone Inline Headline */}
           <div
-            className="lg:col-span-7 px-5 py-6 flex items-center"
+            className="lg:col-span-7 px-5 py-6 flex flex-col justify-center gap-2.5"
             style={{ borderRight: '1px solid var(--v-hairline)' }}
           >
+            <div className="flex items-center gap-2 flex-wrap v-caption-mono" style={{ color: 'var(--v-mute)' }}>
+              <span style={{ color: 'var(--v-ink)' }}>01 Draw 5D path</span>
+              <span style={{ color: 'var(--v-dim)' }}>→</span>
+              <span>02 Lock prediction</span>
+              <span style={{ color: 'var(--v-dim)' }}>→</span>
+              <span>03 Score vs real closes</span>
+            </div>
             <h1 className="v-display-hero">
               <span style={{ color: 'var(--v-ink)' }}>
-                Sculpt the 5-day trajectory for {selectedTicker}.{' '}
+                Draw the next 5 days of {selectedTicker} on the chart.{' '}
               </span>
               <span style={{ color: 'var(--v-mute)', fontWeight: 400 }}>
-                Immutable verification against crowd consensus and daily market closes.
+                Lock your prediction, challenge the crowd, and get scored against real market closes.
               </span>
             </h1>
           </div>
