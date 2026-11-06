@@ -176,7 +176,7 @@ export function CompactForecastCard({
             className="text-xs font-semibold"
             style={{ color: 'var(--v-ink)' }}
           >
-            ${forecast.ticker}
+            {forecast.ticker}
           </span>
           <span
             className="text-xs font-semibold"
@@ -189,7 +189,7 @@ export function CompactForecastCard({
             className="v-caption-mono"
             style={{ color: 'var(--v-body)' }}
           >
-            (${targetPrice.toFixed(2)})
+            (${targetPrice.toLocaleString('en-US', { maximumFractionDigits: 0 })})
           </span>
         </div>
 
@@ -210,10 +210,10 @@ export function CompactForecastCard({
             style={{
               backgroundColor: 'var(--v-canvas-soft-2)',
               boxShadow: 'var(--v-shadow-border)',
-              color: 'var(--v-mute)',
+              color: tierInfo.accentHex,
             }}
           >
-            {tierInfo.tier} · {authorElo}
+            {tierInfo.krTitle} · {authorElo}
           </span>
         </div>
 
@@ -284,7 +284,7 @@ export function CompactForecastCard({
                 : 'var(--v-ink)',
             }}
           >
-            {isActiveLayer ? 'Pinned' : 'Overlay'}
+            {isActiveLayer ? '비교중' : '오버레이'}
           </button>
         )}
 
@@ -292,11 +292,11 @@ export function CompactForecastCard({
           type="button"
           onClick={e => {
             e.stopPropagation();
-            navigate(`/studio/${forecast.ticker}`);
+            navigate('/studio');
           }}
           className="v-btn-secondary"
         >
-          Studio ↗
+          스튜디오 ↗
         </button>
 
         <button
@@ -310,7 +310,7 @@ export function CompactForecastCard({
           style={{
             color: isLiked ? 'var(--v-ink)' : 'var(--v-mute)',
           }}
-          title="Like trajectory"
+          title="추천"
         >
           <ThumbsUp size={11} />
           {likesCount > 0 && (
@@ -322,7 +322,7 @@ export function CompactForecastCard({
           className="v-caption-mono px-1 hover:underline"
           style={{ color: 'var(--v-mute)' }}
         >
-          Receipt ↗
+          검증 영수증 ↗
         </span>
       </div>
     </div>

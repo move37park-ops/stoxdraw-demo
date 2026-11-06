@@ -9,6 +9,17 @@ function median(values: number[]): number {
     : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+export function quantile(sorted: number[], q: number): number {
+  if (sorted.length === 0) return 0;
+  const pos = (sorted.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  if (sorted[base + 1] !== undefined) {
+    return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+  }
+  return sorted[base];
+}
+
 function getEstimatedPriceAtDate(f: Forecast, targetDate: string): number | null {
   const path = f.path;
   if (!path || path.length === 0) return null;
@@ -36,6 +47,67 @@ function getEstimatedPriceAtDate(f: Forecast, targetDate: string): number | null
     }
   }
   return sorted[sorted.length - 1].price;
+}
+
+export interface DailyConsensusBandPoint {
+  day: number;       // 1..20
+  date: string;
+  p15: number;       // 하위 15% 분위수
+  p25: number;       // 하위 25% 분위수
+  median: number;    // Crowd Median (중앙값)
+  p75: number;       // 상위 75% 분위수
+  p85: number;       // 상위 85% 분위수
+  topForecasterMedian: number; // 상위 고수(Top Forecasters) 중앙값
+}
+
+/**
+ * 20일 시계열 전체에 대해 Crowd Median, 분포 밴드(P15~P85, P25~P75),
+ * 그리고 상위 고수(Top Forecasters) 시나리오 중앙값을 계산합니다.
+ */
+export function compute20DConsensusBand(
+  forecasts: Forecast[],
+  evalDates: string[],
+  basePrice: number,
+  topAuthorIds: Set<string> = new Set(['u_quant', 'u_alpha'])
+): DailyConsensusBandPoint[] {
+  const valid = forecasts.filter(
+    f => f.mode === 'path' && f.path && f.path.length > 0 && f.basePrice > 0
+  );
+
+  if (valid.length === 0 || evalDates.length === 0) {
+    return [];
+  }
+
+  const topForecasts = valid.filter(f => f.authorId && topAuthorIds.has(f.authorId));
+
+  return evalDates.map((date, stepIdx) => {
+    const pcts = valid
+      .map(f => {
+        const pt = f.path![stepIdx] ?? f.path![f.path!.length - 1];
+        return pt ? (pt.price - f.basePrice) / f.basePrice : 0;
+      })
+      .sort((a, b) => a - b);
+
+    const topPcts = (topForecasts.length > 0 ? topForecasts : valid)
+      .map(f => {
+        const pt = f.path![stepIdx] ?? f.path![f.path!.length - 1];
+        return pt ? (pt.price - f.basePrice) / f.basePrice : 0;
+      })
+      .sort((a, b) => a - b);
+
+    const toPrice = (pct: number) => parseFloat((basePrice * (1 + pct)).toFixed(2));
+
+    return {
+      day: stepIdx + 1,
+      date,
+      p15: toPrice(quantile(pcts, 0.15)),
+      p25: toPrice(quantile(pcts, 0.25)),
+      median: toPrice(quantile(pcts, 0.5)),
+      p75: toPrice(quantile(pcts, 0.75)),
+      p85: toPrice(quantile(pcts, 0.85)),
+      topForecasterMedian: toPrice(quantile(topPcts, 0.5)),
+    };
+  });
 }
 
 export function aggregateCrowd(
@@ -113,7 +185,6 @@ export function aggregateCrowd(
 
     if (changesAtStep.length > 0) {
       const stepMedianPct = median(changesAtStep);
-      // Project against reference base price
       const medianPrice = referenceForecast.basePrice * (1 + stepMedianPct);
       consensusPoints.push({
         date: targetDate,

@@ -12,7 +12,7 @@ import {
   X,
   ChevronDown,
 } from 'lucide-react';
-import { getRoundFor, getCountdownRemaining } from '../../domain/round';
+import { getBtc20DRound, getCountdownRemaining } from '../../domain/round';
 import { getEloTierInfo } from '../../domain/elo';
 import { repository } from '../../data/localRepository';
 import { getCurrentUser, logout, getOrCreateAnonId } from '../../data/session';
@@ -28,14 +28,14 @@ export interface TimeWarpStep {
 }
 
 export const STUDIO_TIME_STEPS: TimeWarpStep[] = [
-  { date: '2026-10-02', code: 'D-0', label: 'Lock', phase: 'OPEN' },
-  { date: '2026-10-05', code: 'D+1', label: 'Day 1', phase: 'LIVE' },
-  { date: '2026-10-07', code: 'D+3', label: 'Day 3', phase: 'LIVE' },
-  { date: '2026-10-09', code: 'D+5', label: 'Settled', phase: 'RESOLVED' },
+  { date: '2026-10-02', code: 'D-0', label: '제출', phase: 'OPEN' },
+  { date: '2026-10-07', code: 'D+5', label: '5일차 추적', phase: 'LIVE' },
+  { date: '2026-10-14', code: 'D+12', label: '12일차 추적', phase: 'LIVE' },
+  { date: '2026-10-22', code: 'D+20', label: '20일 정산', phase: 'RESOLVED' },
 ];
 
 interface StudioCommandBarProps {
-  ticker: string;
+  ticker?: string;
   studioDateStr: string;
   onStudioDateChange: (date: string) => void;
   userHandle: string;
@@ -59,7 +59,7 @@ export function StudioCommandBar({
   const location = useLocation();
   const navigate = useNavigate();
 
-  const round = getRoundFor('NVDA', '2026-10-05');
+  const round = getBtc20DRound('2026-10-02', studioDateStr);
   const tierInfo = getEloTierInfo(liveElo);
 
   const [countdown, setCountdown] = useState(() => getCountdownRemaining(round.cutoffAt));
@@ -120,34 +120,37 @@ export function StudioCommandBar({
       ? 'var(--v-warning)'
       : 'var(--v-link)';
 
-  const isStudioActive =
-    location.pathname === '/' ||
+  const isLandingActive = location.pathname === '/';
+  const isLiveStudioActive =
     location.pathname.startsWith('/studio') ||
-    location.pathname.startsWith('/arena') ||
-    location.pathname.startsWith('/draw');
+    location.pathname.startsWith('/live');
+  const isPracticeActive = location.pathname.startsWith('/practice');
+  const isLeaderboardOrRecordActive =
+    location.pathname.startsWith('/leaderboard') ||
+    location.pathname.startsWith('/record') ||
+    location.pathname.startsWith('/u/') ||
+    location.pathname.startsWith('/f/');
 
   const navTabs = [
     {
       to: '/',
-      label: 'Studio',
-      isActive: isStudioActive,
+      label: '홈',
+      isActive: isLandingActive,
     },
     {
-      to: '/overview',
-      label: 'Overview',
-      isActive: location.pathname.startsWith('/overview'),
+      to: '/studio',
+      label: '실전 모드',
+      isActive: isLiveStudioActive,
+    },
+    {
+      to: '/practice',
+      label: '연습 모드',
+      isActive: isPracticeActive,
     },
     {
       to: '/leaderboard',
-      label: 'Leaderboard',
-      isActive: location.pathname.startsWith('/leaderboard'),
-    },
-    {
-      to: '/record',
-      label: 'My Record',
-      isActive:
-        location.pathname.startsWith('/record') ||
-        location.pathname.startsWith('/u/'),
+      label: '리더보드',
+      isActive: isLeaderboardOrRecordActive,
       badge: myForecasts.length > 0 ? myForecasts.length : undefined,
     },
   ];
@@ -175,27 +178,15 @@ export function StudioCommandBar({
             borderRight: '1px solid var(--v-hairline)',
           }}
         >
-          {/* Left: Brand + Primary Navigation Tabs */}
-          <div className="flex items-center gap-5 sm:gap-7 h-full min-w-0">
-            {/* Vercel Logo + STOXDRAW Mark */}
+          {/* Left: Brand + 3 Lean Navigation Tabs */}
+          <div className="flex items-center gap-4 sm:gap-6 h-full min-w-0">
             <Link
               to="/"
               className="inline-flex items-center gap-2.5 flex-shrink-0 group"
-              title="STOXDRAW Studio"
+              title="STOXDRAW"
             >
-              <svg
-                width="15"
-                height="13"
-                viewBox="0 0 76 65"
-                fill="currentColor"
-                aria-label="Vercel mark"
-                style={{ color: 'var(--v-ink)' }}
-                className="group-hover:opacity-80 transition-opacity"
-              >
-                <path d="M37.5274 0L75.0548 65H0L37.5274 0Z" />
-              </svg>
               <span
-                className="v-mono text-xs font-bold tracking-tight"
+                className="v-serif-brand text-xl font-bold tracking-wider"
                 style={{ color: 'var(--v-ink)' }}
               >
                 STOXDRAW
@@ -208,13 +199,13 @@ export function StudioCommandBar({
               aria-hidden="true"
             />
 
-            {/* Desktop Navigation Tabs */}
-            <nav className="hidden md:flex items-center gap-1 h-full">
+            {/* Primary 3-Tab Navigation (Vercel standard 14px text-sm font-medium) */}
+            <nav className="flex items-center gap-1 sm:gap-1.5 h-full overflow-x-auto no-scrollbar">
               {navTabs.map(tab => (
                 <NavLink
                   key={tab.to}
                   to={tab.to}
-                  className="relative h-full flex items-center gap-1.5 px-3 text-xs font-medium transition-colors"
+                  className="relative h-full flex items-center gap-2 px-3 sm:px-3.5 text-sm font-medium transition-colors whitespace-nowrap"
                   style={{
                     color: tab.isActive ? 'var(--v-ink)' : 'var(--v-mute)',
                   }}
@@ -222,7 +213,7 @@ export function StudioCommandBar({
                   <span>{tab.label}</span>
                   {tab.badge !== undefined && (
                     <span
-                      className="v-caption-mono text-[9px] px-1 py-0 rounded-[3px]"
+                      className="v-caption-mono text-xs px-1.5 py-0.5 rounded-[3px]"
                       style={{
                         backgroundColor: tab.isActive
                           ? 'var(--v-canvas-soft)'
@@ -245,59 +236,60 @@ export function StudioCommandBar({
             </nav>
           </div>
 
-          {/* Right: Unified Time-Warp Instrument + Global Actions */}
-          <div className="flex items-center gap-2.5 flex-shrink-0">
-            {/* Integrated Time-Warp Simulation Scrubber */}
-            <div
-              className="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-[6px]"
-              style={{
-                backgroundColor: 'var(--v-canvas-soft)',
-                boxShadow: 'var(--v-shadow-border)',
-              }}
-              role="group"
-              aria-label="Simulation state scrubber"
-            >
-              <div className="flex items-center gap-1.5 mr-1">
-                <span
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: statusDotColor }}
-                />
-                <span
-                  className="v-caption-mono text-[11px] font-medium hidden lg:inline"
-                  style={{ color: 'var(--v-body)' }}
-                >
-                  {currentStep.phase === 'OPEN'
-                    ? countdown.formatted
-                    : `${currentStep.code} ${currentStep.phase}`}
-                </span>
-              </div>
+          {/* Right: Live 20D Tracking Scrubber + User Tier & Theme */}
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+            {!isPracticeActive && !isLandingActive && (
+              <div
+                className="hidden sm:inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-[6px]"
+                style={{
+                  backgroundColor: 'var(--v-canvas-soft)',
+                  boxShadow: 'var(--v-shadow-border)',
+                }}
+                role="group"
+                aria-label="20일 시장 추적 시뮬레이터"
+              >
+                <div className="flex items-center gap-1.5 mr-1">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: statusDotColor }}
+                  />
+                  <span
+                    className="v-caption-mono text-xs font-medium hidden xl:inline"
+                    style={{ color: 'var(--v-body)' }}
+                  >
+                    {currentStep.phase === 'OPEN'
+                      ? `마감 ${countdown.formatted}`
+                      : `${currentStep.label}`}
+                  </span>
+                </div>
 
-              <div className="inline-flex items-center gap-0.5">
-                {STUDIO_TIME_STEPS.map(step => {
-                  const active = step.date === studioDateStr;
-                  return (
-                    <button
-                      key={step.date}
-                      type="button"
-                      onClick={() => onStudioDateChange(step.date)}
-                      className="px-2 py-0.5 rounded-[4px] text-[10px] v-mono transition-all"
-                      style={{
-                        backgroundColor: active
-                          ? 'var(--v-primary)'
-                          : 'transparent',
-                        color: active
-                          ? 'var(--v-on-primary)'
-                          : 'var(--v-mute)',
-                        fontWeight: active ? 600 : 400,
-                      }}
-                      title={`${step.code} (${step.label}) - ${step.phase}`}
-                    >
-                      {step.code}
-                    </button>
-                  );
-                })}
+                <div className="inline-flex items-center gap-0.5">
+                  {STUDIO_TIME_STEPS.map(step => {
+                    const active = step.date === studioDateStr;
+                    return (
+                      <button
+                        key={step.date}
+                        type="button"
+                        onClick={() => onStudioDateChange(step.date)}
+                        className="px-2 py-0.5 rounded-[4px] text-xs v-mono transition-all"
+                        style={{
+                          backgroundColor: active
+                            ? 'var(--v-primary)'
+                            : 'transparent',
+                          color: active
+                            ? 'var(--v-on-primary)'
+                            : 'var(--v-mute)',
+                          fontWeight: active ? 600 : 400,
+                        }}
+                        title={`${step.code} (${step.label})`}
+                      >
+                        {step.code}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             <span
               className="hidden sm:inline-block h-3.5 w-[1px]"
@@ -310,7 +302,7 @@ export function StudioCommandBar({
               <button
                 type="button"
                 onClick={() => setIsNotifOpen(prev => !prev)}
-                className="w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors relative"
+                className="w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors relative"
                 style={{
                   color: 'var(--v-mute)',
                   boxShadow: 'var(--v-shadow-border)',
@@ -318,10 +310,10 @@ export function StudioCommandBar({
                     ? 'var(--v-canvas-soft)'
                     : 'transparent',
                 }}
-                title="Notifications"
-                aria-label="Notifications"
+                title="알림"
+                aria-label="알림"
               >
-                <Bell size={13} />
+                <Bell size={14} />
                 {unreadCount > 0 && (
                   <span
                     className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
@@ -346,7 +338,7 @@ export function StudioCommandBar({
                       className="v-body-sm-strong"
                       style={{ color: 'var(--v-ink)' }}
                     >
-                      Notifications
+                      알림 센터
                     </span>
                     <button
                       type="button"
@@ -357,242 +349,226 @@ export function StudioCommandBar({
                     </button>
                   </div>
 
-                  {notifications.length > 0 ? (
-                    <div className="max-h-64 overflow-y-auto flex flex-col">
+                  {notifications.length === 0 ? (
+                    <p
+                      className="v-caption py-6 text-center"
+                      style={{ color: 'var(--v-mute)' }}
+                    >
+                      새로운 알림이 없습니다.
+                    </p>
+                  ) : (
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
                       {notifications.slice(0, 6).map(n => (
                         <button
                           key={n.id}
                           type="button"
                           onClick={() => handleNotificationClick(n)}
-                          className="w-full text-left p-2 rounded-[6px] transition"
+                          className="w-full text-left p-2 rounded-[6px] transition-colors flex items-start gap-2"
                           style={{
-                            borderBottom: '1px solid var(--v-hairline-subtle)',
+                            backgroundColor: n.read
+                              ? 'transparent'
+                              : 'var(--v-canvas-soft)',
                           }}
                         >
-                          <div className="flex items-center justify-between v-caption-mono mb-0.5">
-                            <span
-                              className="inline-flex items-center gap-1 font-medium"
+                          <span className="mt-0.5 flex-shrink-0">
+                            {n.type === 'resolved' ? (
+                              <CheckCircle2
+                                size={13}
+                                style={{ color: 'var(--v-bull)' }}
+                              />
+                            ) : n.type === 'response' ? (
+                              <CornerDownRight
+                                size={13}
+                                style={{ color: 'var(--v-link)' }}
+                              />
+                            ) : (
+                              <MessageSquare
+                                size={13}
+                                style={{ color: 'var(--v-mute)' }}
+                              />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className="v-caption leading-snug"
                               style={{ color: 'var(--v-ink)' }}
                             >
-                              {n.type === 'response' ? (
-                                <CornerDownRight size={11} />
-                              ) : n.type === 'resolved' ? (
-                                <CheckCircle2
-                                  size={11}
-                                  style={{ color: 'var(--v-bull)' }}
-                                />
-                              ) : (
-                                <MessageSquare size={11} />
-                              )}
-                              <span>${n.ticker}</span>
-                            </span>
-                            <span style={{ color: 'var(--v-mute)' }}>
+                              <span className="font-semibold">
+                                @{n.actorHandle}
+                              </span>{' '}
+                              {n.message}
+                            </p>
+                            <span
+                              className="v-caption-mono text-xs"
+                              style={{ color: 'var(--v-mute)' }}
+                            >
                               {formatRelativeTime(n.createdAt)}
                             </span>
                           </div>
-                          <p
-                            className="v-caption line-clamp-2"
-                            style={{ color: 'var(--v-body)' }}
-                          >
-                            {n.message}
-                          </p>
                         </button>
                       ))}
                     </div>
-                  ) : (
-                    <p
-                      className="v-caption py-5 text-center"
-                      style={{ color: 'var(--v-mute)' }}
-                    >
-                      No notifications yet.
-                    </p>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Sleek Theme Toggle (Sun / Moon SVG Icon) */}
+            {/* Theme Toggle (Dark / Light) */}
             <button
               type="button"
               onClick={onToggleTheme}
-              className="w-7 h-7 rounded-[6px] flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors"
               style={{
                 color: 'var(--v-mute)',
                 boxShadow: 'var(--v-shadow-border)',
                 backgroundColor: 'transparent',
               }}
-              title={
-                theme === 'dark'
-                  ? 'Switch to light mode'
-                  : 'Switch to dark mode'
-              }
-              aria-label="Toggle color theme"
+              title={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
+              aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
             >
-              {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
             </button>
 
-            {/* User Profile / Connect Action */}
-            {currentUser ? (
-              <div className="relative" ref={userMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsUserMenuOpen(prev => !prev)}
-                  className="inline-flex items-center gap-2 h-7 px-2 rounded-[6px] transition-colors"
+            {/* User Profile / Elo Tier HUD Pill */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() =>
+                  currentUser
+                    ? setIsUserMenuOpen(prev => !prev)
+                    : setIsConnectOpen(true)
+                }
+                className="h-8 px-3 rounded-[6px] inline-flex items-center gap-2 text-xs font-medium transition-colors"
+                style={{
+                  backgroundColor: 'var(--v-canvas-soft)',
+                  boxShadow: 'var(--v-shadow-border)',
+                  color: 'var(--v-ink)',
+                }}
+                title={`${tierInfo.krTitle} · ${liveElo} LP (승급 진행률 ${tierInfo.progressPct}%)`}
+              >
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: tierInfo.accentHex }}
+                />
+                <span className="v-caption-mono font-semibold">
+                  {tierInfo.krTitle}
+                </span>
+                <span
+                  className="v-caption-mono font-semibold hidden sm:inline"
+                  style={{ color: tierInfo.accentHex }}
+                >
+                  {liveElo} LP
+                </span>
+                <span
+                  className="hidden md:inline-block w-10 h-1.5 rounded-full overflow-hidden"
+                  style={{ backgroundColor: 'var(--v-canvas-soft-2)' }}
+                >
+                  <span
+                    className="block h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.max(8, tierInfo.progressPct)}%`,
+                      backgroundColor: tierInfo.accentHex,
+                    }}
+                  />
+                </span>
+                <ChevronDown size={11} style={{ color: 'var(--v-mute)' }} />
+              </button>
+
+              {isUserMenuOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-64 rounded-[8px] p-3 z-50 space-y-2.5"
                   style={{
-                    boxShadow: 'var(--v-shadow-border)',
-                    backgroundColor: isUserMenuOpen
-                      ? 'var(--v-canvas-soft)'
-                      : 'transparent',
+                    backgroundColor: 'var(--v-canvas)',
+                    boxShadow: 'var(--v-shadow-stack)',
                   }}
-                  title={`@${currentUser.handle}`}
                 >
                   <div
-                    className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold v-mono"
-                    style={{
-                      backgroundColor: 'var(--v-canvas-soft)',
-                      color: 'var(--v-ink)',
-                      border: '1px solid var(--v-hairline)',
-                    }}
+                    className="pb-2.5 space-y-2"
+                    style={{ borderBottom: '1px solid var(--v-hairline)' }}
                   >
-                    {currentUser.handle.slice(0, 1).toUpperCase()}
-                  </div>
-                  <span
-                    className="text-xs font-medium truncate max-w-[90px]"
-                    style={{ color: 'var(--v-ink)' }}
-                  >
-                    @{currentUser.handle}
-                  </span>
-                  <span
-                    className="v-caption-mono text-[10px] hidden sm:inline"
-                    style={{ color: 'var(--v-mute)' }}
-                  >
-                    {liveElo} LP
-                  </span>
-                  <ChevronDown size={11} style={{ color: 'var(--v-mute)' }} />
-                </button>
-
-                {isUserMenuOpen && (
-                  <div
-                    className="absolute right-0 mt-2 w-48 rounded-[8px] p-1.5 z-50"
-                    style={{
-                      backgroundColor: 'var(--v-canvas)',
-                      boxShadow: 'var(--v-shadow-stack)',
-                    }}
-                  >
-                    <div
-                      className="px-2.5 py-1.5 mb-1"
-                      style={{ borderBottom: '1px solid var(--v-hairline-subtle)' }}
-                    >
+                    <div className="flex items-center justify-between gap-2">
                       <p
-                        className="text-xs font-semibold"
+                        className="v-body-sm-strong truncate"
                         style={{ color: 'var(--v-ink)' }}
                       >
-                        @{currentUser.handle}
+                        @{userHandle}
                       </p>
-                      <p
-                        className="v-caption-mono text-[10px]"
-                        style={{ color: 'var(--v-mute)' }}
+                      <span
+                        className="v-caption-mono text-xs font-semibold px-1.5 py-0.5 rounded-[4px]"
+                        style={{
+                          backgroundColor: 'var(--v-canvas-soft)',
+                          color: tierInfo.accentHex,
+                          boxShadow: 'var(--v-shadow-border)',
+                        }}
                       >
-                        {tierInfo.tier} Tier · {liveElo} LP
-                      </p>
+                        {tierInfo.krTitle}
+                      </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        navigate('/record');
-                      }}
-                      className="w-full text-left px-2.5 py-1.5 rounded-[5px] v-caption flex items-center gap-2 hover:bg-[var(--v-canvas-soft)] transition"
-                      style={{ color: 'var(--v-ink)' }}
-                    >
-                      <UserIcon size={12} />
-                      <span>My Record Dossier</span>
-                    </button>
+                    <div>
+                      <div className="flex items-center justify-between v-caption-mono text-xs mb-1">
+                        <span style={{ color: 'var(--v-ink)' }}>{liveElo} LP</span>
+                        <span style={{ color: 'var(--v-mute)' }}>
+                          {tierInfo.nextTierElo
+                            ? `승급까지 ${Math.max(0, tierInfo.nextTierElo - liveElo)} LP`
+                            : '최고 티어 달성'}
+                        </span>
+                      </div>
+                      <div
+                        className="w-full h-1.5 rounded-full overflow-hidden"
+                        style={{ backgroundColor: 'var(--v-canvas-soft-2)' }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${tierInfo.progressPct}%`,
+                            backgroundColor: tierInfo.accentHex,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      navigate('/record');
+                    }}
+                    className="w-full text-left px-2 py-1.5 rounded-[5px] v-caption flex items-center gap-2 transition-colors"
+                    style={{ color: 'var(--v-ink)' }}
+                  >
+                    <UserIcon size={13} />내 기록
+                  </button>
+
+                  {currentUser ? (
                     <button
                       type="button"
                       onClick={() => {
                         logout();
                         setIsUserMenuOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-1.5 rounded-[5px] v-caption flex items-center gap-2 hover:bg-[var(--v-canvas-soft)] transition"
+                      className="w-full text-left px-2 py-1.5 rounded-[5px] v-caption flex items-center gap-2 transition-colors"
                       style={{ color: 'var(--v-bear)' }}
                     >
-                      <LogOut size={12} />
-                      <span>Sign out</span>
+                      <LogOut size={13} />
+                      연결 해제
                     </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/record')}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-[5px] hover:bg-[var(--v-canvas-soft)] transition"
-                  title="Guest account standing"
-                >
-                  <span
-                    className="text-xs font-medium"
-                    style={{ color: 'var(--v-body)' }}
-                  >
-                    @{userHandle}
-                  </span>
-                  <span
-                    className="v-caption-mono text-[10px]"
-                    style={{ color: 'var(--v-mute)' }}
-                  >
-                    ({liveElo} LP)
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsConnectOpen(true)}
-                  className="v-btn-primary h-7 px-3 text-xs"
-                >
-                  <span>Connect</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile Navigation Sub-Row (< 768px only) */}
-        <div
-          className="md:hidden w-full overflow-x-auto no-scrollbar"
-          style={{
-            borderTop: '1px solid var(--v-hairline-subtle)',
-            backgroundColor: 'var(--v-canvas)',
-          }}
-        >
-          <div
-            className="px-4 h-8 flex items-center gap-5 whitespace-nowrap"
-            style={{
-              borderLeft: '1px solid var(--v-hairline)',
-              borderRight: '1px solid var(--v-hairline)',
-            }}
-          >
-            {navTabs.map(tab => (
-              <NavLink
-                key={tab.to}
-                to={tab.to}
-                className="relative h-full flex items-center gap-1.5 text-xs font-medium transition-colors"
-                style={{
-                  color: tab.isActive ? 'var(--v-ink)' : 'var(--v-mute)',
-                }}
-              >
-                <span>{tab.label}</span>
-                {tab.badge !== undefined && (
-                  <span className="v-kbd text-[9px] px-1 py-0">{tab.badge}</span>
-                )}
-                {tab.isActive && (
-                  <span
-                    className="absolute bottom-0 left-0 right-0 h-[2px]"
-                    style={{ backgroundColor: 'var(--v-primary)' }}
-                  />
-                )}
-              </NavLink>
-            ))}
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsConnectOpen(true);
+                      }}
+                      className="w-full v-btn-primary text-xs h-8 mt-1"
+                    >
+                      계정 연결 / 전환
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -600,9 +576,6 @@ export function StudioCommandBar({
       <ConnectModal
         isOpen={isConnectOpen}
         onClose={() => setIsConnectOpen(false)}
-        onSuccess={() => {
-          setIsConnectOpen(false);
-        }}
       />
     </>
   );

@@ -4,7 +4,6 @@ import type { Forecast, PathPoint } from '../domain/types';
 import { computeForecastDigest } from '../domain/audit';
 import { formatPct } from '../domain/format';
 import { getEloTierInfo, formatSignedLp, DEFAULT_ELO } from '../domain/elo';
-import { getStockLandmarks } from '../data/market';
 import { track } from '../lib/analytics';
 
 interface ShareTicketModalProps {
@@ -36,35 +35,34 @@ export function ShareTicketModal({
   const [copiedType, setCopiedType] = useState<'text' | 'link' | null>(null);
 
   const path = forecast.path || [];
-  const targetPrice = path.length > 0 ? path[path.length - 1].price : forecast.basePrice;
-  const changePct = forecast.basePrice > 0
-    ? ((targetPrice - forecast.basePrice) / forecast.basePrice) * 100
-    : 0;
+  const targetPrice =
+    path.length > 0 ? path[path.length - 1].price : forecast.basePrice;
+  const changePct =
+    forecast.basePrice > 0
+      ? ((targetPrice - forecast.basePrice) / forecast.basePrice) * 100
+      : 0;
   const isBull = changePct >= 0;
-  const divergencePct = crowdChangePct !== undefined ? changePct - crowdChangePct : null;
+  const divergencePct =
+    crowdChangePct !== undefined ? changePct - crowdChangePct : null;
   const digest = computeForecastDigest(forecast);
   const tierInfo = getEloTierInfo(authorElo);
 
-  const shareUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/f/${forecast.id}`
-    : `https://stoxdraw.com/f/${forecast.id}`;
-
-  const stepSummary = path
-    .map((p, idx) => `D+${idx + 1} $${p.price.toFixed(1)}`)
-    .join(' -> ');
+  const shareUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/f/${forecast.id}`
+      : `https://stoxdraw.com/f/${forecast.id}`;
 
   const shareSnippet = [
-    `[STOXDRAW // 5D TRAJECTORY & ELO RECEIPT]`,
-    `Instrument: $${forecast.ticker} (${forecast.roundId || '5D ROUND'}) | Forecaster: @${authorHandle} (${tierInfo.tier} · ${authorElo} LP)`,
-    `Trajectory: Anchor $${forecast.basePrice.toFixed(2)} -> D+5 Target $${targetPrice.toFixed(2)} (${formatPct(changePct)})`,
-    eloDeltaLp !== undefined
-      ? `Settlement: ${scoreTotal?.toFixed(1)} pts (${scoreGrade}) | Elo ${formatSignedLp(eloDeltaLp)}`
+    `STOXDRAW · ${forecast.ticker} 20일 예측`,
+    `예측자: @${authorHandle} (${tierInfo.krTitle} · ${authorElo} LP)`,
+    `20일 목표: $${forecast.basePrice.toLocaleString('en-US')} -> $${targetPrice.toLocaleString('en-US')} (${formatPct(changePct)})`,
+    eloDeltaLp !== undefined && scoreTotal !== undefined
+      ? `정산 점수: ${scoreTotal.toFixed(1)}점 (${scoreGrade}등급) · ${formatSignedLp(eloDeltaLp)}`
       : divergencePct !== null
-      ? `vs Crowd Median (${formatPct(crowdChangePct!)}): ${divergencePct >= 0 ? '+' : ''}${divergencePct.toFixed(1)}%p edge`
+      ? `군집 중앙값 대비: ${divergencePct >= 0 ? '+' : ''}${divergencePct.toFixed(1)}%p`
       : null,
-    stepSummary ? `5D Vector: ${stepSummary}` : null,
-    forecast.comment ? `Thesis: "${forecast.comment}"` : null,
-    `Verify receipt: ${shareUrl}`,
+    forecast.comment ? `시나리오: "${forecast.comment}"` : null,
+    `${shareUrl}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -81,12 +79,12 @@ export function ShareTicketModal({
     canvas.width = W;
     canvas.height = H;
 
-    // 1. Pure Black Terminal Canvas
-    ctx.fillStyle = '#000000';
+    // 1. Pure Dark Geist Terminal Canvas
+    ctx.fillStyle = '#050505';
     ctx.fillRect(0, 0, W, H);
 
     // Subtle Grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
     ctx.lineWidth = 1;
     for (let x = 60; x < W; x += 60) {
       ctx.beginPath();
@@ -101,359 +99,318 @@ export function ShareTicketModal({
       ctx.stroke();
     }
 
-    // Outer Border
-    ctx.strokeStyle = '#27272a';
+    // Outer Frame
+    ctx.strokeStyle = '#262626';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(24, 24, W - 48, H - 48);
 
     // Top Header Bar
-    ctx.fillStyle = '#09090b';
+    ctx.fillStyle = '#0c0c0e';
     ctx.fillRect(25, 25, W - 50, 68);
-    ctx.strokeStyle = '#27272a';
+    ctx.strokeStyle = '#262626';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(25, 93);
     ctx.lineTo(W - 25, 93);
     ctx.stroke();
 
-    // Brand & Ticket ID
+    // Brand Title (Editorial Serif)
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '700 20px "Geist", sans-serif';
+    ctx.font = '700 26px "Times Newer Roman", "Tinos", "Instrument Serif", Didot, "Bodoni MT", Georgia, serif';
     ctx.textAlign = 'left';
-    ctx.fillText('STOXDRAW', 56, 66);
+    ctx.fillText('STOXDRAW', 56, 68);
 
-    ctx.fillStyle = '#71717a';
-    ctx.font = '500 13px "Geist Mono", monospace';
-    ctx.fillText('· 5D FORECAST & ELO PROTOCOL', 175, 65);
+    ctx.fillStyle = '#3291ff';
+    ctx.font = '600 14px "Pretendard Variable", "Pretendard", sans-serif';
+    ctx.fillText('· BTC/USDT 20D FORECAST & TIER PROOF', 185, 65);
 
-    ctx.fillStyle = '#71717a';
-    ctx.font = '500 12px "Geist Mono", monospace';
+    ctx.fillStyle = '#888888';
+    ctx.font = '500 12px "Pretendard Variable", "Pretendard", sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`UTC ${forecast.baseDate} · DIGEST ${digest.slice(0, 14)}...`, W - 56, 65);
+    const verCount = forecast.versions?.length ?? 1;
+    ctx.fillText(
+      `BASE ${forecast.baseDate} · v${verCount} LOCKED · ${digest.slice(0, 14)}...`,
+      W - 56,
+      65
+    );
 
-    // Left Column (Metrics & Thesis)
+    // Left Column: Ticker, Tier Badge, Target Return
     const leftX = 56;
     ctx.textAlign = 'left';
 
-    // Ticker & Stance Tag
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '700 48px "Geist", sans-serif';
-    ctx.fillText(`$${forecast.ticker}`, leftX, 172);
+    ctx.font = '700 44px "Pretendard Variable", "Pretendard", sans-serif';
+    ctx.fillText(forecast.ticker, leftX, 168);
 
-    const stanceLabel = isBull ? 'BULLISH 5D' : 'BEARISH 5D';
-    const accentColor = isBull ? '#10b981' : '#f43f5e';
+    ctx.fillStyle = tierInfo.accentHex;
+    ctx.font = '700 16px "Pretendard Variable", "Pretendard", sans-serif';
+    ctx.fillText(
+      `@${authorHandle}  ·  ${tierInfo.krTitle} (${tierInfo.tier} ${authorElo} LP)`,
+      leftX,
+      204
+    );
+
+    ctx.fillStyle = '#888888';
+    ctx.font = '600 13px "Pretendard Variable", "Pretendard", sans-serif';
+    ctx.fillText('D+20 목표 수익률', leftX, 256);
+
+    const accentColor = isBull ? '#00e599' : '#f43f5e';
     ctx.fillStyle = accentColor;
-    ctx.font = '700 15px monospace';
-    ctx.fillText(`${stanceLabel}  ·  @${authorHandle} (${tierInfo.tier} ${authorElo} LP)`, leftX, 206);
+    ctx.font = '700 62px "Pretendard Variable", "Pretendard", sans-serif';
+    ctx.fillText(formatPct(changePct), leftX, 322);
 
-    // Target Return Hero Number
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '500 14px "Pretendard Variable", sans-serif';
-    ctx.fillText('5거래일 목표 수익률 및 예측 종가', leftX, 256);
+    ctx.fillStyle = '#ededed';
+    ctx.font = '600 18px "Pretendard Variable", "Pretendard", sans-serif';
+    ctx.fillText(
+      `$${forecast.basePrice.toLocaleString('en-US')}  →  $${targetPrice.toLocaleString('en-US')}`,
+      leftX,
+      358
+    );
 
-    ctx.fillStyle = accentColor;
-    ctx.font = '800 56px monospace';
-    ctx.fillText(formatPct(changePct), leftX, 316);
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '600 22px monospace';
-    ctx.fillText(`$${forecast.basePrice.toFixed(2)}  ->  $${targetPrice.toFixed(2)}`, leftX, 353);
-
-    // Comparison Box (Consensus & Elo Rating)
-    ctx.fillStyle = '#09090b';
-    ctx.fillRect(leftX, 385, 440, 96);
+    // Score or Crowd Comparison Box
+    ctx.fillStyle = '#111113';
     ctx.strokeStyle = '#27272a';
-    ctx.strokeRect(leftX, 385, 440, 96);
+    ctx.fillRect(leftX, 390, 440, 86);
+    ctx.strokeRect(leftX, 390, 440, 86);
 
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '500 13px monospace';
-    ctx.fillText('MARKET CONSENSUS', leftX + 20, 415);
-    ctx.fillText(eloDeltaLp !== undefined ? 'SETTLED ELO RATING' : 'VS CONSENSUS EDGE', leftX + 235, 415);
-
-    ctx.fillStyle = '#e4e4e7';
-    ctx.font = '700 24px monospace';
-    ctx.fillText(crowdChangePct !== undefined ? formatPct(crowdChangePct) : 'LOCKED', leftX + 20, 452);
-
-    ctx.fillStyle = '#DFC15D';
-    ctx.font = '700 23px monospace';
-    if (eloDeltaLp !== undefined) {
-      ctx.fillStyle = eloDeltaLp >= 0 ? '#10b981' : '#f43f5e';
-      ctx.fillText(`${formatSignedLp(eloDeltaLp)} (${scoreGrade || 'A'})`, leftX + 235, 452);
-    } else if (divergencePct !== null) {
-      ctx.fillText(`${divergencePct >= 0 ? '+' : ''}${divergencePct.toFixed(1)}%p EDGE`, leftX + 235, 452);
+    ctx.fillStyle = '#a1a1aa';
+    ctx.font = '500 13px sans-serif';
+    if (scoreTotal !== undefined) {
+      ctx.fillText('20일 채점 결과', leftX + 20, 420);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 22px "Pretendard Variable", "Pretendard", sans-serif';
+      ctx.fillText(
+        `${scoreTotal.toFixed(1)} / 100점 (${scoreGrade}등급)  ·  ${
+          eloDeltaLp !== undefined ? formatSignedLp(eloDeltaLp) : ''
+        }`,
+        leftX + 20,
+        454
+      );
     } else {
-      ctx.fillText(`${tierInfo.tier} ${authorElo} LP`, leftX + 235, 452);
+      ctx.fillText('중앙값 대비', leftX + 20, 420);
+      ctx.fillStyle = '#3291ff';
+      ctx.font = '700 20px "Pretendard Variable", "Pretendard", sans-serif';
+      const crowdText =
+        crowdChangePct !== undefined
+          ? `Crowd 중앙값 ${formatPct(crowdChangePct)} 대비 ${formatPct(divergencePct!)}p`
+          : `점 ${forecast.anchors?.length ?? 3}개 · 20일 경로`;
+      ctx.fillText(crowdText, leftX + 20, 454);
     }
 
-    // Comment Quote
-    const commentText = forecast.comment || `${forecast.ticker} 5거래일 주가 예측`;
-    const clippedComment = commentText.length > 52 ? commentText.slice(0, 52) + '...' : commentText;
-    ctx.fillStyle = '#E2E8F0';
-    ctx.font = '500 16px "Pretendard Variable", sans-serif';
-    ctx.fillText(`"${clippedComment}"`, leftX, 526);
+    // Thesis Comment Footer
+    ctx.fillStyle = '#888888';
+    ctx.font = '400 14px sans-serif';
+    const shortComment =
+      (forecast.comment || '').length > 52
+        ? `${forecast.comment.slice(0, 52)}...`
+        : forecast.comment || '차트 위에 직접 그린 20일 가격 시나리오';
+    ctx.fillText(`"${shortComment}"`, leftX, 535);
 
-    // Footer Callout
-    ctx.fillStyle = '#64748B';
-    ctx.font = '500 13px monospace';
-    ctx.fillText('5일 주가 예측 및 Elo 레이팅 정산 · STOXDRAW ELO PROTOCOL', leftX, 572);
-
-    // Right Column: Trajectory Chart Box
+    // Right Column: Mini 20-Day Polyline Trajectory Chart
     const chartX = 540;
-    const chartY = 125;
-    const chartW = 604;
-    const chartH = 445;
+    const chartY = 135;
+    const chartW = 590;
+    const chartH = 410;
 
-    ctx.fillStyle = '#0B101B';
+    ctx.fillStyle = '#0b0b0e';
+    ctx.strokeStyle = '#262626';
     ctx.fillRect(chartX, chartY, chartW, chartH);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.strokeRect(chartX, chartY, chartW, chartH);
 
-    const landmarks = getStockLandmarks(forecast.ticker, forecast.basePrice);
-
-    // Compute price scale for chart
-    const prices = [
+    const allPrices = [
       forecast.basePrice,
       ...path.map(p => p.price),
-      ...landmarks.map(l => l.price),
+      ...(crowdPath ? crowdPath.map(p => p.price) : []),
     ];
-    if (crowdPath && crowdPath.length > 0) {
-      crowdPath.forEach(p => prices.push(p.price));
-    }
-    const minP = Math.min(...prices);
-    const maxP = Math.max(...prices);
-    const padP = (maxP - minP) * 0.25 || forecast.basePrice * 0.04;
-    const lowP = minP - padP;
-    const highP = maxP + padP;
-    const rangeP = highP - lowP || 1;
+    const minP = Math.min(...allPrices) * 0.985;
+    const maxP = Math.max(...allPrices) * 1.015;
 
-    const padInX = 54;
-    const padInY = 58;
-    const innerW = chartW - padInX * 2;
-    const innerH = chartH - padInY * 2;
+    const toX = (stepIdx: number, totalSteps: number) =>
+      chartX + 40 + (stepIdx / Math.max(1, totalSteps)) * (chartW - 80);
+    const toY = (price: number) => {
+      const ratio = (price - minP) / Math.max(1, maxP - minP);
+      return chartY + chartH - 45 - ratio * (chartH - 90);
+    };
 
-    const totalSteps = Math.max(path.length, 5);
-    const getStepX = (idx: number) => chartX + padInX + (idx / totalSteps) * innerW;
-    const getPriceY = (p: number) => chartY + padInY + (1 - (p - lowP) / rangeP) * innerH;
-
-    // Base Horizontal Line
-    const baseY = getPriceY(forecast.basePrice);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    // Base Price Horizontal Dashed Line
+    const baseY = toY(forecast.basePrice);
+    ctx.strokeStyle = '#333333';
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(chartX + 24, baseY);
-    ctx.lineTo(chartX + chartW - 24, baseY);
+    ctx.moveTo(chartX + 20, baseY);
+    ctx.lineTo(chartX + chartW - 20, baseY);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '500 12px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(`BASE $${forecast.basePrice.toFixed(1)}`, chartX + 30, baseY - 8);
-
-    // Market Landmarks
-    landmarks.forEach(lm => {
-      const ly = getPriceY(lm.price);
-      const isRes = lm.category !== 'support';
-      ctx.strokeStyle = isRes ? 'rgba(56, 189, 248, 0.28)' : 'rgba(223, 193, 93, 0.28)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([2, 4]);
-      ctx.beginPath();
-      ctx.moveTo(chartX + 24, ly);
-      ctx.lineTo(chartX + chartW - 24, ly);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = isRes ? '#38bdf8' : '#DFC15D';
-      ctx.font = '600 11px monospace';
-      ctx.textAlign = 'right';
-      ctx.fillText(`${lm.label} $${lm.price.toFixed(1)}`, chartX + chartW - 28, ly - 5);
-    });
-
-    // Crowd Wave Line (if present)
+    // Crowd Median Path if available
     if (crowdPath && crowdPath.length > 0) {
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+      ctx.lineWidth = 2;
       ctx.setLineDash([6, 4]);
       ctx.beginPath();
-      ctx.moveTo(getStepX(0), baseY);
-      crowdPath.forEach((p, idx) => {
-        ctx.lineTo(getStepX(idx + 1), getPriceY(p.price));
+      ctx.moveTo(toX(0, crowdPath.length), baseY);
+      crowdPath.forEach((pt, idx) => {
+        ctx.lineTo(toX(idx + 1, crowdPath.length), toY(pt.price));
       });
       ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    // User Forecast Path Line
+    // User 20-Day Interpolated Polyline
     if (path.length > 0) {
-      ctx.strokeStyle = accentColor;
+      ctx.strokeStyle = '#3291ff';
       ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(getStepX(0), baseY);
-      path.forEach((p, idx) => {
-        ctx.lineTo(getStepX(idx + 1), getPriceY(p.price));
+      ctx.moveTo(toX(0, path.length), baseY);
+      path.forEach((pt, idx) => {
+        ctx.lineTo(toX(idx + 1, path.length), toY(pt.price));
       });
       ctx.stroke();
 
-      // Draw Nodes & Labels
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(getStepX(0), baseY, 5, 0, Math.PI * 2);
-      ctx.fill();
-
-      path.forEach((p, idx) => {
-        const px = getStepX(idx + 1);
-        const py = getPriceY(p.price);
-
-        ctx.fillStyle = accentColor;
+      // Anchor Dots
+      const anchors = forecast.anchors || [{ day: path.length, price: targetPrice }];
+      anchors.forEach(a => {
+        const ax = toX(a.day, path.length);
+        const ay = toY(a.price);
+        ctx.fillStyle = '#0b0b0e';
+        ctx.strokeStyle = '#3291ff';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.arc(ax, ay, 6, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '700 13px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(`$${p.price.toFixed(1)}`, px, py - 14);
-
-        ctx.fillStyle = '#94A3B8';
-        ctx.font = '500 12px monospace';
-        ctx.fillText(`D+${idx + 1}`, px, chartY + chartH - 18);
+        ctx.stroke();
       });
     }
 
-    // Legend inside Chart Box
+    ctx.fillStyle = '#888888';
+    ctx.font = '600 12px "Pretendard Variable", "Pretendard", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('D-0 ANCHOR', chartX + 36, chartY + chartH - 16);
     ctx.textAlign = 'right';
-    ctx.font = '600 12px monospace';
-    ctx.fillStyle = accentColor;
-    ctx.fillText('— MY 5D PATH', chartX + chartW - 24, chartY + 28);
-    if (crowdPath && crowdPath.length > 0) {
-      ctx.fillStyle = '#a1a1aa';
-      ctx.fillText('--- CONSENSUS', chartX + chartW - 145, chartY + 28);
-    }
-  }, [isOpen, forecast, authorHandle, crowdPath, crowdChangePct, scoreTotal, scoreGrade, eloDeltaLp, authorElo, tierInfo, isBull, changePct, targetPrice, divergencePct, digest]);
+    ctx.fillStyle = '#3291ff';
+    ctx.fillText('D+20 INTERPOLATED PATH', chartX + chartW - 36, chartY + chartH - 16);
+  }, [
+    isOpen,
+    forecast,
+    authorHandle,
+    authorElo,
+    tierInfo,
+    targetPrice,
+    changePct,
+    isBull,
+    crowdPath,
+    crowdChangePct,
+    divergencePct,
+    scoreTotal,
+    scoreGrade,
+    eloDeltaLp,
+    digest,
+    path,
+  ]);
 
   if (!isOpen) return null;
 
   const handleDownloadPng = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
+    const url = canvas.toDataURL('image/png');
     const link = document.createElement('a');
-    link.download = `stoxdraw-${forecast.ticker.toLowerCase()}-${forecast.id.slice(-5)}.png`;
-    link.href = dataUrl;
+    link.download = `stoxdraw-btc-20d-${forecast.id}.png`;
+    link.href = url;
     link.click();
     track('share_clicked', { method: 'download_png', forecastId: forecast.id });
   };
 
-  const handleCopySnippet = () => {
-    navigator.clipboard.writeText(shareSnippet);
-    setCopiedType('text');
-    track('share_clicked', { method: 'copy_snippet', forecastId: forecast.id });
-    setTimeout(() => setCopiedType(null), 2000);
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopiedType('link');
-    track('share_clicked', { method: 'copy_link', forecastId: forecast.id });
+  const handleCopyText = async (type: 'text' | 'link') => {
+    const text = type === 'link' ? shareUrl : shareSnippet;
+    await navigator.clipboard.writeText(text);
+    setCopiedType(type);
+    track('share_clicked', { method: type, forecastId: forecast.id });
     setTimeout(() => setCopiedType(null), 2000);
   };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' }}
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.78)' }}
+      onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl rounded-[8px] overflow-hidden"
+        className="w-full max-w-3xl rounded-[10px] p-5 space-y-4"
         style={{
           backgroundColor: 'var(--v-canvas)',
           boxShadow: 'var(--v-shadow-stack)',
+          color: 'var(--v-ink)',
         }}
+        onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div
-          className="px-5 py-3.5 flex items-center justify-between"
-          style={{
-            backgroundColor: 'var(--v-canvas-soft)',
-            borderBottom: '1px solid var(--v-hairline)',
-          }}
+          className="flex items-center justify-between pb-3"
+          style={{ borderBottom: '1px solid var(--v-hairline)' }}
         >
-          <span className="v-body-sm-strong" style={{ color: 'var(--v-ink)' }}>
-            Export verified trajectory receipt
-          </span>
+          <div>
+            <h3 className="v-heading-16">
+              예측 공유 카드
+            </h3>
+            <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
+              20일 예측 경로와 티어 정보가 담긴 검증 이미지입니다.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            style={{ color: 'var(--v-mute)' }}
+            className="v-btn-secondary h-7 w-7 p-0"
           >
-            <X size={15} />
+            <X size={14} />
           </button>
         </div>
 
-        {/* Rendered Ticket Canvas Preview */}
+        {/* Canvas Preview */}
         <div
-          className="w-full"
-          style={{
-            backgroundColor: '#000000',
-            borderBottom: '1px solid var(--v-hairline)',
-          }}
+          className="w-full rounded-[6px] overflow-hidden"
+          style={{ boxShadow: 'var(--v-shadow-border)' }}
         >
           <canvas ref={canvasRef} className="w-full h-auto block" />
         </div>
 
-        {/* Copyable Text Snippet Preview */}
-        <div
-          className="p-4"
-          style={{
-            backgroundColor: 'var(--v-canvas-soft)',
-            borderBottom: '1px solid var(--v-hairline)',
-          }}
-        >
-          <pre
-            className="v-caption-mono whitespace-pre-wrap leading-relaxed overflow-x-auto"
-            style={{ color: 'var(--v-body)' }}
-          >
-            {shareSnippet}
-          </pre>
-        </div>
-
-        {/* Actions */}
-        <div
-          className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-2"
-          style={{ backgroundColor: 'var(--v-canvas)' }}
-        >
-          <button
-            type="button"
-            onClick={handleDownloadPng}
-            className="v-btn-primary w-full"
-          >
-            <Download size={13} />
-            <span>Download PNG</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCopySnippet}
-            className="v-btn-secondary w-full h-9"
-          >
-            {copiedType === 'text' ? <Check size={13} /> : <Copy size={13} />}
-            <span>{copiedType === 'text' ? 'Copied summary' : 'Copy summary'}</span>
-          </button>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadPng}
+              className="v-btn-primary h-8 px-3.5 text-xs font-semibold"
+            >
+              <Download size={13} />
+              PNG 다운로드
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCopyText('text')}
+              className="v-btn-secondary h-8 px-3 text-xs"
+            >
+              {copiedType === 'text' ? <Check size={12} /> : <Copy size={12} />}
+              {copiedType === 'text' ? '텍스트 복사됨' : '텍스트 복사'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCopyText('link')}
+              className="v-btn-secondary h-8 px-3 text-xs"
+            >
+              {copiedType === 'link' ? <Check size={12} /> : <Copy size={12} />}
+              {copiedType === 'link' ? '링크 복사됨' : '링크 복사'}
+            </button>
+          </div>
 
           <button
             type="button"
-            onClick={handleCopyLink}
-            className="v-btn-secondary w-full h-9"
+            onClick={onClose}
+            className="v-btn-secondary h-8 px-3 text-xs"
           >
-            {copiedType === 'link' ? <Check size={13} /> : <Copy size={13} />}
-            <span>{copiedType === 'link' ? 'Copied URL' : 'Copy receipt URL'}</span>
+            닫기
           </button>
         </div>
       </div>
     </div>
   );
 }
-
-export default ShareTicketModal;

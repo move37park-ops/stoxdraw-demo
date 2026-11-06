@@ -3,38 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
-    <title>STOXDRAW — 5D Stock Path & Elo Rating</title>
-    <meta name="description" content="5거래일 주가 경로 예측 및 실제 시장 종가 기반 정량 Elo 레이팅 검증 플랫폼." />
+    <title>STOXDRAW — 비트코인 20일 시나리오 예측 및 집단지성 검증</title>
+    <meta name="description" content="비트코인 20일 가격 경로를 차트 위에 직접 그려 예측하고, 시장 집단지성 중앙값과 대조해 100점 만점으로 정량 채점받으세요." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="STOXDRAW" />
+    <meta property="og:title" content="STOXDRAW — 비트코인 20일 시나리오 예측" />
+    <meta property="og:description" content="변곡점 클릭으로 20일 예상 궤적을 작도하고 시장 참여자들의 집단지성 및 실전 적중률을 확인하세요." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="STOXDRAW — 비트코인 20일 시나리오 예측" />
+    <meta name="twitter:description" content="변곡점 클릭으로 20일 예상 궤적을 작도하고 시장 참여자들의 집단지성 및 실전 적중률을 확인하세요." />
+    <link rel="preload" href="/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/TimesNewerRoman-Bold.otf" as="font" type="font/otf" crossorigin />
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
-            colors: {
-              brand: {
-                green: '#00D03A',
-                'green-aa': '#008236',
-                blue: '#78ABFF',
-                'blue-aa': '#1F7DFF',
-                'gray-light': '#EFF3EB',
-                'gray-100': '#E5ECE2',
-                'gray-200': '#C2CFC0',
-                'gray-500': '#586B60',
-                'gray-800': '#26362E',
-                'gray-900': '#0F1A15',
-                'gray-950': '#0A120E',
-              }
-            },
             fontFamily: {
               sans: [
-                '"Geist"',
                 '"Pretendard Variable"',
                 'Pretendard',
                 '-apple-system',
@@ -43,24 +36,21 @@
                 'sans-serif'
               ],
               mono: [
-                '"Geist Mono"',
-                'ui-monospace',
-                'SFMono-Regular',
-                'Menlo',
-                'Monaco',
-                'Consolas',
-                'monospace'
+                '"Pretendard Variable"',
+                'Pretendard',
+                '-apple-system',
+                'BlinkMacSystemFont',
+                'system-ui',
+                'sans-serif'
               ],
-            },
-            fontSize: {
-              'h1-m': ['2rem', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
-              'h1-d': ['2.5rem', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
-              'h2-m': ['1.5rem', { lineHeight: '1.3', letterSpacing: '-0.01em' }],
-              'h2-d': ['1.75rem', { lineHeight: '1.3', letterSpacing: '-0.01em' }],
-              'h3-m': ['1.125rem', { lineHeight: '1.4', letterSpacing: '0em' }],
-              'h3-d': ['1.25rem', { lineHeight: '1.4', letterSpacing: '0em' }],
-              'body-std': ['1rem', { lineHeight: '1.6', letterSpacing: '0em' }],
-              'caption-std': ['0.875rem', { lineHeight: '1.4', letterSpacing: '0em' }],
+              serif: [
+                '"Times Newer Roman"',
+                '"Tinos"',
+                '"Instrument Serif"',
+                'Didot',
+                'Georgia',
+                'serif'
+              ],
             }
           }
         }

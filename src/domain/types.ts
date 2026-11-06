@@ -1,10 +1,24 @@
-export type Horizon = '5D' | '30D';
+export type Horizon = '20D' | '5D' | '30D';
 export type Mode = 'path' | 'breakout';
 export type ForecastStatus = 'DRAFT' | 'LOCKED' | 'LIVE' | 'RESOLVED';
 
 export interface PathPoint {
   date: string;
   price: number;
+}
+
+export interface AnchorPoint {
+  day: number; // 1 ~ 20 (D+1 ~ D+20)
+  price: number;
+}
+
+export interface ForecastVersion {
+  version: number;          // 1 (최초 제출본), 2, 3...
+  createdAt: string;        // 박제 시각 (ISO String)
+  anchors: AnchorPoint[];   // 클릭하여 작도한 변곡점 목록
+  prices: number[];         // 자동 보간된 20일 시계열 가격 (길이 20)
+  comment: string;          // 해당 버전 코멘트
+  digestHash: string;       // 불변 검증 해시
 }
 
 export interface BreakoutTarget {
@@ -16,33 +30,36 @@ export interface Forecast {
   id: string;
   authorId: string | null;       // null = Anonymous
   anonId: string;                // 익명 디바이스 ID (계정 연결 시 귀속)
-  ticker: string;
-  horizon: Horizon;
+  ticker: string;                // 'BTC/USDT'
+  horizon: Horizon;              // 기본 '20D'
   mode: Mode;
   comment: string;
-  lockedAt: string;              // ISO String
+  lockedAt: string;              // 최초 제출 시각 (ISO String)
+  updatedAt?: string;            // 최근 수정 시각 (ISO String)
   basePrice: number;             // Lock 시점 기준가
   baseDate: string;              // YYYY-MM-DD
-  evalDates: string[];           // 평가 거래일 목록 (5일 또는 21일)
-  path?: PathPoint[];            // Mode === 'path'
+  evalDates: string[];           // 평가 일봉 목록 (20일)
+  anchors?: AnchorPoint[];       // 현재 활성 변곡점 배열
+  versions?: ForecastVersion[];  // 최초 제출본(v1) 및 수정 이력(v2+) 보존 원장
+  path?: PathPoint[];            // 보간된 20일 시계열 가격 배열
   pathPct?: number[];            // 기준가 대비 % 변동률 배열 [-0.02, 0.01, ...]
-  roundId?: string;              // 주간 라운드 ID (e.g. W2026-40-NVDA)
+  roundId?: string;              // 라운드 ID (e.g. R2026-BTC-20D)
   breakout?: BreakoutTarget;     // Mode === 'breakout'
-  parentId?: string;             // 원본 Forecast ID ([YOUR DRAW] 파생 대결 관계)
+  parentId?: string;             // 원본 Forecast ID (맞불 대결 관계)
   rulesVersion: 'v1';
 }
 
 export interface ScoreBreakdown {
   total: number;                 // 0 ~ 100점
-  pathScore: number;             // /50
-  directionScore: number;        // /30
-  targetScore: number;           // /20
+  pathScore: number;             // /50 (오차 정밀도)
+  directionScore: number;        // /30 (방향성 적중)
+  targetScore: number;           // /20 (변동성·목표가 정밀도)
   grade: 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
   directionHit: boolean;
   endErrorPct: number;
 }
 
-export type EloTier = 'MASTER' | 'DIAMOND' | 'GOLD' | 'SILVER' | 'BRONZE';
+export type EloTier = 'DIAMOND' | 'PLATINUM' | 'GOLD' | 'SILVER' | 'BRONZE' | 'MASTER';
 
 export interface EloProjection {
   expectedWinLp: number;         // 적중 시 예상 획득 LP (예: +28)
@@ -61,7 +78,7 @@ export interface EloSettlement {
 
 export interface MarketLandmark {
   id: string;
-  label: string;                 // 예: '월가 목표선 (Wall St.)'
+  label: string;                 // 예: '전고점 저항선'
   shortLabel: string;            // 캔버스 배지용 짧은 라벨
   category: 'consensus' | 'resistance' | 'support';
   price: number;
@@ -137,4 +154,16 @@ export interface MarketBar {
   high: number;
   low: number;
   close: number;
+}
+
+export interface PracticeAttempt {
+  id: string;
+  scenarioId: string;
+  scenarioTitle: string;
+  createdAt: string;
+  basePrice: number;
+  anchors: AnchorPoint[];
+  forecastPrices: number[];
+  actualPrices: number[];
+  score: ScoreBreakdown;
 }

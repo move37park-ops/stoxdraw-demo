@@ -39,7 +39,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           }}
         >
           <span className="v-body-sm-strong" style={{ color: 'var(--v-ink)' }}>
-            Connect forecaster identity
+            예측자 프로필 연결
           </span>
           <button
             type="button"
@@ -52,7 +52,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
 
         <div className="p-5 space-y-4">
           <p className="v-body-sm" style={{ color: 'var(--v-body)' }}>
-            Bind your local 5-day trajectory deployments to a verified profile and persist your quantitative Elo standing across devices.
+            이 브라우저의 제출 기록과 LP를 계정에 연결합니다.
           </p>
 
           <div className="space-y-2">
@@ -61,7 +61,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
               onClick={() => handleLogin('google')}
               className="v-btn-primary w-full"
             >
-              Continue with Google
+              Google 계정으로 계속하기
             </button>
 
             <button
@@ -69,7 +69,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
               onClick={() => handleLogin('kakao')}
               className="v-btn-secondary w-full h-9"
             >
-              Continue with Kakao
+              Kakao 계정으로 계속하기
             </button>
           </div>
         </div>

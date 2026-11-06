@@ -17,76 +17,77 @@ export interface EloTierInfo {
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
 /**
- * 현재 Elo 레이팅에 따른 5단계 티어 및 진행률 정보 반환
+ * 현재 Elo 레이팅에 따른 브론즈 ~ 다이아몬드 5단계 티어 및 진행률 정보 반환
+ * (피치덱 02.3 & 05.2: 브론즈 ~ 다이아몬드 실력 등급 체계)
  */
 export function getEloTierInfo(elo: number = DEFAULT_ELO): EloTierInfo {
   const safeElo = Math.max(600, Math.round(elo));
 
-  if (safeElo >= 1900) {
-    return {
-      tier: 'MASTER',
-      title: 'MASTER',
-      krTitle: '마스터',
-      minElo: 1900,
-      nextTierElo: null,
-      progressPct: 100,
-      badgeClass: 'bg-zinc-100 text-black border-zinc-100',
-      accentHex: '#ffffff',
-    };
-  }
-
-  if (safeElo >= 1650) {
-    const progressPct = Math.round(((safeElo - 1650) / (1900 - 1650)) * 100);
+  if (safeElo >= 1800) {
     return {
       tier: 'DIAMOND',
       title: 'DIAMOND',
       krTitle: '다이아몬드',
-      minElo: 1650,
-      nextTierElo: 1900,
-      progressPct: clamp(progressPct, 0, 100),
-      badgeClass: 'bg-zinc-800 text-zinc-100 border-zinc-700',
-      accentHex: '#e4e4e7',
+      minElo: 1800,
+      nextTierElo: null,
+      progressPct: 100,
+      badgeClass: 'bg-zinc-100 text-black border-zinc-100',
+      accentHex: '#3291ff',
     };
   }
 
-  if (safeElo >= 1350) {
-    const progressPct = Math.round(((safeElo - 1350) / (1650 - 1350)) * 100);
+  if (safeElo >= 1600) {
+    const progressPct = Math.round(((safeElo - 1600) / (1800 - 1600)) * 100);
+    return {
+      tier: 'PLATINUM',
+      title: 'PLATINUM',
+      krTitle: '플래티넘',
+      minElo: 1600,
+      nextTierElo: 1800,
+      progressPct: clamp(progressPct, 0, 100),
+      badgeClass: 'bg-zinc-800 text-zinc-100 border-zinc-700',
+      accentHex: '#00e599',
+    };
+  }
+
+  if (safeElo >= 1400) {
+    const progressPct = Math.round(((safeElo - 1400) / (1600 - 1400)) * 100);
     return {
       tier: 'GOLD',
       title: 'GOLD',
       krTitle: '골드',
-      minElo: 1350,
-      nextTierElo: 1650,
+      minElo: 1400,
+      nextTierElo: 1600,
       progressPct: clamp(progressPct, 0, 100),
       badgeClass: 'bg-zinc-900 text-zinc-200 border-zinc-700',
-      accentHex: '#a1a1aa',
+      accentHex: '#f5a623',
     };
   }
 
-  if (safeElo >= 1050) {
-    const progressPct = Math.round(((safeElo - 1050) / (1350 - 1050)) * 100);
+  if (safeElo >= 1200) {
+    const progressPct = Math.round(((safeElo - 1200) / (1400 - 1200)) * 100);
     return {
       tier: 'SILVER',
       title: 'SILVER',
       krTitle: '실버',
-      minElo: 1050,
-      nextTierElo: 1350,
+      minElo: 1200,
+      nextTierElo: 1400,
       progressPct: clamp(progressPct, 0, 100),
       badgeClass: 'bg-zinc-900 text-zinc-300 border-zinc-800',
-      accentHex: '#71717a',
+      accentHex: '#a1a1aa',
     };
   }
 
-  const progressPct = Math.round(((safeElo - 600) / (1050 - 600)) * 100);
+  const progressPct = Math.round(((Math.max(1000, safeElo) - 1000) / (1200 - 1000)) * 100);
   return {
     tier: 'BRONZE',
     title: 'BRONZE',
     krTitle: '브론즈',
-    minElo: 600,
-    nextTierElo: 1050,
+    minElo: 1000,
+    nextTierElo: 1200,
     progressPct: clamp(progressPct, 0, 100),
     badgeClass: 'bg-zinc-950 text-zinc-400 border-zinc-800',
-    accentHex: '#52525b',
+    accentHex: '#71717a',
   };
 }
 
@@ -97,15 +98,16 @@ export function getEloTierInfo(elo: number = DEFAULT_ELO): EloTierInfo {
 export function calculateEloProjection(
   myChangePct: number,
   crowdChangePct?: number,
-  dailyVolatility: number = 0.03
+  dailyVolatility: number = 0.032,
+  horizonDays: number = 20
 ): EloProjection {
-  const fiveDayVolPct = Math.max(2.0, dailyVolatility * 100 * Math.sqrt(5));
+  const horizonVolPct = Math.max(2.5, dailyVolatility * 100 * Math.sqrt(horizonDays));
   const referencePct = crowdChangePct !== undefined ? crowdChangePct : 0;
 
   const divergenceAbs = Math.abs(myChangePct - referencePct);
   const magnitudeAbs = Math.abs(myChangePct);
 
-  const normalizedDifficulty = (divergenceAbs * 0.65 + magnitudeAbs * 0.35) / fiveDayVolPct;
+  const normalizedDifficulty = (divergenceAbs * 0.65 + magnitudeAbs * 0.35) / horizonVolPct;
 
   const isOppositeSign =
     crowdChangePct !== undefined &&
@@ -144,16 +146,14 @@ export function settleEloRating(
   score: ScoreBreakdown,
   myChangePct: number,
   crowdChangePct?: number,
-  dailyVolatility: number = 0.03
+  dailyVolatility: number = 0.032,
+  horizonDays: number = 20
 ): EloSettlement {
-  const projection = calculateEloProjection(myChangePct, crowdChangePct, dailyVolatility);
+  const projection = calculateEloProjection(myChangePct, crowdChangePct, dailyVolatility, horizonDays);
 
-  // 100점 만점 점수를 [0, 1] 성과 지표 S로 변환
   const performanceRatio = parseFloat(clamp(score.total / 100, 0, 1).toFixed(3));
-
   const rawDelta = Math.round(K_FACTOR * (performanceRatio - projection.expectedProbability));
 
-  // 방향 적중 및 B등급(58점) 이상이면 최소 +6 LP 보장, 반대로 방향 실패 및 저점수면 음수 보장
   let deltaLp = rawDelta;
   if (score.directionHit && score.total >= 58 && deltaLp < 6) {
     deltaLp = 6;

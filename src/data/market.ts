@@ -1,5 +1,12 @@
 import type { MarketBar, MarketLandmark } from '../domain/types';
 import { isTradingDay, formatDateStr } from '../domain/tradingCalendar';
+import {
+  BTC_TICKER,
+  BTC_DAILY_VOLATILITY,
+  getBtcHistoryBars,
+  getCurrentBtcPrice,
+  getBtcLandmarks,
+} from './btcMarket';
 
 export interface StockMeta {
   ticker: string;
@@ -10,19 +17,20 @@ export interface StockMeta {
 }
 
 export const CORE_STOCKS: StockMeta[] = [
-  { ticker: 'NVDA', name: 'NVIDIA', startPrice: 128.8, volatility: 0.038, logoColor: '#76b900' },
-  { ticker: 'TSLA', name: 'Tesla', startPrice: 245.5, volatility: 0.035, logoColor: '#e82127' },
-  { ticker: 'AAPL', name: 'Apple', startPrice: 227.4, volatility: 0.018, logoColor: '#a2aaad' },
+  {
+    ticker: BTC_TICKER,
+    name: 'Bitcoin / Tether US',
+    startPrice: 68420,
+    volatility: BTC_DAILY_VOLATILITY,
+    logoColor: '#f7931a',
+  },
 ];
 
 export const STOCKS: StockMeta[] = [
   ...CORE_STOCKS,
-  { ticker: 'MSFT', name: 'Microsoft', startPrice: 422.3, volatility: 0.019, logoColor: '#00a4ef' },
-  { ticker: 'AMZN', name: 'Amazon', startPrice: 186.2, volatility: 0.024, logoColor: '#ff9900' },
-  { ticker: 'META', name: 'Meta', startPrice: 585.1, volatility: 0.028, logoColor: '#0668e1' },
-  { ticker: 'GOOGL', name: 'Alphabet', startPrice: 164.7, volatility: 0.021, logoColor: '#4285f4' },
-  { ticker: 'AMD', name: 'AMD', startPrice: 156.4, volatility: 0.036, logoColor: '#ed1c24' },
-  { ticker: 'NFLX', name: 'Netflix', startPrice: 698.0, volatility: 0.026, logoColor: '#e50914' },
+  { ticker: 'NVDA', name: 'NVIDIA', startPrice: 128.8, volatility: 0.038, logoColor: '#76b900' },
+  { ticker: 'TSLA', name: 'Tesla', startPrice: 245.5, volatility: 0.035, logoColor: '#e82127' },
+  { ticker: 'AAPL', name: 'Apple', startPrice: 227.4, volatility: 0.018, logoColor: '#a2aaad' },
   { ticker: 'PLTR', name: 'Palantir', startPrice: 38.6, volatility: 0.042, logoColor: '#ffffff' },
 ];
 
@@ -36,8 +44,11 @@ function createSeededRandom(seed: number) {
   };
 }
 
-// 2026-10-05 기준 과거 120거래일 + 미래 30거래일 시세 생성
 export function generateStockHistory(stock: StockMeta): MarketBar[] {
+  if (stock.ticker.toUpperCase().includes('BTC')) {
+    return getBtcHistoryBars();
+  }
+
   let seed = 0;
   for (let i = 0; i < stock.ticker.length; i++) {
     seed = (seed * 31 + stock.ticker.charCodeAt(i)) | 0;
@@ -45,11 +56,9 @@ export function generateStockHistory(stock: StockMeta): MarketBar[] {
   const rand = createSeededRandom(seed);
 
   const bars: MarketBar[] = [];
-  // 기준 시점: 2026-10-05
-  const baseDate = new Date(2026, 9, 5); // 2026-10-05
+  const baseDate = new Date(2026, 9, 5);
   baseDate.setHours(0, 0, 0, 0);
 
-  // 과거 100거래일 역산
   const pastDates: string[] = [];
   const temp = new Date(baseDate);
   while (pastDates.length < 100) {
@@ -59,7 +68,6 @@ export function generateStockHistory(stock: StockMeta): MarketBar[] {
     }
   }
 
-  // 미래 30거래일
   const futureDates: string[] = [];
   const tempFuture = new Date(baseDate);
   if (isTradingDay(tempFuture)) {
@@ -96,10 +104,12 @@ export function generateStockHistory(stock: StockMeta): MarketBar[] {
   return bars;
 }
 
-// Memory Cache
 const marketCache = new Map<string, MarketBar[]>();
 
 export function getStockHistory(ticker: string): MarketBar[] {
+  if (ticker.toUpperCase().includes('BTC')) {
+    return getBtcHistoryBars();
+  }
   const meta = STOCKS.find(s => s.ticker === ticker) || STOCKS[0];
   if (!marketCache.has(meta.ticker)) {
     marketCache.set(meta.ticker, generateStockHistory(meta));
@@ -107,47 +117,53 @@ export function getStockHistory(ticker: string): MarketBar[] {
   return marketCache.get(meta.ticker)!;
 }
 
-export function getCurrentStockPrice(ticker: string, asOfDate: string = '2026-10-05'): number {
+export function getCurrentStockPrice(ticker: string, asOfDate: string = '2026-10-02'): number {
+  if (ticker.toUpperCase().includes('BTC')) {
+    return getCurrentBtcPrice(asOfDate);
+  }
   const bars = getStockHistory(ticker);
   const match = bars.find(b => b.date === asOfDate);
   if (match) return match.close;
-  // Fallback to closest earlier bar
   const earlier = bars.filter(b => b.date <= asOfDate);
   if (earlier.length > 0) return earlier[earlier.length - 1].close;
   return bars[0].close;
 }
 
-/**
- * 종목별 5D 변동성(σ)에 맞춘 객관적 시장 내비게이션 기준선(Waypoints) 반환
- */
 export function getStockLandmarks(ticker: string, basePrice: number): MarketLandmark[] {
-  const meta = STOCKS.find(s => s.ticker === ticker.toUpperCase()) || CORE_STOCKS[0];
-  const fiveDaySigma = meta.volatility * Math.sqrt(5);
-
-  const upperPct = parseFloat((fiveDaySigma * 0.62 * 100).toFixed(1));
-  const lowerPct = parseFloat((-fiveDaySigma * 0.52 * 100).toFixed(1));
-
-  const upperPrice = parseFloat((basePrice * (1 + upperPct / 100)).toFixed(2));
-  const lowerPrice = parseFloat((basePrice * (1 + lowerPct / 100)).toFixed(2));
+  if (ticker.toUpperCase().includes('BTC')) {
+    return getBtcLandmarks(basePrice);
+  }
+  const meta = STOCKS.find(s => s.ticker === ticker) || STOCKS[0];
+  const roundPrice = (p: number) => parseFloat(p.toFixed(2));
+  const fiveDayVol = meta.volatility * Math.sqrt(5);
 
   return [
     {
-      id: `${meta.ticker}_wallst_target`,
-      label: '월가 단기 저항 · 목표선 (Wall St. Target)',
-      shortLabel: 'WALL ST TARGET',
+      id: 'lm_resistance',
+      label: '옵션 콜벽 저항 (Call Wall)',
+      shortLabel: '콜벽 저항',
       category: 'resistance',
-      price: upperPrice,
-      changePct: upperPct,
-      benchmarkElo: 1650,
+      price: roundPrice(basePrice * (1 + fiveDayVol * 0.95)),
+      changePct: parseFloat((fiveDayVol * 95).toFixed(1)),
+      benchmarkElo: 1750,
     },
     {
-      id: `${meta.ticker}_options_support`,
-      label: '옵션 맥스페인 · 지지선 (Options Support)',
-      shortLabel: 'OPTIONS SUPPORT',
+      id: 'lm_consensus',
+      label: '월가 평균 목표선 (Wall St.)',
+      shortLabel: '월가 목표선',
+      category: 'consensus',
+      price: roundPrice(basePrice * (1 + fiveDayVol * 0.42)),
+      changePct: parseFloat((fiveDayVol * 42).toFixed(1)),
+      benchmarkElo: 1600,
+    },
+    {
+      id: 'lm_support',
+      label: '풋 지지선 (Put Support)',
+      shortLabel: '풋 지지선',
       category: 'support',
-      price: lowerPrice,
-      changePct: lowerPct,
-      benchmarkElo: 1520,
+      price: roundPrice(basePrice * (1 - fiveDayVol * 0.65)),
+      changePct: parseFloat((-fiveDayVol * 65).toFixed(1)),
+      benchmarkElo: 1450,
     },
   ];
 }

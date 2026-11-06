@@ -1,27 +1,33 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ThumbsUp } from 'lucide-react';
+import {
+  ThumbsUp,
+  Share2,
+  ArrowLeft,
+  History,
+  ShieldCheck,
+} from 'lucide-react';
 import { repository } from '../../data/localRepository';
-import { getStockHistory, STOCKS } from '../../data/market';
+import { getStockHistory } from '../../data/market';
+import { BTC_DAILY_VOLATILITY } from '../../data/btcMarket';
 import { deriveForecastStatus } from '../../domain/lifecycle';
 import { resolveForecast } from '../../domain/resolution';
 import { aggregateCrowd } from '../../domain/crowd';
-import { buildDailySettlementRows, computeForecastDigest } from '../../domain/audit';
+import {
+  buildDailySettlementRows,
+  computeForecastDigest,
+} from '../../domain/audit';
 import {
   calculateEloProjection,
   DEFAULT_ELO,
   formatSignedLp,
   getEloTierInfo,
 } from '../../domain/elo';
-import { SplitHorizonCanvas } from '../studio/SplitHorizonCanvas';
+import { formatPct } from '../../domain/format';
+import { Polyline20DCanvas } from '../studio/Polyline20DCanvas';
+import { STUDIO_TIME_STEPS } from '../studio/StudioCommandBar';
 import { ShareTicketModal } from '../../components/ShareTicketModal';
-import type { Forecast } from '../../domain/types';
-
-const DIFFICULTY_EN_MAP: Record<string, string> = {
-  '컨센서스 동조': 'Consensus aligned',
-  '컨센서스 이탈': 'Consensus divergence',
-  '역발상 예측': 'Contrarian call',
-};
+import type { AnchorPoint, Forecast } from '../../domain/types';
 
 interface DetailPageProps {
   currentDateStr: string;
@@ -53,20 +59,22 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
     return (
       <div className="p-16 text-center space-y-4">
         <p className="v-heading-16" style={{ color: 'var(--v-ink)' }}>
-          Prediction receipt not found.
+          예측을 찾을 수 없습니다.
         </p>
         <button
           type="button"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/studio')}
           className="v-btn-primary"
         >
-          Return to Studio
+          실전 모드로 돌아가기
         </button>
       </div>
     );
   }
 
-  const author = forecast.authorId ? repository.getUser(forecast.authorId) : null;
+  const author = forecast.authorId
+    ? repository.getUser(forecast.authorId)
+    : null;
   const authorHandle = author
     ? author.handle
     : `guest_${forecast.anonId.replace(/^anon[_-]?/i, '').slice(0, 4) || 'user'}`;
@@ -76,92 +84,143 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
   const likesCount = repository.getLikesCount(forecast.id);
   const status = deriveForecastStatus(forecast, currentDateStr);
   const stockBars = getStockHistory(forecast.ticker);
-  const stockMeta = STOCKS.find(s => s.ticker === forecast.ticker) || STOCKS[0];
+  const historyBars = stockBars
+    .filter(b => b.date <= forecast.baseDate)
+    .slice(-180);
   const visibleBars = stockBars.filter(b => b.date <= currentDateStr);
 
+  const barMap = new Map(stockBars.map(b => [b.date, b]));
+  const actualFutureBars = forecast.evalDates.map(d => {
+    if (currentDateStr > forecast.baseDate && d <= currentDateStr) {
+      return barMap.get(d) || null;
+    }
+    return null;
+  });
+
   const allForecasts = repository.listFeed('all', currentDateStr);
-  const tickerForecasts = allForecasts.filter(f => f.ticker === forecast.ticker);
+  const sameRoundForecasts = allForecasts.filter(
+    f => f.ticker === forecast.ticker && f.baseDate === forecast.baseDate
+  );
   const crowd = aggregateCrowd(
-    allForecasts,
+    sameRoundForecasts,
     forecast.ticker,
     forecast.horizon,
     forecast.mode
   );
 
-  const result = resolveForecast(forecast, visibleBars, crowd.consensusChangePct);
+  const result = resolveForecast(
+    forecast,
+    visibleBars,
+    crowd.consensusChangePct
+  );
   const settledElo = result.eloSettlement
     ? authorElo + result.eloSettlement.deltaLp
     : authorElo;
   const authorTier = getEloTierInfo(settledElo);
 
-  const eloProjection = useMemo(
-    () =>
-      calculateEloProjection(
-        result.forecastChangePct,
-        crowd.consensusChangePct,
-        stockMeta.volatility
-      ),
-    [result.forecastChangePct, crowd.consensusChangePct, stockMeta.volatility]
+  const eloProjection = calculateEloProjection(
+    result.forecastChangePct,
+    crowd.consensusChangePct,
+    BTC_DAILY_VOLATILITY,
+    forecast.evalDates.length
   );
 
-  const settlementRows = useMemo(
-    () => buildDailySettlementRows(forecast, stockBars, currentDateStr),
-    [forecast, stockBars, currentDateStr]
+  const settlementRows = buildDailySettlementRows(
+    forecast,
+    stockBars,
+    currentDateStr
   );
 
-  const digestHash = useMemo(() => computeForecastDigest(forecast), [forecast]);
+  const digestHash = computeForecastDigest(forecast);
 
-  const draftPrices = useMemo(() => {
-    if (forecast.path && forecast.path.length > 0) {
-      return forecast.path.map(p => p.price);
+  const displayAnchors: AnchorPoint[] = (() => {
+    if (forecast.anchors && forecast.anchors.length > 0) {
+      return forecast.anchors;
     }
-    return forecast.evalDates.map(() => forecast.basePrice);
-  }, [forecast]);
+    const pts = forecast.path || [];
+    if (pts.length > 0) {
+      return [{ day: pts.length, price: pts[pts.length - 1].price }];
+    }
+    return [{ day: 20, price: forecast.basePrice }];
+  })();
 
-  const finalPrice = draftPrices[draftPrices.length - 1] ?? forecast.basePrice;
-  const isBull = result.forecastChangePct >= 0;
-  const crowdPct = crowd.consensusChangePct ?? 0;
-  const difficultyEn =
-    DIFFICULTY_EN_MAP[eloProjection.difficultyLabel] ||
-    eloProjection.difficultyLabel;
+  const initialVersion =
+    forecast.versions && forecast.versions.length > 1
+      ? forecast.versions[0]
+      : null;
 
   return (
-    <div className="w-full">
-      {/* Top Action & Receipt Verification Bar */}
-      <div
-        className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-3"
-        style={{
-          backgroundColor: 'var(--v-canvas-soft)',
-          borderBottom: '1px solid var(--v-hairline)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="v-btn-secondary"
-          >
-            ← Back
-          </button>
-          <span className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-            receipt: {digestHash}
-          </span>
-        </div>
+    <div className="w-full relative">
+      <span className="v-crosshair -top-[5px] -left-[6px]" aria-hidden="true" />
+      <span className="v-crosshair -top-[5px] -right-[6px]" aria-hidden="true" />
 
-        <div className="flex items-center gap-2">
-          {onDateChange && status !== 'RESOLVED' && (
+      {/* Top Receipt Masthead Band */}
+      <section
+        className="relative px-5 py-4 flex flex-wrap items-center justify-between gap-4"
+        style={{ borderBottom: '1px solid var(--v-hairline)' }}
+      >
+        <span className="v-crosshair -bottom-[6px] -left-[6px]" aria-hidden="true" />
+        <span className="v-crosshair -bottom-[6px] -right-[6px]" aria-hidden="true" />
+
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() =>
-                onDateChange(
-                  forecast.evalDates[forecast.evalDates.length - 1] ||
-                    '2026-10-09'
-                )
-              }
-              className="v-btn-secondary v-mono"
+              onClick={() => navigate(-1)}
+              className="v-btn-secondary h-7 px-2 text-xs"
             >
-              Simulate D+5 settlement →
+              <ArrowLeft size={12} />
+              뒤로
             </button>
+            <span
+              className="v-caption-mono px-2 py-0.5 rounded-[4px]"
+              style={{
+                backgroundColor: 'var(--v-canvas-soft-2)',
+                color: 'var(--v-mute)',
+              }}
+            >
+              {status}
+            </span>
+            <span
+              className="v-caption-mono"
+              style={{ color: 'var(--v-mute)' }}
+            >
+              해시: {digestHash.slice(0, 18)}...
+            </span>
+          </div>
+
+          <h1 className="v-display-md" style={{ color: 'var(--v-ink)' }}>
+            @{authorHandle} · {forecast.ticker} {forecast.evalDates.length}일 예측
+          </h1>
+          <p className="v-caption" style={{ color: 'var(--v-body)' }}>
+            {forecast.comment}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {onDateChange && (
+            <div className="inline-flex items-center gap-1 mr-2">
+              {STUDIO_TIME_STEPS.map(s => (
+                <button
+                  key={s.date}
+                  type="button"
+                  onClick={() => onDateChange(s.date)}
+                  className="v-btn-secondary h-7 px-2 text-[11px]"
+                  style={{
+                    backgroundColor:
+                      s.date === currentDateStr
+                        ? 'var(--v-primary)'
+                        : 'var(--v-canvas)',
+                    color:
+                      s.date === currentDateStr
+                        ? 'var(--v-on-primary)'
+                        : 'var(--v-ink)',
+                  }}
+                >
+                  {s.code}
+                </button>
+              ))}
+            </div>
           )}
 
           <button
@@ -170,264 +229,310 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
               repository.toggleLike(forecast.id);
               setLikeTick(t => t + 1);
             }}
-            className="v-btn-secondary"
-            style={{ color: isLiked ? 'var(--v-ink)' : 'var(--v-mute)' }}
+            className="v-btn-secondary h-8 px-3 text-xs"
+            style={{
+              color: isLiked ? 'var(--v-link)' : 'var(--v-ink)',
+            }}
           >
             <ThumbsUp size={12} />
-            <span>Like</span>
-            {likesCount > 0 && <span className="v-kbd">{likesCount}</span>}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate(`/studio/${forecast.ticker}`)}
-            className="v-btn-secondary"
-          >
-            Open ${forecast.ticker} Studio ↗
+            추천 ({likesCount})
           </button>
 
           <button
             type="button"
             onClick={() => setIsShareOpen(true)}
-            className="v-btn-primary"
+            className="v-btn-primary h-8 px-3 text-xs font-semibold"
           >
-            Export verified receipt
+            <Share2 size={12} />
+            공유 카드
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* ZONE 1: Receipt Masthead Band */}
-      <div
-        className="relative grid grid-cols-1 lg:grid-cols-12"
-        style={{ borderBottom: '1px solid var(--v-hairline)' }}
-      >
-        <span className="v-crosshair" style={{ bottom: -6, left: -6 }} />
-        <span className="v-crosshair" style={{ bottom: -6, right: -6 }} />
-
-        <div
-          className="lg:col-span-7 p-5 flex flex-col justify-between gap-3 min-w-0"
-          style={{ borderRight: '1px solid var(--v-hairline)' }}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => author && navigate(`/u/${author.handle}`)}
-                className="v-mono text-sm font-semibold hover:underline"
-                style={{ color: 'var(--v-ink)' }}
-              >
-                @{authorHandle}
-              </button>
-              <span
-                className="v-caption-mono px-2 py-0.5 rounded-[4px]"
-                style={{
-                  backgroundColor: 'var(--v-canvas-soft-2)',
-                  boxShadow: 'var(--v-shadow-border)',
-                  color: 'var(--v-body)',
-                }}
-              >
-                {authorTier.tier} · {settledElo} LP
-              </span>
-              <span className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-                locked {forecast.baseDate}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 v-mono text-xs">
-              <span
-                className="px-2 py-0.5 rounded-[4px]"
-                style={{
-                  backgroundColor: 'var(--v-canvas-soft)',
-                  boxShadow: 'var(--v-shadow-border)',
-                  color: 'var(--v-ink)',
-                }}
-              >
-                ${forecast.ticker} · Anchor ${forecast.basePrice.toFixed(2)}
-              </span>
-              <span
-                className="px-2 py-0.5 rounded-[4px] v-caption-mono"
-                style={{
-                  backgroundColor:
-                    status === 'RESOLVED'
-                      ? 'var(--v-link-soft)'
-                      : 'var(--v-bull-soft)',
-                  color:
-                    status === 'RESOLVED' ? 'var(--v-link)' : 'var(--v-bull)',
-                }}
-              >
-                {status}
-              </span>
-            </div>
-          </div>
-
-          <h1 className="v-display-md" style={{ color: 'var(--v-ink)' }}>
-            {forecast.comment || `${forecast.ticker} 5-day trajectory deployment`}
-          </h1>
-        </div>
-
-        {/* Right 5 Cols: Flush 3-Column Receipt Telemetry Strip */}
-        <div className="lg:col-span-5 grid grid-cols-3 min-w-0">
-          <div
-            className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
-            style={{ borderRight: '1px solid var(--v-hairline)' }}
-          >
-            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
-              D+5 target
-            </span>
-            <div className="mt-2">
-              <p
-                className="v-mono text-xl font-semibold tracking-tight"
-                style={{ color: isBull ? 'var(--v-bull)' : 'var(--v-bear)' }}
-              >
-                {isBull ? '+' : ''}
-                {result.forecastChangePct.toFixed(2)}%
-              </p>
-              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                ${finalPrice.toFixed(2)}
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
-            style={{ borderRight: '1px solid var(--v-hairline)' }}
-          >
-            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
-              Crowd median
-            </span>
-            <div className="mt-2">
-              <p
-                className="v-mono text-xl font-semibold tracking-tight"
-                style={{ color: 'var(--v-ink)' }}
-              >
-                {crowdPct >= 0 ? '+' : ''}
-                {crowdPct.toFixed(2)}%
-              </p>
-              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                {difficultyEn}
-              </p>
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
-            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
-              {result.eloSettlement ? 'Elo settled' : 'Elo stake'}
-            </span>
-            <div className="mt-2">
-              {result.eloSettlement ? (
-                <>
-                  <p
-                    className="v-mono text-xl font-semibold tracking-tight"
-                    style={{
-                      color:
-                        result.eloSettlement.deltaLp >= 0
-                          ? 'var(--v-bull)'
-                          : 'var(--v-bear)',
-                    }}
-                  >
-                    {formatSignedLp(result.eloSettlement.deltaLp)}
-                  </p>
-                  <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                    {result.score
-                      ? `${result.score.total.toFixed(1)} pts · Grade ${result.score.grade}`
-                      : 'Settled'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="v-mono text-lg font-semibold tracking-tight">
-                    <span style={{ color: 'var(--v-bull)' }}>
-                      +{eloProjection.expectedWinLp}
-                    </span>
-                    <span style={{ color: 'var(--v-dim)' }}> / </span>
-                    <span style={{ color: 'var(--v-bear)' }}>
-                      {eloProjection.expectedLossLp}
-                    </span>
-                  </p>
-                  <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                    Hit prob E = {Math.round(eloProjection.expectedProbability * 100)}%
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ZONE 2: Unified Split-Horizon Verification Canvas */}
-      <div style={{ borderBottom: '1px solid var(--v-hairline)' }}>
-        <SplitHorizonCanvas
+      {/* Canvas Replay View */}
+      <section style={{ borderBottom: '1px solid var(--v-hairline)' }}>
+        <Polyline20DCanvas
+          mode="live"
           ticker={forecast.ticker}
           baseDate={forecast.baseDate}
           basePrice={forecast.basePrice}
           evalDates={forecast.evalDates}
-          currentDateStr={currentDateStr}
-          draftPrices={draftPrices}
-          onChangeDraftPrices={() => {}}
-          lockedForecast={forecast}
-          onExitLockedView={() => navigate(`/studio/${forecast.ticker}`)}
-          allTickerForecasts={tickerForecasts}
-          overlaidRivals={[]}
-          onRemoveOverlay={() => {}}
-          onClearOverlays={() => {}}
-          duelTarget={null}
-          onCancelDuel={() => {}}
+          historyBars={historyBars}
+          actualFutureBars={actualFutureBars}
+          anchors={displayAnchors}
+          onChangeAnchors={() => {}}
+          readOnly
+          isConsensusUnlocked
+          allForecasts={sameRoundForecasts}
+          initialVersion={initialVersion}
+          headerSubtitle="내 예측 · 중앙값 · 실제 종가"
         />
-      </div>
+      </section>
 
-      {/* ZONE 3: Full-Width Semantic Daily Settlement Audit Table */}
-      <div>
+      {/* Flush Architectural Grid: Left 5 Cols Version Ledger | Right 7 Cols 20-Day Daily Audit Matrix */}
+      <section className="grid grid-cols-1 lg:grid-cols-12">
+        {/* Left 5 Cols */}
         <div
-          className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-2"
-          style={{
-            backgroundColor: 'var(--v-canvas-soft)',
-            borderBottom: '1px solid var(--v-hairline)',
-          }}
+          className="lg:col-span-5 divide-y divide-[var(--v-hairline)]"
+          style={{ borderRight: '1px solid var(--v-hairline)' }}
         >
-          <span className="v-caption-mono uppercase" style={{ color: 'var(--v-ink)' }}>
-            Daily close settlement ledger ({currentDateStr})
-          </span>
-          <span className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-            rules:v1 · hybrid-100pt
-          </span>
+          <div
+            className="px-5 py-3 flex items-center justify-between"
+            style={{ backgroundColor: 'var(--v-canvas-soft)' }}
+          >
+            <span
+              className="v-body-sm-strong flex items-center gap-1.5"
+              style={{ color: 'var(--v-ink)' }}
+            >
+              <ShieldCheck size={14} style={{ color: 'var(--v-bull)' }} />
+              예측 요약 및 채점 성적표
+            </span>
+            <span
+              className="v-caption-mono px-2 py-0.5 rounded-[4px]"
+              style={{
+                backgroundColor: 'var(--v-canvas)',
+                boxShadow: 'var(--v-shadow-border)',
+                color: 'var(--v-ink)',
+              }}
+            >
+              {authorTier.krTitle} ({settledElo} LP)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 divide-x divide-[var(--v-hairline)]">
+            <div className="p-4">
+              <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
+                예측 목표 수익률
+              </p>
+              <p
+                className="v-mono text-lg font-bold mt-0.5"
+                style={{
+                  color:
+                    result.forecastChangePct >= 0
+                      ? 'var(--v-bull)'
+                      : 'var(--v-bear)',
+                }}
+              >
+                {formatPct(result.forecastChangePct)}
+              </p>
+            </div>
+            <div className="p-4">
+              <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
+                실제 진행 수익률
+              </p>
+              <p
+                className="v-mono text-lg font-bold mt-0.5"
+                style={{
+                  color:
+                    result.actualChangePct >= 0
+                      ? 'var(--v-bull)'
+                      : 'var(--v-bear)',
+                }}
+              >
+                {formatPct(result.actualChangePct)}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 divide-x divide-[var(--v-hairline)]">
+            <div className="p-4">
+              <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
+                점수
+              </p>
+              <p
+                className="v-mono text-lg font-bold mt-0.5"
+                style={{ color: 'var(--v-link)' }}
+              >
+                {result.score
+                  ? `${result.score.total}점 (등급 ${result.score.grade})`
+                  : '집계 대기 (D-0)'}
+              </p>
+            </div>
+            <div className="p-4">
+              <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
+                평판 LP 변동
+              </p>
+              <p
+                className="v-mono text-lg font-bold mt-0.5"
+                style={{
+                  color: result.eloSettlement
+                    ? result.eloSettlement.deltaLp >= 0
+                      ? 'var(--v-bull)'
+                      : 'var(--v-bear)'
+                    : 'var(--v-ink)',
+                }}
+              >
+                {result.eloSettlement
+                  ? formatSignedLp(result.eloSettlement.deltaLp)
+                  : `+${eloProjection.expectedWinLp} / ${eloProjection.expectedLossLp} LP`}
+              </p>
+            </div>
+          </div>
+
+          {result.score && (
+            <div
+              className="grid grid-cols-3 divide-x divide-[var(--v-hairline)]"
+              style={{ backgroundColor: 'var(--v-canvas-soft-2)' }}
+            >
+              <div className="p-3 space-y-1">
+                <div className="flex items-center justify-between v-caption-mono text-xs">
+                  <span style={{ color: 'var(--v-mute)' }}>경로 (50)</span>
+                  <strong style={{ color: 'var(--v-ink)' }}>
+                    {result.score.pathScore}
+                  </strong>
+                </div>
+                <div
+                  className="w-full h-1.5 rounded-full overflow-hidden"
+                  style={{ backgroundColor: 'var(--v-canvas)' }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(result.score.pathScore / 50) * 100}%`,
+                      backgroundColor: 'var(--v-bull)',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 space-y-1">
+                <div className="flex items-center justify-between v-caption-mono text-xs">
+                  <span style={{ color: 'var(--v-mute)' }}>방향 (30)</span>
+                  <strong style={{ color: 'var(--v-ink)' }}>
+                    {result.score.directionScore}
+                  </strong>
+                </div>
+                <div
+                  className="w-full h-1.5 rounded-full overflow-hidden"
+                  style={{ backgroundColor: 'var(--v-canvas)' }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(result.score.directionScore / 30) * 100}%`,
+                      backgroundColor: 'var(--v-link)',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 space-y-1">
+                <div className="flex items-center justify-between v-caption-mono text-xs">
+                  <span style={{ color: 'var(--v-mute)' }}>목표 (20)</span>
+                  <strong style={{ color: 'var(--v-ink)' }}>
+                    {result.score.targetScore}
+                  </strong>
+                </div>
+                <div
+                  className="w-full h-1.5 rounded-full overflow-hidden"
+                  style={{ backgroundColor: 'var(--v-canvas)' }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(result.score.targetScore / 20) * 100}%`,
+                      backgroundColor: 'var(--v-warning)',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Version History Header */}
+          <div
+            className="px-5 py-3 flex items-center justify-between"
+            style={{ backgroundColor: 'var(--v-canvas-soft)' }}
+          >
+            <h3
+              className="v-body-sm-strong flex items-center gap-1.5"
+              style={{ color: 'var(--v-ink)' }}
+            >
+              <History size={14} style={{ color: 'var(--v-link)' }} />
+              버전 기록
+            </h3>
+            <span className="v-caption-mono" style={{ color: 'var(--v-dim)' }}>
+              Append-only
+            </span>
+          </div>
+
+          <div className="divide-y divide-[var(--v-hairline-subtle)]">
+            {(forecast.versions && forecast.versions.length > 0
+              ? forecast.versions
+              : [
+                  {
+                    version: 1,
+                    createdAt: forecast.lockedAt,
+                    anchors: displayAnchors,
+                    prices: (forecast.path || []).map(p => p.price),
+                    comment: forecast.comment,
+                    digestHash,
+                  },
+                ]
+            ).map(ver => {
+              const lastP =
+                ver.prices[ver.prices.length - 1] ?? forecast.basePrice;
+              const pct =
+                forecast.basePrice > 0
+                  ? ((lastP - forecast.basePrice) / forecast.basePrice) * 100
+                  : 0;
+              return (
+                <div key={ver.version} className="p-4 space-y-1">
+                  <div className="flex items-center justify-between v-caption-mono">
+                    <span
+                      className="font-semibold"
+                      style={{ color: 'var(--v-link)' }}
+                    >
+                      버전 v{ver.version} (
+                      {ver.version === 1 ? '최초' : '수정'})
+                    </span>
+                    <span style={{ color: 'var(--v-ink)' }}>
+                      목표 ${Math.round(lastP).toLocaleString('en-US')} (
+                      {formatPct(pct)})
+                    </span>
+                  </div>
+                  <p
+                    className="v-caption text-[11px]"
+                    style={{ color: 'var(--v-body)' }}
+                  >
+                    {ver.comment}
+                  </p>
+                  <p
+                    className="v-caption-mono text-xs"
+                    style={{ color: 'var(--v-mute)' }}
+                  >
+                    저장: {ver.createdAt.slice(0, 16).replace('T', ' ')} UTC · 해시:{' '}
+                    {ver.digestHash.slice(0, 14)}...
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Right 7 Cols: 20-Day Daily Audit Matrix */}
+        <div className="lg:col-span-7 overflow-x-auto">
           <table className="v-audit-table">
             <thead>
               <tr>
-                <th scope="col">Slot</th>
-                <th scope="col">Date</th>
-                <th scope="col" className="v-numeric">
-                  Weight (w_t)
-                </th>
-                <th scope="col" className="v-numeric">
-                  Forecast close
-                </th>
-                <th scope="col" className="v-numeric">
-                  Forecast delta
-                </th>
-                <th scope="col" className="v-numeric">
-                  Observed close
-                </th>
-                <th scope="col" className="v-numeric">
-                  Observed delta
-                </th>
-                <th scope="col" className="v-numeric">
-                  Abs error
-                </th>
-                <th scope="col">Direction</th>
+                <th>구간</th>
+                <th>일자</th>
+                <th className="v-numeric">보간 예측가</th>
+                <th className="v-numeric">예측 등락</th>
+                <th className="v-numeric">실제 종가</th>
+                <th className="v-numeric">오차율</th>
               </tr>
             </thead>
             <tbody>
               {settlementRows.map(row => (
                 <tr key={row.slot}>
-                  <th scope="row" className="v-mono font-medium">
-                    {row.slot}
-                  </th>
-                  <td className="v-mono">{row.date}</td>
-                  <td className="v-numeric">{row.weight}.0x</td>
-                  <td className="v-numeric">${row.forecastPrice.toFixed(2)}</td>
+                  <td className="v-mono font-semibold">{row.slot}</td>
+                  <td className="v-mono" style={{ color: 'var(--v-mute)' }}>
+                    {row.date}
+                  </td>
+                  <td className="v-numeric font-semibold">
+                    ${row.forecastPrice.toLocaleString('en-US')}
+                  </td>
                   <td
                     className="v-numeric"
                     style={{
@@ -437,66 +542,24 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
                           : 'var(--v-bear)',
                     }}
                   >
-                    {row.forecastChangePct >= 0 ? '+' : ''}
-                    {row.forecastChangePct.toFixed(2)}%
+                    {formatPct(row.forecastChangePct)}
                   </td>
                   <td className="v-numeric">
                     {row.actualClose !== null
-                      ? `$${row.actualClose.toFixed(2)}`
-                      : 'Pending'}
-                  </td>
-                  <td
-                    className="v-numeric"
-                    style={{
-                      color:
-                        row.actualChangePct === null
-                          ? 'var(--v-mute)'
-                          : row.actualChangePct >= 0
-                          ? 'var(--v-bull)'
-                          : 'var(--v-bear)',
-                    }}
-                  >
-                    {row.actualChangePct !== null
-                      ? `${row.actualChangePct >= 0 ? '+' : ''}${row.actualChangePct.toFixed(
-                          2
-                        )}%`
-                      : 'Pending'}
+                      ? `$${row.actualClose.toLocaleString('en-US')}`
+                      : '미도래'}
                   </td>
                   <td className="v-numeric">
                     {row.absErrorPct !== null
                       ? `${row.absErrorPct.toFixed(2)}%`
-                      : 'Pending'}
-                  </td>
-                  <td>
-                    {row.directionMatch === null ? (
-                      <span
-                        className="v-caption-mono"
-                        style={{ color: 'var(--v-mute)' }}
-                      >
-                        Unsettled
-                      </span>
-                    ) : row.directionMatch ? (
-                      <span
-                        className="v-caption-mono"
-                        style={{ color: 'var(--v-bull)' }}
-                      >
-                        Matched
-                      </span>
-                    ) : (
-                      <span
-                        className="v-caption-mono"
-                        style={{ color: 'var(--v-bear)' }}
-                      >
-                        Diverged
-                      </span>
-                    )}
+                      : '-'}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       <ShareTicketModal
         isOpen={isShareOpen}
@@ -505,10 +568,12 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
         authorHandle={authorHandle}
         crowdPath={crowd.consensusPath}
         crowdChangePct={crowd.consensusChangePct}
+        scoreTotal={result.score?.total}
+        scoreGrade={result.score?.grade}
+        eloDeltaLp={result.eloSettlement?.deltaLp}
         authorElo={settledElo}
       />
     </div>
   );
 }
-
 export default DetailPage;

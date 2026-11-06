@@ -40,9 +40,9 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
         const myAnonUser: User = {
           id: anonId,
           handle: `guest_${cleanSuffix}`,
-          name: 'Local Session Forecaster',
+          name: '로컬 세션 예측자',
           avatarUrl: '',
-          bio: 'Immutable 5-day trajectory deployments and Elo settlements stored in this browser session.',
+          bio: '이 브라우저에 저장된 제출 기록입니다.',
           forecastsCount: myAnonList.length,
           completedCount: myAnonList.filter(
             f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED'
@@ -74,14 +74,14 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
     return (
       <div className="p-16 text-center space-y-4">
         <p className="v-heading-16" style={{ color: 'var(--v-ink)' }}>
-          Forecaster dossier not found.
+          예측자 프로필을 찾을 수 없습니다.
         </p>
         <button
           type="button"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/studio')}
           className="v-btn-primary"
         >
-          Return to Studio
+          라이브 스튜디오로 돌아가기
         </button>
       </div>
     );
@@ -147,14 +147,14 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
           }}
         >
           <span className="v-caption" style={{ color: 'var(--v-body)' }}>
-            Session deployments are currently bound to this browser. Connect an account to persist your Elo standing across devices.
+            현재 예측 기록은 이 브라우저에 임시 저장되어 있습니다. 계정을 연결하면 기기 간 Elo 레이팅과 트랙 레코드가 영구 동기화됩니다.
           </span>
           <button
             type="button"
             onClick={() => setIsConnectOpen(true)}
             className="v-btn-secondary"
           >
-            Connect account
+            계정 연결
           </button>
         </div>
       )}
@@ -186,10 +186,10 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
                   style={{
                     backgroundColor: 'var(--v-canvas-soft-2)',
                     boxShadow: 'var(--v-shadow-border)',
-                    color: 'var(--v-ink)',
+                    color: tierInfo.accentHex,
                   }}
                 >
-                  {tierInfo.tier} · {liveElo} LP
+                  {tierInfo.krTitle} ({tierInfo.tier}) · {liveElo} LP
                 </span>
                 {netLpDelta !== 0 && (
                   <span
@@ -210,15 +210,15 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
                   onClick={handleFollowToggle}
                   className={isFollowing ? 'v-btn-secondary' : 'v-btn-primary'}
                 >
-                  {isFollowing ? 'Following' : 'Follow forecaster'}
+                  {isFollowing ? '팔로잉' : '팔로우'}
                 </button>
               ) : (
                 <button
                   type="button"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/studio')}
                   className="v-btn-secondary"
                 >
-                  + New 5D trajectory
+                  + 새 예측
                 </button>
               )}
             </div>
@@ -228,29 +228,51 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
             </p>
           </div>
 
-          {/* Elo Tier Progress Bar */}
-          <div>
-            <div className="flex items-center justify-between v-caption-mono mb-1.5">
-              <span style={{ color: 'var(--v-mute)' }}>
-                Tier progression ({tierInfo.progressPct}%)
+          {/* Elo Tier Progress Bar with 5-Tier Milestones */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between v-caption-mono">
+              <span style={{ color: 'var(--v-ink)' }}>
+                티어 승급 진척도 ({tierInfo.progressPct}%)
               </span>
-              <span style={{ color: 'var(--v-mute)' }}>
+              <span style={{ color: tierInfo.accentHex }}>
                 {tierInfo.nextTierElo
-                  ? `${tierInfo.nextTierElo - liveElo} LP to next tier`
-                  : 'Top tier achieved'}
+                  ? `다음 티어까지 ${tierInfo.nextTierElo - liveElo} LP`
+                  : '최상위 다이아몬드 달성'}
               </span>
             </div>
             <div
-              className="w-full h-1.5 rounded-[2px] overflow-hidden"
-              style={{ backgroundColor: 'var(--v-hairline)' }}
+              className="w-full h-2 rounded-full overflow-hidden"
+              style={{ backgroundColor: 'var(--v-canvas-soft-2)' }}
             >
               <div
-                className="h-full transition-all duration-300"
+                className="h-full rounded-full transition-all duration-300"
                 style={{
-                  width: `${tierInfo.progressPct}%`,
-                  backgroundColor: 'var(--v-primary)',
+                  width: `${Math.max(6, tierInfo.progressPct)}%`,
+                  backgroundColor: tierInfo.accentHex,
                 }}
               />
+            </div>
+            <div className="flex items-center justify-between v-caption-mono text-xs pt-0.5">
+              {[
+                { label: '브론즈', lp: 1000 },
+                { label: '실버', lp: 1200 },
+                { label: '골드', lp: 1400 },
+                { label: '플래티넘', lp: 1600 },
+                { label: '다이아', lp: 1800 },
+              ].map(m => {
+                const reached = liveElo >= m.lp;
+                return (
+                  <span
+                    key={m.label}
+                    style={{
+                      color: reached ? 'var(--v-ink)' : 'var(--v-mute)',
+                      fontWeight: reached ? 600 : 400,
+                    }}
+                  >
+                    {m.label} ({m.lp})
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -261,18 +283,18 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
             className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
             style={{ borderRight: '1px solid var(--v-hairline)' }}
           >
-            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
-              Total locks
+            <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
+              제출
             </span>
             <div className="mt-2">
               <p
                 className="v-mono text-xl font-semibold tracking-tight"
                 style={{ color: 'var(--v-ink)' }}
               >
-                {forecasts.length}
+                {forecasts.length}건
               </p>
-              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                Immutable paths
+              <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                불변 20일 시나리오
               </p>
             </div>
           </div>
@@ -281,25 +303,25 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
             className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
             style={{ borderRight: '1px solid var(--v-hairline)' }}
           >
-            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
-              Settled rounds
+            <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
+              정산 완료
             </span>
             <div className="mt-2">
               <p
                 className="v-mono text-xl font-semibold tracking-tight"
                 style={{ color: 'var(--v-ink)' }}
               >
-                {resolvedForecasts.length}
+                {resolvedForecasts.length}건
               </p>
-              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                As of {currentDateStr}
+              <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                {currentDateStr} 기준
               </p>
             </div>
           </div>
 
           <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
-            <span className="v-caption-mono uppercase" style={{ color: 'var(--v-mute)' }}>
-              {avgScore !== null ? 'Mean score' : 'Hit rate'}
+            <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
+              {avgScore !== null ? '평균 점수' : '방향 적중률'}
             </span>
             <div className="mt-2">
               <p
@@ -307,13 +329,13 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
                 style={{ color: 'var(--v-bull)' }}
               >
                 {avgScore !== null
-                  ? `${avgScore}`
+                  ? `${avgScore}점`
                   : hitRate !== null
                   ? `${hitRate}%`
-                  : '—'}
+                  : '-'}
               </p>
-              <p className="v-caption-mono mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                100-pt rubric
+              <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                100점 정량 루브릭
               </p>
             </div>
           </div>
@@ -333,11 +355,11 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
             {[
               {
                 id: 'forecasts' as const,
-                label: `All deployments (${forecasts.length})`,
+                label: `전체 (${forecasts.length})`,
               },
               {
                 id: 'results' as const,
-                label: `Settled receipts (${resolvedForecasts.length})`,
+                label: `정산 완료 영수증 (${resolvedForecasts.length})`,
               },
             ].map(tab => {
               const active = activeTab === tab.id;
@@ -364,7 +386,7 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
           </div>
 
           <span className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-            rules:v1 · immutable verification
+            rules:v1 · append-only 불변 검증
           </span>
         </div>
 
@@ -383,16 +405,16 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
           <div className="p-16 text-center space-y-4">
             <p className="v-body-sm" style={{ color: 'var(--v-mute)' }}>
               {activeTab === 'results'
-                ? 'No settled trajectories as of this timeline date. Switch the header timeline to [D+5 Settled] to inspect Friday close scoring.'
-                : 'No locked 5D trajectories recorded yet.'}
+                ? '정산된 예측이 없습니다.'
+                : '아직 예측이 없습니다.'}
             </p>
             {isMe && (
               <button
                 type="button"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/studio')}
                 className="v-btn-primary"
               >
-                Sculpt 5D trajectory in Studio
+                예측하러 가기
               </button>
             )}
           </div>

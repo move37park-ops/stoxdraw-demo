@@ -7,18 +7,18 @@ import {
 } from './elo';
 import { calculateForecastScore } from './scoring';
 
-describe('Elo Rating Engine (elo.ts)', () => {
-  it('maps Elo ratings to the correct 5 tiers and progress percentages', () => {
-    expect(getEloTierInfo(2020).tier).toBe('MASTER');
-    expect(getEloTierInfo(1780).tier).toBe('DIAMOND');
-    expect(getEloTierInfo(1490).tier).toBe('GOLD');
+describe('Elo Rating Engine (elo.ts — Bronze to Diamond)', () => {
+  it('maps Elo ratings to the correct 5 tiers (Bronze ~ Diamond) and progress percentages', () => {
+    expect(getEloTierInfo(1920).tier).toBe('DIAMOND');
+    expect(getEloTierInfo(1680).tier).toBe('PLATINUM');
+    expect(getEloTierInfo(1460).tier).toBe('GOLD');
     expect(getEloTierInfo(DEFAULT_ELO).tier).toBe('SILVER');
-    expect(getEloTierInfo(920).tier).toBe('BRONZE');
+    expect(getEloTierInfo(950).tier).toBe('BRONZE');
   });
 
   it('grants higher expectedWinLp for contrarian / high-divergence trajectories', () => {
-    const safeProj = calculateEloProjection(3.2, 3.0, 0.035);
-    const contrarianProj = calculateEloProjection(-6.5, 4.2, 0.035);
+    const safeProj = calculateEloProjection(3.2, 3.0, 0.032, 20);
+    const contrarianProj = calculateEloProjection(-8.5, 5.2, 0.032, 20);
 
     expect(contrarianProj.expectedWinLp).toBeGreaterThan(safeProj.expectedWinLp);
     expect(contrarianProj.expectedProbability).toBeLessThan(safeProj.expectedProbability);
@@ -26,16 +26,16 @@ describe('Elo Rating Engine (elo.ts)', () => {
   });
 
   it('settles positive LP for accurate trajectories and negative LP for missed trajectories', () => {
-    const basePrice = 100;
-    const actualPrices = [102, 104, 105, 107, 108];
+    const basePrice = 68000;
+    const actualPrices = [69000, 70000, 71000, 72000, 73000];
 
-    const hitForecast = [101.8, 103.5, 105.2, 106.8, 107.9];
-    const hitScore = calculateForecastScore(hitForecast, actualPrices, basePrice, 0.03);
-    const hitSettlement = settleEloRating(hitScore, 7.9, 3.5, 0.03);
+    const hitForecast = [68900, 69800, 71100, 71900, 72950];
+    const hitScore = calculateForecastScore(hitForecast, actualPrices, basePrice, 0.032);
+    const hitSettlement = settleEloRating(hitScore, 7.28, 4.5, 0.032, 20);
 
-    const missForecast = [98, 96, 95, 94, 92];
-    const missScore = calculateForecastScore(missForecast, actualPrices, basePrice, 0.03);
-    const missSettlement = settleEloRating(missScore, -8.0, 3.5, 0.03);
+    const missForecast = [67000, 66000, 65000, 64000, 63000];
+    const missScore = calculateForecastScore(missForecast, actualPrices, basePrice, 0.032);
+    const missSettlement = settleEloRating(missScore, -7.35, 4.5, 0.032, 20);
 
     expect(hitSettlement.deltaLp).toBeGreaterThan(0);
     expect(missSettlement.deltaLp).toBeLessThan(0);

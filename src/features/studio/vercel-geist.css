@@ -1,205 +1,198 @@
 /* ==========================================================================
-   Vercel Geist Design System (design.md & design.dark.md) — Authentic Edition
-   Scoped to .v-studio-root so existing pages remain 100% untouched.
+   Vercel Design System (design.md & design.dark.md) - Pretendard Monochrome
+   Strictly following Vercel monochrome restraint, tabular-nums & 1px hairlines
    ========================================================================== */
 
 .v-studio-root,
 .v-studio-root[data-theme="dark"] {
-  /* Geist 10-Step Dark Polarity (design.dark.md) */
+  /* Monochrome Dark Canvas */
   --v-canvas: #000000;
   --v-canvas-soft: #0a0a0a;
-  --v-canvas-soft-2: #111111;
-  --v-surface-elevated: #141414;
-  --v-surface-hover: #1a1a1a;
+  --v-canvas-soft-2: #121212;
+  --v-surface-elevated: #161616;
+  --v-surface-hover: #1f1f1f;
 
-  /* Ink Hierarchy */
+  /* Ink Hierarchy (WCAG 2.2 AA Contrast Compliant) */
   --v-primary: #ededed;
   --v-on-primary: #000000;
   --v-ink: #ededed;
   --v-body: #a1a1aa;
-  --v-mute: #888888;
-  --v-dim: #555555;
+  --v-mute: #8e8e96; /* Contrast >= 5.5:1 against #000000 */
+  --v-dim: #444444;
 
-  /* 1px Structural Hairlines & Shadow-as-Border */
-  --v-hairline: #222222;
-  --v-hairline-subtle: #161616;
-  --v-hairline-strong: #444444;
-  --v-shadow-border: 0 0 0 1px #222222;
-  --v-shadow-border-hover: 0 0 0 1px #444444;
-  --v-shadow-stack: 0 0 0 1px #262626, 0 8px 24px rgba(0, 0, 0, 0.75);
+  /* 1px Structural Hairlines */
+  --v-hairline: #1f1f1f;
+  --v-hairline-subtle: #141414;
+  --v-hairline-strong: #333333;
+  --v-shadow-border: 0 0 0 1px #1f1f1f;
+  --v-shadow-border-hover: 0 0 0 1px #383838;
+  --v-shadow-stack: 0 0 0 1px #222222, 0 8px 24px rgba(0, 0, 0, 0.8);
 
-  /* Geist Semantic Pipeline Colors (Develop / Preview / Ship) */
-  --v-link: #3291ff;
-  --v-link-deep: #0070f3;
-  --v-link-soft: rgba(0, 112, 243, 0.12);
-
+  /* Functional Status (Monochrome First, Color Only for Meaning) */
   --v-bull: #00e599;
-  --v-bull-soft: rgba(0, 229, 153, 0.10);
-  --v-bull-deep: #00a86b;
-
-  --v-bear: #ff4d4d;
-  --v-bear-soft: rgba(255, 77, 77, 0.10);
-  --v-bear-deep: #ee0000;
-
+  --v-bull-soft: rgba(0, 229, 153, 0.12);
+  --v-bear: #f43f5e;
+  --v-bear-soft: rgba(244, 63, 94, 0.12);
   --v-warning: #f5a623;
   --v-warning-soft: rgba(245, 166, 35, 0.12);
+  --v-link: #3291ff;
+  --v-link-soft: rgba(50, 145, 255, 0.12);
 
-  --v-violet: #c084fc;
-  --v-violet-soft: rgba(168, 85, 247, 0.14);
-  --v-cyan: #50e3c2;
-  --v-cyan-soft: rgba(80, 227, 194, 0.12);
-  --v-magenta: #ff0080;
-
-  /* Chart & Architectural Textures */
-  --v-chart-grid: #141414;
-  --v-chart-divider: #333333;
-  --v-dot-color: rgba(255, 255, 255, 0.12);
+  /* Restrained Chart Lines */
+  --v-chart-grid: #111111;
+  --v-chart-divider: #222222;
 }
 
 .v-studio-root[data-theme="light"] {
-  /* Geist 10-Step Light Polarity (design.md) */
+  /* Monochrome Light Canvas */
   --v-canvas: #ffffff;
   --v-canvas-soft: #fafafa;
-  --v-canvas-soft-2: #f2f2f2;
+  --v-canvas-soft-2: #f4f4f5;
   --v-surface-elevated: #ffffff;
-  --v-surface-hover: #f5f5f5;
+  --v-surface-hover: #f4f4f5;
 
-  /* Ink Hierarchy */
+  /* Ink Hierarchy (WCAG 2.2 AA Contrast Compliant) */
   --v-primary: #171717;
   --v-on-primary: #ffffff;
   --v-ink: #171717;
-  --v-body: #4d4d4d;
-  --v-mute: #666666;
-  --v-dim: #999999;
+  --v-body: #4b5563; /* Contrast >= 6.8:1 against #ffffff */
+  --v-mute: #5f6368; /* Contrast >= 5.1:1 against #ffffff */
+  --v-dim: #9ca3af;
 
-  /* 1px Structural Hairlines & Shadow-as-Border */
-  --v-hairline: #eaeaea;
-  --v-hairline-subtle: #f3f3f3;
-  --v-hairline-strong: #999999;
-  --v-shadow-border: 0 0 0 1px rgba(0, 0, 0, 0.08);
-  --v-shadow-border-hover: 0 0 0 1px rgba(0, 0, 0, 0.24);
-  --v-shadow-stack: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+  /* 1px Structural Hairlines */
+  --v-hairline: #e4e4e7;
+  --v-hairline-subtle: #f4f4f5;
+  --v-hairline-strong: #d4d4d8;
+  --v-shadow-border: 0 0 0 1px #e4e4e7;
+  --v-shadow-border-hover: 0 0 0 1px #d4d4d8;
+  --v-shadow-stack: 0 0 0 1px #e4e4e7, 0 8px 24px rgba(0, 0, 0, 0.06);
 
-  /* Geist Semantic Pipeline Colors */
-  --v-link: #0070f3;
-  --v-link-deep: #0761d1;
-  --v-link-soft: rgba(0, 112, 243, 0.08);
+  /* Functional Status */
+  --v-bull: #10b981;
+  --v-bull-soft: rgba(16, 185, 129, 0.10);
+  --v-bear: #e11d48;
+  --v-bear-soft: rgba(225, 29, 72, 0.10);
+  --v-warning: #d97706;
+  --v-warning-soft: rgba(217, 119, 6, 0.10);
+  --v-link: #2563eb;
+  --v-link-soft: rgba(37, 99, 235, 0.08);
 
-  --v-bull: #008236;
-  --v-bull-soft: rgba(0, 168, 107, 0.08);
-  --v-bull-deep: #00662b;
-
-  --v-bear: #e00000;
-  --v-bear-soft: rgba(224, 0, 0, 0.08);
-  --v-bear-deep: #c50000;
-
-  --v-warning: #ab570a;
-  --v-warning-soft: #ffefcf;
-
-  --v-violet: #7928ca;
-  --v-violet-soft: #f3e8ff;
-  --v-cyan: #0d9488;
-  --v-cyan-soft: #ccfbf1;
-  --v-magenta: #eb367f;
-
-  /* Chart & Architectural Textures */
-  --v-chart-grid: #f2f2f2;
-  --v-chart-divider: #cccccc;
-  --v-dot-color: rgba(0, 0, 0, 0.12);
+  /* Restrained Chart Lines */
+  --v-chart-grid: #f4f4f5;
+  --v-chart-divider: #e4e4e7;
 }
 
 .v-studio-root {
   background-color: var(--v-canvas);
   color: var(--v-ink);
-  font-family: 'Geist', 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
   min-height: 100vh;
   letter-spacing: -0.015em;
   -webkit-font-smoothing: antialiased;
-  selection-background-color: var(--v-primary);
-  selection-color: var(--v-on-primary);
 }
 
-/* Typography Scale from Vercel DESIGN.md */
+/* Editorial Modern Serif Accent (Times Newer Roman for STOXDRAW Brand) */
+.v-serif-brand {
+  font-family: 'Times Newer Roman', 'Tinos', 'Instrument Serif', Didot, 'Bodoni MT', 'Cinzel', Georgia, serif !important;
+  font-style: normal;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+}
+
+/* Typography Scale (Vercel DESIGN.md: Comfortable reading size, no tiny gray copy) */
 .v-display-hero {
-  font-size: clamp(24px, 2.5vw, 34px);
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.04em;
-}
-
-.v-display-md {
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 30px;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-size: clamp(24px, 2.6vw, 36px);
+  font-weight: 700;
+  line-height: 1.25;
   letter-spacing: -0.035em;
 }
 
+.v-display-md {
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 30px;
+  letter-spacing: -0.03em;
+}
+
 .v-heading-16 {
-  font-size: 15px;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 22px;
+  line-height: 24px;
   letter-spacing: -0.02em;
 }
 
 .v-body-sm {
-  font-size: 13px;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-size: 14px;
   font-weight: 400;
-  line-height: 20px;
+  line-height: 22px;
   letter-spacing: -0.01em;
 }
 
 .v-body-sm-strong {
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 20px;
-  letter-spacing: -0.01em;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  letter-spacing: -0.015em;
 }
 
 .v-caption {
-  font-size: 12px;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-size: 13px;
   font-weight: 400;
-  line-height: 16px;
-  letter-spacing: 0px;
-}
-
-.v-mono {
-  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "zero" 1;
-}
-
-.v-caption-mono {
-  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 16px;
-  font-variant-numeric: tabular-nums;
+  line-height: 19px;
   letter-spacing: -0.01em;
 }
 
-/* Geist Buttons */
+/* Tabular Numeric Typography in Pretendard (No Foreign Monospace Fallback) */
+.v-mono {
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.015em;
+}
+
+.v-caption-mono {
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+
+/* Vercel Design System Buttons (6px radius, shadow-as-border) */
 .v-btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   background-color: var(--v-primary);
   color: var(--v-on-primary);
-  font-size: 13px;
-  font-weight: 500;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-size: 14px;
+  font-weight: 600;
   line-height: 20px;
   height: 36px;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 6px;
-  transition: opacity 0.12s ease, transform 0.08s ease;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.12s ease, transform 0.08s ease, filter 0.12s ease;
 }
 
 .v-btn-primary:hover:not(:disabled) {
-  opacity: 0.88;
+  opacity: 0.92;
+  filter: brightness(1.04);
 }
 
 .v-btn-primary:active:not(:disabled) {
-  transform: scale(0.99);
+  transform: scale(0.98);
 }
 
 .v-btn-secondary {
@@ -210,26 +203,35 @@
   background-color: var(--v-canvas);
   color: var(--v-ink);
   box-shadow: var(--v-shadow-border);
-  font-size: 12px;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-size: 13px;
   font-weight: 500;
   line-height: 18px;
-  height: 28px;
-  padding: 0 10px;
+  height: 32px;
+  padding: 0 12px;
   border-radius: 6px;
-  transition: background-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, transform 0.08s ease;
 }
 
-.v-btn-secondary:hover {
+.v-btn-secondary:hover:not(:disabled) {
   background-color: var(--v-surface-hover);
   box-shadow: var(--v-shadow-border-hover);
+}
+
+.v-btn-secondary:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .v-kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Geist Mono', monospace;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
+  font-variant-numeric: tabular-nums;
   font-size: 10px;
+  font-weight: 600;
   line-height: 14px;
   padding: 1px 5px;
   border-radius: 4px;
@@ -269,14 +271,15 @@
 .v-audit-table {
   width: 100%;
   border-collapse: collapse;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
   font-size: 13px;
   line-height: 20px;
 }
 
 .v-audit-table th {
-  font-family: 'Geist Mono', monospace;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
   font-size: 11px;
-  font-weight: 400;
+  font-weight: 600;
   color: var(--v-mute);
   text-align: left;
   padding: 10px 16px;
@@ -289,7 +292,7 @@
   padding: 11px 16px;
   border-bottom: 1px solid var(--v-hairline-subtle);
   color: var(--v-ink);
-  vertical-align: baseline;
+  vertical-align: middle;
 }
 
 .v-audit-table tr:last-child td {
@@ -303,44 +306,6 @@
 .v-audit-table th.v-numeric,
 .v-audit-table td.v-numeric {
   text-align: right;
-  font-family: 'Geist Mono', monospace;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
-
-/* Light-mode adaptation for secondary workspace views (Overview, Leaderboard, Record, Detail) */
-.v-studio-root[data-theme="light"] .bg-zinc-950,
-.v-studio-root[data-theme="light"] .bg-black {
-  background-color: var(--v-canvas) !important;
-  color: var(--v-ink) !important;
-}
-
-.v-studio-root[data-theme="light"] .bg-zinc-900,
-.v-studio-root[data-theme="light"] .bg-zinc-900\/60,
-.v-studio-root[data-theme="light"] .bg-zinc-900\/40,
-.v-studio-root[data-theme="light"] .bg-zinc-900\/30 {
-  background-color: var(--v-canvas-soft) !important;
-}
-
-.v-studio-root[data-theme="light"] .border-zinc-800,
-.v-studio-root[data-theme="light"] .border-zinc-800\/80,
-.v-studio-root[data-theme="light"] .border-zinc-900,
-.v-studio-root[data-theme="light"] .divide-zinc-800 > :not([hidden]) ~ :not([hidden]),
-.v-studio-root[data-theme="light"] .divide-zinc-800\/60 > :not([hidden]) ~ :not([hidden]) {
-  border-color: var(--v-hairline) !important;
-}
-
-.v-studio-root[data-theme="light"] .text-zinc-100,
-.v-studio-root[data-theme="light"] .text-zinc-200,
-.v-studio-root[data-theme="light"] .text-white {
-  color: var(--v-ink) !important;
-}
-
-.v-studio-root[data-theme="light"] .text-zinc-300,
-.v-studio-root[data-theme="light"] .text-zinc-400 {
-  color: var(--v-body) !important;
-}
-
-.v-studio-root[data-theme="light"] .text-zinc-500 {
-  color: var(--v-mute) !important;
-}
-

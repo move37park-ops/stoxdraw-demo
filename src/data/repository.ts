@@ -1,4 +1,13 @@
-import type { Forecast, User, Comment, Notification } from '../domain/types';
+import type {
+  Forecast,
+  User,
+  Comment,
+  Notification,
+  Horizon,
+  Mode,
+  AnchorPoint,
+  PracticeAttempt,
+} from '../domain/types';
 
 export type FeedTab = 'all' | 'following' | 'results';
 
@@ -12,19 +21,35 @@ export interface Repository {
     authorId: string | null;
     anonId: string;
     ticker: string;
-    horizon: '5D' | '30D';
-    mode: 'path' | 'breakout';
+    horizon: Horizon;
+    mode: Mode;
     comment: string;
     basePrice: number;
     baseDate: string;
     evalDates: string[];
+    anchors?: AnchorPoint[];
     path?: { date: string; price: number }[];
     pathPct?: number[];
     roundId?: string;
     breakout?: { direction: 'up' | 'down'; price: number };
     parentId?: string;
   }): Forecast;
+  appendForecastVersion(
+    forecastId: string,
+    input: {
+      anchors: AnchorPoint[];
+      prices: number[];
+      path: { date: string; price: number }[];
+      pathPct: number[];
+      comment: string;
+      digestHash: string;
+    }
+  ): Forecast | undefined;
   claimAnonymous(anonId: string, userId: string): void;
+
+  // Practice Replay Lab
+  listPracticeAttempts(): PracticeAttempt[];
+  savePracticeAttempt(attempt: Omit<PracticeAttempt, 'id' | 'createdAt'>): PracticeAttempt;
 
   // Users
   getUser(id: string): User | undefined;

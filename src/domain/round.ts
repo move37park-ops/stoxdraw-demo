@@ -1,15 +1,16 @@
 import { isTradingDay, formatDateStr, parseDateStr } from './tradingCalendar';
+import { getNextCalendarDays } from './interpolation';
 
 export type RoundStatus = 'OPEN' | 'LIVE' | 'RESOLVED';
 
 export interface Round {
-  id: string; // e.g. 'W2026-40-NVDA'
+  id: string; // e.g. 'R2026-BTC-20D'
   ticker: string;
   year: number;
   weekNumber: number;
-  baseDate: string; // 직전 금요일 (기준 거래일)
-  cutoffAt: string; // 제출 마감 시각 (ISO string, 보통 월요일 개장 시점)
-  evalDates: string[]; // 월~금 5거래일
+  baseDate: string; // 기준일
+  cutoffAt: string; // 제출 마감 시각 (ISO string)
+  evalDates: string[]; // 평가 일자 배열 (20일 또는 5일)
   status: RoundStatus;
 }
 
@@ -30,25 +31,59 @@ export function getISOWeekNumber(date: Date): { year: number; week: number } {
 }
 
 /**
- * 특정 기준일(currentDateStr: YYYY-MM-DD)을 포함하는 주의 주간 라운드를 계산
- * 기본 규칙:
- * - 매주 월요일 미국장 개장 전까지 제출(OPEN)
- * - 월요일 장 시작부터 금요일 장 마감까지 LIVE
- * - 금요일 장 마감 이후 RESOLVED
- * - baseDate는 이전 주의 마지막 거래일 (금요일)
+ * BTC/USDT 20일 코호트 라운드 생성 (기준일 baseDateStr로부터 연속 20일 달력일)
+ */
+export function getBtc20DRound(
+  baseDateStr: string = '2026-10-02',
+  asOfDateStr: string = '2026-10-02'
+): Round {
+  const baseDateObj = parseDateStr(baseDateStr);
+  const { year, week } = getISOWeekNumber(baseDateObj);
+  const evalDates = getNextCalendarDays(baseDateStr, 20);
+  const firstEval = evalDates[0];
+  const lastEval = evalDates[evalDates.length - 1];
+
+  const cutoffAt = `${firstEval}T00:00:00Z`;
+
+  let status: RoundStatus = 'OPEN';
+  if (asOfDateStr >= lastEval) {
+    status = 'RESOLVED';
+  } else if (asOfDateStr >= firstEval) {
+    status = 'LIVE';
+  } else {
+    status = 'OPEN';
+  }
+
+  const paddedWeek = String(week).padStart(2, '0');
+  return {
+    id: `R${year}-W${paddedWeek}-BTCUSDT-20D`,
+    ticker: 'BTC/USDT',
+    year,
+    weekNumber: week,
+    baseDate: baseDateStr,
+    cutoffAt,
+    evalDates,
+    status,
+  };
+}
+
+/**
+ * 특정 기준일(currentDateStr: YYYY-MM-DD)을 포함하는 주의 라운드를 계산
  */
 export function getRoundFor(ticker: string, asOfDateStr: string = '2026-10-05'): Round {
+  if (ticker.toUpperCase().includes('BTC')) {
+    return getBtc20DRound('2026-10-02', asOfDateStr);
+  }
+
   const asOf = parseDateStr(asOfDateStr);
   const { year, week } = getISOWeekNumber(asOf);
 
-  // 해당 주차의 월요일 찾기
   const monday = new Date(asOf);
-  const day = monday.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const day = monday.getDay();
   const diffToMonday = day === 0 ? -6 : 1 - day;
   monday.setDate(monday.getDate() + diffToMonday);
   monday.setHours(0, 0, 0, 0);
 
-  // 직전 금요일 찾기 (baseDate)
   const prevFriday = new Date(monday);
   prevFriday.setDate(prevFriday.getDate() - 3);
   while (!isTradingDay(prevFriday)) {
@@ -56,7 +91,6 @@ export function getRoundFor(ticker: string, asOfDateStr: string = '2026-10-05'):
   }
   const baseDate = formatDateStr(prevFriday);
 
-  // 월요일부터 5거래일 (evalDates)
   const evalDates: string[] = [];
   const cur = new Date(monday);
   while (evalDates.length < 5) {
@@ -66,10 +100,7 @@ export function getRoundFor(ticker: string, asOfDateStr: string = '2026-10-05'):
     cur.setDate(cur.getDate() + 1);
   }
 
-  // cutoff: 월요일 09:30 EDT (한국시간 22:30 / 서머타임 해제 시 23:30)
-  // 여기서는 YYYY-MM-DDT13:30:00Z (UTC 13:30 = EDT 09:30)
   const cutoffAt = `${evalDates[0]}T13:30:00Z`;
-
   const lastEval = evalDates[evalDates.length - 1];
 
   let status: RoundStatus = 'OPEN';
@@ -109,19 +140,14 @@ export function getCountdownRemaining(cutoffIso: string, nowMs?: number): {
   const currentMs = nowMs ?? Date.now();
   let diff = new Date(cutoffIso).getTime() - currentMs;
 
-  // 데모 환경에서 시뮬레이션 기준일이 과거여서 diff <= 0인 경우,
-  // 테스트용 명시적 nowMs가 없을 때는 다음 미국장 개장(13:30 UTC / 22:30 KST)까지 실시간 롤링 카운트다운 제공
   if (diff <= 0 && nowMs === undefined) {
     const nowDate = new Date(currentMs);
     const nextCutoff = new Date(Date.UTC(
       nowDate.getUTCFullYear(),
       nowDate.getUTCMonth(),
-      nowDate.getUTCDate(),
-      13, 30, 0, 0
+      nowDate.getUTCDate() + 1,
+      0, 0, 0, 0
     ));
-    if (nextCutoff.getTime() <= currentMs) {
-      nextCutoff.setUTCDate(nextCutoff.getUTCDate() + 1);
-    }
     diff = nextCutoff.getTime() - currentMs;
   }
 

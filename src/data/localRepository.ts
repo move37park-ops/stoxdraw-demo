@@ -1,15 +1,27 @@
 import type { Repository, FeedTab } from './repository';
-import type { Forecast, User, Comment, Notification } from '../domain/types';
+import type {
+  Forecast,
+  User,
+  Comment,
+  Notification,
+  Horizon,
+  Mode,
+  AnchorPoint,
+  ForecastVersion,
+  PracticeAttempt,
+} from '../domain/types';
 import { SEED_USERS, generateSeedForecasts, SEED_COMMENTS, SEED_NOTIFICATIONS } from './seed';
 import { deriveForecastStatus } from '../domain/lifecycle';
+import { computeForecastDigest } from '../domain/audit';
 
 const KEYS = {
-  FORECASTS: 'stoxdraw_v6_forecasts',
-  USERS: 'stoxdraw_v6_users',
-  LIKES: 'stoxdraw_v6_likes',
-  FOLLOWS: 'stoxdraw_v6_follows',
-  COMMENTS: 'stoxdraw_v6_comments',
-  NOTIFICATIONS: 'stoxdraw_v6_notifications',
+  FORECASTS: 'stoxdraw_v8_btc20d_forecasts',
+  USERS: 'stoxdraw_v8_btc20d_users',
+  LIKES: 'stoxdraw_v8_btc20d_likes',
+  FOLLOWS: 'stoxdraw_v8_btc20d_follows',
+  COMMENTS: 'stoxdraw_v8_btc20d_comments',
+  NOTIFICATIONS: 'stoxdraw_v8_btc20d_notifications',
+  PRACTICE: 'stoxdraw_v8_btc20d_practice',
 };
 
 class LocalRepository implements Repository {
@@ -33,10 +45,13 @@ class LocalRepository implements Repository {
       localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(SEED_NOTIFICATIONS));
     }
     if (!localStorage.getItem(KEYS.LIKES)) {
-      localStorage.setItem(KEYS.LIKES, JSON.stringify({ fc_tsla_live_root: 24, fc_tsla_resolved_1: 18 }));
+      localStorage.setItem(
+        KEYS.LIKES,
+        JSON.stringify({ fc_btc_live_quant: 31, fc_btc_live_alpha: 24, fc_btc_live_satoshi: 17 })
+      );
     }
     if (!localStorage.getItem(KEYS.FOLLOWS)) {
-      localStorage.setItem(KEYS.FOLLOWS, JSON.stringify(['u_alpha']));
+      localStorage.setItem(KEYS.FOLLOWS, JSON.stringify(['u_quant', 'u_alpha']));
     }
   }
 
@@ -59,10 +74,11 @@ class LocalRepository implements Repository {
     this.notify();
   }
 
-  listFeed(tab: FeedTab, currentDateStr: string = '2026-10-05'): Forecast[] {
+  listFeed(tab: FeedTab, currentDateStr: string = '2026-10-02'): Forecast[] {
     const list = this.getForecasts();
-    // Sort descending by lockedAt
-    const sorted = [...list].sort((a, b) => new Date(b.lockedAt).getTime() - new Date(a.lockedAt).getTime());
+    const sorted = [...list].sort(
+      (a, b) => new Date(b.lockedAt).getTime() - new Date(a.lockedAt).getTime()
+    );
 
     if (tab === 'results') {
       return sorted.filter(f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED');
@@ -73,7 +89,7 @@ class LocalRepository implements Repository {
       return sorted.filter(f => f.authorId && follows.includes(f.authorId));
     }
 
-    return sorted; // 'all'
+    return sorted;
   }
 
   getForecast(id: string): Forecast | undefined {
@@ -92,12 +108,13 @@ class LocalRepository implements Repository {
     authorId: string | null;
     anonId: string;
     ticker: string;
-    horizon: '5D' | '30D';
-    mode: 'path' | 'breakout';
+    horizon: Horizon;
+    mode: Mode;
     comment: string;
     basePrice: number;
     baseDate: string;
     evalDates: string[];
+    anchors?: AnchorPoint[];
     path?: { date: string; price: number }[];
     pathPct?: number[];
     roundId?: string;
@@ -105,58 +122,152 @@ class LocalRepository implements Repository {
     parentId?: string;
   }): Forecast {
     const forecasts = this.getForecasts();
-    const newForecast: Forecast = {
+    const nowIso = new Date().toISOString();
+    const id = 'fc_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+
+    const tempForecast: Forecast = {
       ...input,
-      id: 'fc_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36),
-      lockedAt: new Date().toISOString(),
+      id,
+      lockedAt: nowIso,
       rulesVersion: 'v1',
+    };
+
+    const digestHash = computeForecastDigest(tempForecast);
+    const prices = (input.path || []).map(p => p.price);
+    const initialVersion: ForecastVersion = {
+      version: 1,
+      createdAt: nowIso,
+      anchors: input.anchors || [],
+      prices,
+      comment: input.comment,
+      digestHash,
+    };
+
+    const newForecast: Forecast = {
+      ...tempForecast,
+      versions: [initialVersion],
     };
 
     forecasts.unshift(newForecast);
     this.setForecasts(forecasts);
 
-    // If derived from parent, generate notification for original author (§9.3, §32)
     if (input.parentId) {
       const parent = forecasts.find(f => f.id === input.parentId);
-      if (parent && parent.authorId) {
-        const author = input.authorId ? this.getUser(input.authorId) : null;
-        const actorHandle = author ? author.handle : '익명 사용자';
-        const actorName = author ? author.name : '익명 예측가';
-
-        const notifs = this.getAllNotifications();
-        notifs.unshift({
-          id: 'notif_' + Date.now(),
+      if (parent && parent.authorId && parent.authorId !== input.authorId) {
+        const actor = input.authorId ? this.getUser(input.authorId) : null;
+        this.createNotification({
           userId: parent.authorId,
           type: 'response',
-          actorHandle,
-          actorName,
+          actorHandle: actor ? actor.handle : 'anon_trader',
+          actorName: actor ? actor.name : 'Anonymous Trader',
           forecastId: newForecast.id,
           ticker: newForecast.ticker,
-          message: `@${actorHandle} 님이 회원님의 Forecast에 [YOUR DRAW]로 새로운 궤적을 제시했습니다.`,
-          createdAt: new Date().toISOString(),
-          read: false,
+          message: `님이 회원님의 ${newForecast.ticker} 20일 시나리오에 맞불 작도를 제출했습니다.`,
         });
-        localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(notifs));
+      }
+    }
+
+    if (input.authorId) {
+      const users = this.listAllUsers();
+      const idx = users.findIndex(u => u.id === input.authorId);
+      if (idx !== -1) {
+        users[idx].forecastsCount += 1;
+        localStorage.setItem(KEYS.USERS, JSON.stringify(users));
       }
     }
 
     return newForecast;
   }
 
-  claimAnonymous(anonId: string, userId: string): void {
-    const list = this.getForecasts();
-    let updated = false;
-    const modified = list.map(f => {
-      if (f.anonId === anonId && !f.authorId) {
-        updated = true;
-        return { ...f, authorId: userId };
-      }
-      return f;
-    });
-
-    if (updated) {
-      this.setForecasts(modified);
+  /**
+   * 피치덱 02.3 & 05.2: 예측 기록 박제 및 버전 관리 (최초 제출본 보존 + 수정 이력 추가)
+   */
+  appendForecastVersion(
+    forecastId: string,
+    input: {
+      anchors: AnchorPoint[];
+      prices: number[];
+      path: { date: string; price: number }[];
+      pathPct: number[];
+      comment: string;
+      digestHash: string;
     }
+  ): Forecast | undefined {
+    const forecasts = this.getForecasts();
+    const idx = forecasts.findIndex(f => f.id === forecastId);
+    if (idx === -1) return undefined;
+
+    const target = forecasts[idx];
+    const existingVersions = target.versions && target.versions.length > 0
+      ? [...target.versions]
+      : [
+          {
+            version: 1,
+            createdAt: target.lockedAt,
+            anchors: target.anchors || [],
+            prices: (target.path || []).map(p => p.price),
+            comment: target.comment,
+            digestHash: computeForecastDigest(target),
+          },
+        ];
+
+    const nextVerNum = existingVersions.length + 1;
+    const nowIso = new Date().toISOString();
+
+    const nextVersion: ForecastVersion = {
+      version: nextVerNum,
+      createdAt: nowIso,
+      anchors: input.anchors,
+      prices: input.prices,
+      comment: input.comment,
+      digestHash: input.digestHash,
+    };
+
+    const updated: Forecast = {
+      ...target,
+      updatedAt: nowIso,
+      anchors: input.anchors,
+      path: input.path,
+      pathPct: input.pathPct,
+      comment: input.comment,
+      versions: [...existingVersions, nextVersion],
+    };
+
+    forecasts[idx] = updated;
+    this.setForecasts(forecasts);
+    return updated;
+  }
+
+  claimAnonymous(anonId: string, userId: string) {
+    const forecasts = this.getForecasts();
+    let changed = false;
+    forecasts.forEach(f => {
+      if (f.anonId === anonId && !f.authorId) {
+        f.authorId = userId;
+        changed = true;
+      }
+    });
+    if (changed) {
+      this.setForecasts(forecasts);
+    }
+  }
+
+  listPracticeAttempts(): PracticeAttempt[] {
+    const raw = localStorage.getItem(KEYS.PRACTICE);
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  savePracticeAttempt(attempt: Omit<PracticeAttempt, 'id' | 'createdAt'>): PracticeAttempt {
+    const list = this.listPracticeAttempts();
+    const newAttempt: PracticeAttempt = {
+      ...attempt,
+      id: 'prac_' + Math.random().toString(36).substring(2, 8) + '_' + Date.now().toString(36),
+      createdAt: new Date().toISOString(),
+    };
+    list.unshift(newAttempt);
+    localStorage.setItem(KEYS.PRACTICE, JSON.stringify(list.slice(0, 50)));
+    this.notify();
+    return newAttempt;
   }
 
   getUser(id: string): User | undefined {
@@ -169,45 +280,46 @@ class LocalRepository implements Repository {
 
   listAllUsers(): User[] {
     const raw = localStorage.getItem(KEYS.USERS);
-    const parsed: User[] = raw ? JSON.parse(raw) : SEED_USERS;
-    return parsed.map(u => {
-      const seedMatch = SEED_USERS.find(s => s.id === u.id);
-      return {
-        ...u,
-        elo: u.elo ?? seedMatch?.elo ?? 1200,
-      };
-    });
+    return raw ? JSON.parse(raw) : SEED_USERS;
+  }
+
+  private getLikesMap(): Record<string, number> {
+    return JSON.parse(localStorage.getItem(KEYS.LIKES) || '{}');
+  }
+
+  private getMyLikedSet(): Set<string> {
+    const raw = localStorage.getItem(KEYS.LIKES + '_my') || '[]';
+    return new Set(JSON.parse(raw));
   }
 
   isLiked(forecastId: string): boolean {
-    const likes = JSON.parse(localStorage.getItem(KEYS.LIKES + '_user') || '[]');
-    return likes.includes(forecastId);
+    return this.getMyLikedSet().has(forecastId);
   }
 
   toggleLike(forecastId: string): boolean {
-    const userLikes: string[] = JSON.parse(localStorage.getItem(KEYS.LIKES + '_user') || '[]');
-    const allCounts: Record<string, number> = JSON.parse(localStorage.getItem(KEYS.LIKES) || '{}');
-    const idx = userLikes.indexOf(forecastId);
-    let nowLiked = false;
+    const map = this.getLikesMap();
+    const mySet = this.getMyLikedSet();
+    let liked = false;
 
-    if (idx >= 0) {
-      userLikes.splice(idx, 1);
-      allCounts[forecastId] = Math.max(0, (allCounts[forecastId] || 1) - 1);
+    if (mySet.has(forecastId)) {
+      mySet.delete(forecastId);
+      map[forecastId] = Math.max(0, (map[forecastId] || 1) - 1);
+      liked = false;
     } else {
-      userLikes.push(forecastId);
-      allCounts[forecastId] = (allCounts[forecastId] || 0) + 1;
-      nowLiked = true;
+      mySet.add(forecastId);
+      map[forecastId] = (map[forecastId] || 0) + 1;
+      liked = true;
     }
 
-    localStorage.setItem(KEYS.LIKES + '_user', JSON.stringify(userLikes));
-    localStorage.setItem(KEYS.LIKES, JSON.stringify(allCounts));
+    localStorage.setItem(KEYS.LIKES, JSON.stringify(map));
+    localStorage.setItem(KEYS.LIKES + '_my', JSON.stringify(Array.from(mySet)));
     this.notify();
-    return nowLiked;
+    return liked;
   }
 
   getLikesCount(forecastId: string): number {
-    const allCounts: Record<string, number> = JSON.parse(localStorage.getItem(KEYS.LIKES) || '{}');
-    return allCounts[forecastId] || 0;
+    const map = this.getLikesMap();
+    return map[forecastId] || 0;
   }
 
   isFollowing(userId: string): boolean {
@@ -218,16 +330,17 @@ class LocalRepository implements Repository {
   toggleFollow(userId: string): boolean {
     const follows: string[] = JSON.parse(localStorage.getItem(KEYS.FOLLOWS) || '[]');
     const idx = follows.indexOf(userId);
-    let nowFollow = false;
-    if (idx >= 0) {
+    let nowFollowing = false;
+    if (idx !== -1) {
       follows.splice(idx, 1);
+      nowFollowing = false;
     } else {
       follows.push(userId);
-      nowFollow = true;
+      nowFollowing = true;
     }
     localStorage.setItem(KEYS.FOLLOWS, JSON.stringify(follows));
     this.notify();
-    return nowFollow;
+    return nowFollowing;
   }
 
   listComments(forecastId: string): Comment[] {
@@ -238,7 +351,7 @@ class LocalRepository implements Repository {
   addComment(forecastId: string, author: User, content: string): Comment {
     const all: Comment[] = JSON.parse(localStorage.getItem(KEYS.COMMENTS) || '[]');
     const newComment: Comment = {
-      id: 'cmt_' + Date.now(),
+      id: 'c_' + Date.now().toString(36),
       forecastId,
       userId: author.id,
       authorHandle: author.handle,
@@ -249,21 +362,45 @@ class LocalRepository implements Repository {
     };
     all.push(newComment);
     localStorage.setItem(KEYS.COMMENTS, JSON.stringify(all));
+
+    const forecast = this.getForecast(forecastId);
+    if (forecast && forecast.authorId && forecast.authorId !== author.id) {
+      this.createNotification({
+        userId: forecast.authorId,
+        type: 'comment',
+        actorHandle: author.handle,
+        actorName: author.name,
+        forecastId,
+        ticker: forecast.ticker,
+        message: `님이 회원님의 ${forecast.ticker} 예측에 코멘트를 남겼습니다.`,
+      });
+    }
+
     this.notify();
     return newComment;
   }
 
-  private getAllNotifications(): Notification[] {
-    const raw = localStorage.getItem(KEYS.NOTIFICATIONS);
-    return raw ? JSON.parse(raw) : [];
+  private getNotifications(): Notification[] {
+    return JSON.parse(localStorage.getItem(KEYS.NOTIFICATIONS) || '[]');
+  }
+
+  private createNotification(input: Omit<Notification, 'id' | 'createdAt' | 'read'>) {
+    const all = this.getNotifications();
+    all.unshift({
+      ...input,
+      id: 'n_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+      createdAt: new Date().toISOString(),
+      read: false,
+    });
+    localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(all));
   }
 
   listNotifications(userId: string): Notification[] {
-    return this.getAllNotifications().filter(n => n.userId === userId);
+    return this.getNotifications().filter(n => n.userId === userId);
   }
 
-  markNotificationRead(id: string): void {
-    const all = this.getAllNotifications();
+  markNotificationRead(id: string) {
+    const all = this.getNotifications();
     const target = all.find(n => n.id === id);
     if (target) {
       target.read = true;
@@ -277,4 +414,4 @@ class LocalRepository implements Repository {
   }
 }
 
-export const repository: Repository = new LocalRepository();
+export const repository = new LocalRepository();

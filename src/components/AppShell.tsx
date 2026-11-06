@@ -6,7 +6,7 @@ import { repository } from '../data/localRepository';
 import { getCurrentUser, getOrCreateAnonId, subscribeSession } from '../data/session';
 import { deriveForecastStatus } from '../domain/lifecycle';
 import { resolveForecast } from '../domain/resolution';
-import { getStockHistory } from '../data/market';
+import { getBtcHistoryBars, BTC_TICKER } from '../data/btcMarket';
 import { DEFAULT_ELO } from '../domain/elo';
 import type { Forecast, User } from '../domain/types';
 
@@ -54,12 +54,10 @@ export function AppShell({
   const liveElo = useMemo(() => {
     const base = currentUser?.elo ?? DEFAULT_ELO;
     let delta = 0;
+    const allBars = getBtcHistoryBars().filter(b => b.date <= currentDateStr);
     myForecasts.forEach(f => {
       if (deriveForecastStatus(f, currentDateStr) === 'RESOLVED') {
-        const bars = getStockHistory(f.ticker).filter(
-          b => b.date <= currentDateStr
-        );
-        const res = resolveForecast(f, bars);
+        const res = resolveForecast(f, allBars);
         if (res.eloSettlement) {
           delta += res.eloSettlement.deltaLp;
         }
@@ -78,8 +76,13 @@ export function AppShell({
       className="v-studio-root min-h-screen w-full flex flex-col"
       data-theme={theme}
     >
+      {/* WCAG 2.4.1: Bypass Blocks (Skip to main content) */}
+      <a href="#main" className="skip-link">
+        본문 바로가기
+      </a>
+
       <StudioCommandBar
-        ticker="NVDA"
+        ticker={BTC_TICKER}
         studioDateStr={currentDateStr}
         onStudioDateChange={onDateChange}
         userHandle={userHandle}
@@ -91,7 +94,8 @@ export function AppShell({
 
       <main
         id="main"
-        className="flex-1 w-full max-w-[1360px] mx-auto relative"
+        tabIndex={-1}
+        className="flex-1 w-full max-w-[1360px] mx-auto relative focus:outline-none"
         style={{
           borderLeft: '1px solid var(--v-hairline)',
           borderRight: '1px solid var(--v-hairline)',
@@ -115,22 +119,12 @@ export function AppShell({
           }}
         >
           <div className="flex items-center gap-2.5">
-            <svg
-              width="14"
-              height="12"
-              viewBox="0 0 76 65"
-              fill="currentColor"
-              aria-label="Vercel triangle mark"
-              style={{ color: 'var(--v-ink)' }}
-            >
-              <path d="M37.5274 0L75.0548 65H0L37.5274 0Z" />
-            </svg>
-            <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
-              STOXDRAW Trajectory Studio · Authored with Geist Design System (design.md & design.dark.md)
+            <span className="v-serif-brand text-lg font-normal tracking-wider" style={{ color: 'var(--v-ink)' }}>
+              STOXDRAW
             </span>
           </div>
-          <p className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-            rules:v1 · hybrid-100pt (path:50 / dir:30 / target:20) · immutable-lock
+          <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
+            © 2026 STOXDRAW
           </p>
         </div>
       </footer>
