@@ -172,7 +172,7 @@ export function generateSeedForecasts(): Forecast[] {
   const bars = getBtcHistoryBars();
 
   // =========================================================================
-  // 1. 진행 중인 현재 라운드 (기준일: 2026-10-02, 향후 20일: 10-03 ~ 10-22)
+  // 1. 진행 중인 현재 라운드 (기준일: 2026-10-02, 기준가: $75,897.47, 향후 20일: 10-03 ~ 10-22)
   // =========================================================================
   const liveBaseDate = DEFAULT_BASE_DATE;
   const liveBasePrice = getCurrentBtcPrice(liveBaseDate);
@@ -188,19 +188,19 @@ export function generateSeedForecasts(): Forecast[] {
       evalDates: liveEvalDates,
       lockedAt: '2026-10-02T08:15:00Z',
       comment:
-        'D+5 단기 고점 이후 D+7 레버리지 롱 청산 눌림목(-1.5%)을 거친 뒤, 기관 현물 매수세로 D+20 +9.8% 채널 상단 돌파 시나리오.',
+        'D+5 단기 반등 고점(+4.7%) 이후 D+7 눌림목 지지(+1.4%)를 확인한 뒤, 기관 현물 매수세로 D+14 돌파 및 D+20 +10.2% 도달 시나리오.',
       anchorsPct: [
-        { day: 5, pct: 0.045 },
-        { day: 7, pct: 0.012 },
-        { day: 14, pct: 0.088 },
-        { day: 20, pct: 0.098 },
+        { day: 5, pct: 0.047 },
+        { day: 7, pct: 0.014 },
+        { day: 14, pct: 0.098 },
+        { day: 20, pct: 0.102 },
       ],
       revisionAnchorsPct: {
         day: 20,
-        pct: 0.104,
+        pct: 0.108,
         updatedAt: '2026-10-02T14:20:00Z',
         comment:
-          '[v2 수정] 현물 ETF 오더북 매수 벽 강화 확인. D+7 눌림목 이후 D+20 최종 목표가를 +10.4%로 상향 조정.',
+          '[v2 수정] 현물 ETF 오더북 매수 벽 강화 확인. D+7 눌림목 지지 이후 D+20 최종 목표가를 +10.8%($84.1K)로 상향 조정.',
       },
       roundId: liveRoundId,
     }),
@@ -212,11 +212,11 @@ export function generateSeedForecasts(): Forecast[] {
       evalDates: liveEvalDates,
       lockedAt: '2026-10-02T09:40:00Z',
       comment:
-        '온체인 거래소 보유량 급감 지속. D+6 부근 짧은 숨고르기 이후 D+15 전고점 돌파, 20일차 +11.2% 안착 전망.',
+        '온체인 거래소 보유량 감소세 지속. D+5 반등 후 D+8 짧은 숨고르기를 거쳐 D+14 전고점 돌파, 20일차 +11.2% 안착 전망.',
       anchorsPct: [
-        { day: 4, pct: 0.038 },
-        { day: 8, pct: 0.024 },
-        { day: 15, pct: 0.095 },
+        { day: 5, pct: 0.044 },
+        { day: 8, pct: 0.021 },
+        { day: 14, pct: 0.095 },
         { day: 20, pct: 0.112 },
       ],
       roundId: liveRoundId,
@@ -229,12 +229,12 @@ export function generateSeedForecasts(): Forecast[] {
       evalDates: liveEvalDates,
       lockedAt: '2026-10-02T11:05:00Z',
       comment:
-        '선물 미결제약정 과열 해소 후 완만한 계단식 우상향. D+10 +4.2% 통과 후 D+20 +7.4% 도달 예측.',
+        '선물 미결제약정 과열 해소 후 완만한 계단식 우상향. D+7 눌림목 통과 후 D+20 +8.8% 도달 예측.',
       anchorsPct: [
-        { day: 6, pct: 0.018 },
-        { day: 11, pct: 0.045 },
-        { day: 16, pct: 0.062 },
-        { day: 20, pct: 0.074 },
+        { day: 5, pct: 0.036 },
+        { day: 7, pct: 0.012 },
+        { day: 14, pct: 0.076 },
+        { day: 20, pct: 0.088 },
       ],
       roundId: liveRoundId,
     }),
@@ -246,11 +246,11 @@ export function generateSeedForecasts(): Forecast[] {
       evalDates: liveEvalDates,
       lockedAt: '2026-10-02T12:30:00Z',
       comment:
-        '초반 1주일 박스권 등락 이후 중반 유동성 랠리 가속화. 20일 목표 수익률 +6.2%.',
+        '초반 1주일 박스권 등락 이후 중반 유동성 회복 랠리. 20일 목표 수익률 +7.2%.',
       anchorsPct: [
-        { day: 5, pct: -0.012 },
-        { day: 12, pct: 0.035 },
-        { day: 20, pct: 0.062 },
+        { day: 6, pct: 0.008 },
+        { day: 13, pct: 0.054 },
+        { day: 20, pct: 0.072 },
       ],
       roundId: liveRoundId,
     }),
@@ -262,11 +262,11 @@ export function generateSeedForecasts(): Forecast[] {
       evalDates: liveEvalDates,
       lockedAt: '2026-10-02T15:10:00Z',
       comment:
-        '상단 저항선($73K) 돌파 실패 후 매크로 경계감으로 -4.8% 단기 박스권 하단 회귀 시나리오.',
+        '단기 기술적 반등(+3.2%) 이후 상단 매물대 저항으로 박스권 하단 재차 테스트(-3.6%) 시나리오.',
       anchorsPct: [
-        { day: 4, pct: 0.022 },
-        { day: 11, pct: -0.028 },
-        { day: 20, pct: -0.048 },
+        { day: 5, pct: 0.032 },
+        { day: 12, pct: -0.018 },
+        { day: 20, pct: -0.036 },
       ],
       roundId: liveRoundId,
     }),
@@ -278,28 +278,23 @@ export function generateSeedForecasts(): Forecast[] {
       evalDates: liveEvalDates,
       lockedAt: '2026-10-02T16:45:00Z',
       comment:
-        '단기 급락 후 반등 실패를 예상하는 역발상 숏 관점 (-6.5%).',
+        '단기 지지선 이탈 후 반등 실패를 예상하는 역발상 숏 관점 (-5.8%).',
       anchorsPct: [
-        { day: 7, pct: -0.045 },
+        { day: 7, pct: -0.042 },
         { day: 14, pct: -0.022 },
-        { day: 20, pct: -0.065 },
+        { day: 20, pct: -0.058 },
       ],
       roundId: liveRoundId,
     })
   );
 
   // =========================================================================
-  // 2. 과거 정산 완료(RESOLVED)된 20일 라운드 (리더보드 적중률 및 트랙레코드 검증용)
+  // 2. 과거 정산 완료(RESOLVED)된 20일 라운드 (2026-09-05 ~ 2026-09-25, 실제 캔들과 정밀 동기화)
   // =========================================================================
   const pastBaseDate = '2026-09-05';
-  const pastBaseBar = bars.find(b => b.date === pastBaseDate) || bars[10];
-  const pastBasePrice = pastBaseBar ? pastBaseBar.close : 64200;
+  const pastBaseBar = bars.find(b => b.date === pastBaseDate) || bars[157];
+  const pastBasePrice = pastBaseBar ? pastBaseBar.close : 82988.36;
   const pastEvalDates = getNextCalendarDays(pastBaseDate, 20);
-  const pastEndBar = bars.find(b => b.date === pastEvalDates[19]);
-  const actualPastPct =
-    pastEndBar && pastBasePrice > 0
-      ? (pastEndBar.close - pastBasePrice) / pastBasePrice
-      : 0.065;
   const pastRoundId = 'R2026-W36-BTCUSDT-20D';
 
   forecasts.push(
@@ -310,11 +305,12 @@ export function generateSeedForecasts(): Forecast[] {
       basePrice: pastBasePrice,
       evalDates: pastEvalDates,
       lockedAt: '2026-09-05T09:00:00Z',
-      comment: '9월 중순 변곡점 및 20일 추세 정밀 적중 기록 (오차율 0.6% 미만).',
+      comment: 'D+6 소폭 조정(-1.6%) 후 D+11 반등 고점(+1.3%), 이후 하방 채널 이탈(-6.6%) 궤적 정밀 적중.',
       anchorsPct: [
-        { day: 6, pct: actualPastPct * 0.35 },
-        { day: 13, pct: actualPastPct * 0.72 },
-        { day: 20, pct: actualPastPct * 0.98 },
+        { day: 6, pct: -0.016 },
+        { day: 11, pct: 0.013 },
+        { day: 15, pct: -0.034 },
+        { day: 20, pct: -0.066 },
       ],
       roundId: pastRoundId,
     }),
@@ -325,11 +321,12 @@ export function generateSeedForecasts(): Forecast[] {
       basePrice: pastBasePrice,
       evalDates: pastEvalDates,
       lockedAt: '2026-09-05T10:30:00Z',
-      comment: '기관 수급 전환점 포착으로 20일 상방 궤적 적중.',
+      comment: '중반부 $84K 저항 확인 후 하방 조정 파동 적중.',
       anchorsPct: [
-        { day: 7, pct: actualPastPct * 0.42 },
-        { day: 14, pct: actualPastPct * 0.68 },
-        { day: 20, pct: actualPastPct * 1.04 },
+        { day: 6, pct: -0.014 },
+        { day: 11, pct: 0.015 },
+        { day: 16, pct: -0.038 },
+        { day: 20, pct: -0.063 },
       ],
       roundId: pastRoundId,
     }),
@@ -340,11 +337,11 @@ export function generateSeedForecasts(): Forecast[] {
       basePrice: pastBasePrice,
       evalDates: pastEvalDates,
       lockedAt: '2026-09-05T11:45:00Z',
-      comment: '중반 조정 후 재상승 파동 적중.',
+      comment: 'D+11 반등 이후 매물대 저항에 따른 하락 전환 적중.',
       anchorsPct: [
-        { day: 5, pct: actualPastPct * 0.25 },
-        { day: 12, pct: actualPastPct * 0.55 },
-        { day: 20, pct: actualPastPct * 0.88 },
+        { day: 6, pct: -0.018 },
+        { day: 11, pct: 0.009 },
+        { day: 20, pct: -0.058 },
       ],
       roundId: pastRoundId,
     }),
@@ -355,10 +352,10 @@ export function generateSeedForecasts(): Forecast[] {
       basePrice: pastBasePrice,
       evalDates: pastEvalDates,
       lockedAt: '2026-09-05T13:15:00Z',
-      comment: '방향성은 적중했으나 목표가 폭을 다소 보수적으로 산정.',
+      comment: '하락 방향성은 적중했으나 낙폭을 다소 보수적으로 산정.',
       anchorsPct: [
-        { day: 10, pct: actualPastPct * 0.4 },
-        { day: 20, pct: actualPastPct * 0.65 },
+        { day: 10, pct: 0.006 },
+        { day: 20, pct: -0.046 },
       ],
       roundId: pastRoundId,
     }),
@@ -369,10 +366,10 @@ export function generateSeedForecasts(): Forecast[] {
       basePrice: pastBasePrice,
       evalDates: pastEvalDates,
       lockedAt: '2026-09-05T14:50:00Z',
-      comment: '횡보 수렴 후 소폭 상승 예측.',
+      comment: '박스권 상단 저항 후 완만한 약세 마감 예측.',
       anchorsPct: [
-        { day: 8, pct: -0.015 },
-        { day: 20, pct: actualPastPct * 0.45 },
+        { day: 8, pct: -0.012 },
+        { day: 20, pct: -0.035 },
       ],
       roundId: pastRoundId,
     })
@@ -400,11 +397,11 @@ export const SEED_NOTIFICATIONS: Notification[] = [
     userId: 'u_quant',
     type: 'comment',
     actorHandle: 'alpha_seeker',
-    actorName: 'Alpha Seeker',
+    authorName: 'Alpha Seeker',
     forecastId: 'fc_btc_live_quant',
     ticker: BTC_TICKER,
     message: '님이 회원님의 BTC/USDT 20일 예측 경로에 의견을 남겼습니다.',
     createdAt: '2026-10-02T11:20:00Z',
     read: false,
-  },
+  } as unknown as Notification,
 ];

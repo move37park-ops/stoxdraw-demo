@@ -15,13 +15,13 @@ import { deriveForecastStatus } from '../domain/lifecycle';
 import { computeForecastDigest } from '../domain/audit';
 
 const KEYS = {
-  FORECASTS: 'stoxdraw_v8_btc20d_forecasts',
-  USERS: 'stoxdraw_v8_btc20d_users',
-  LIKES: 'stoxdraw_v8_btc20d_likes',
-  FOLLOWS: 'stoxdraw_v8_btc20d_follows',
-  COMMENTS: 'stoxdraw_v8_btc20d_comments',
-  NOTIFICATIONS: 'stoxdraw_v8_btc20d_notifications',
-  PRACTICE: 'stoxdraw_v8_btc20d_practice',
+  FORECASTS: 'stoxdraw_v9_btc20d_forecasts',
+  USERS: 'stoxdraw_v9_btc20d_users',
+  LIKES: 'stoxdraw_v9_btc20d_likes',
+  FOLLOWS: 'stoxdraw_v9_btc20d_follows',
+  COMMENTS: 'stoxdraw_v9_btc20d_comments',
+  NOTIFICATIONS: 'stoxdraw_v9_btc20d_notifications',
+  PRACTICE: 'stoxdraw_v9_btc20d_practice',
 };
 
 class LocalRepository implements Repository {

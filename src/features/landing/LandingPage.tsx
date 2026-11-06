@@ -13,8 +13,6 @@ import { repository } from '../../data/localRepository';
 import {
   BTC_TICKER,
   DEFAULT_BASE_DATE,
-  getCurrentBtcPrice,
-  getBtcHistoryBars,
 } from '../../data/btcMarket';
 import { getBtc20DRound } from '../../domain/round';
 import { formatPct } from '../../domain/format';
@@ -22,6 +20,53 @@ import { formatPct } from '../../domain/format';
 interface LandingPageProps {
   currentDateStr: string;
 }
+
+const DEMO_BASE_PRICE = 75897.47;
+
+// 랜딩 히어로 데모 고정 41개 일봉 (D-40 ~ D-0: $84.4K -> $86.5K 고점 이후 계단식 하락 조정 -> $75.9K 지지 및 반등 준비 구간)
+const DEMO_PAST_BARS: { date: string; open: number; high: number; low: number; close: number }[] = [
+  { date: 'past_00', open: 84433.11, high: 85159.03, low: 84132.00, close: 84472.00 },
+  { date: 'past_01', open: 84472.01, high: 84999.00, low: 82563.00, close: 83500.01 },
+  { date: 'past_02', open: 83500.01, high: 84563.99, low: 82775.94, close: 83663.66 },
+  { date: 'past_03', open: 83663.66, high: 85649.95, low: 82956.11, close: 83623.60 },
+  { date: 'past_04', open: 83623.59, high: 85273.65, low: 83186.00, close: 84880.05 },
+  { date: 'past_05', open: 84880.05, high: 87220.00, low: 83888.00, close: 84518.01 },
+  { date: 'past_06', open: 84518.00, high: 85037.63, low: 84456.02, close: 84753.56 },
+  { date: 'past_07', open: 84753.57, high: 86800.00, low: 84719.99, close: 86530.00 },
+  { date: 'past_08', open: 86530.00, high: 86999.11, low: 84972.01, close: 85766.87 },
+  { date: 'past_09', open: 85766.87, high: 86698.99, low: 85136.11, close: 85549.93 },
+  { date: 'past_10', open: 85549.94, high: 85598.22, low: 82787.25, close: 83321.81 },
+  { date: 'past_11', open: 83321.81, high: 83521.15, low: 80393.56, close: 81754.45 },
+  { date: 'past_12', open: 81754.46, high: 83528.98, low: 81603.52, close: 82635.55 },
+  { date: 'past_13', open: 82635.56, high: 83173.29, low: 82545.82, close: 82988.36 },
+  { date: 'past_14', open: 82988.35, high: 84199.00, low: 82804.65, close: 83773.12 },
+  { date: 'past_15', open: 83773.12, high: 84352.00, low: 81750.09, close: 81850.00 },
+  { date: 'past_16', open: 81850.01, high: 84168.00, low: 81033.66, close: 83169.00 },
+  { date: 'past_17', open: 83169.01, high: 84146.72, low: 81444.42, close: 81682.01 },
+  { date: 'past_18', open: 81682.02, high: 82634.30, low: 79800.00, close: 82245.93 },
+  { date: 'past_19', open: 82245.93, high: 82940.81, low: 80809.25, close: 81615.64 },
+  { date: 'past_20', open: 81615.91, high: 81770.01, low: 80819.66, close: 81491.04 },
+  { date: 'past_21', open: 81491.04, high: 82295.47, low: 80684.36, close: 82116.00 },
+  { date: 'past_22', open: 82116.00, high: 83158.00, low: 81748.85, close: 81938.40 },
+  { date: 'past_23', open: 81938.39, high: 83439.00, low: 81200.00, close: 83028.15 },
+  { date: 'past_24', open: 83028.14, high: 84898.00, low: 82635.32, close: 84093.42 },
+  { date: 'past_25', open: 84093.42, high: 84377.21, low: 80939.54, close: 81416.09 },
+  { date: 'past_26', open: 81416.09, high: 82060.88, low: 80513.00, close: 81189.43 },
+  { date: 'past_27', open: 81189.44, high: 81213.64, low: 79220.74, close: 80888.16 },
+  { date: 'past_28', open: 80888.15, high: 81033.69, low: 79845.86, close: 80154.09 },
+  { date: 'past_29', open: 80154.09, high: 80844.70, low: 79368.67, close: 80150.56 },
+  { date: 'past_30', open: 80150.56, high: 81300.00, low: 79506.00, close: 80909.77 },
+  { date: 'past_31', open: 80909.77, high: 81823.00, low: 80397.14, close: 81343.50 },
+  { date: 'past_32', open: 81343.51, high: 81971.00, low: 77910.00, close: 77991.89 },
+  { date: 'past_33', open: 77991.89, high: 78804.01, low: 76325.98, close: 77368.77 },
+  { date: 'past_34', open: 77368.76, high: 77796.01, low: 77114.01, close: 77582.02 },
+  { date: 'past_35', open: 77582.02, high: 78422.23, low: 77517.20, close: 78354.00 },
+  { date: 'past_36', open: 78354.01, high: 78878.01, low: 76705.00, close: 76816.00 },
+  { date: 'past_37', open: 76816.01, high: 78063.30, low: 76388.88, close: 77453.86 },
+  { date: 'past_38', open: 77453.85, high: 81196.01, low: 75736.38, close: 80504.01 },
+  { date: 'past_39', open: 80504.01, high: 80918.01, low: 75208.42, close: 76088.01 },
+  { date: 'past_40', open: 76088.01, high: 76416.24, low: 74888.00, close: 75897.47 },
+];
 
 // 데모 시연용 20일 실제 캔들 등락 시퀀스
 const DEMO_FUTURE_RETURNS = [
@@ -38,18 +83,15 @@ export function LandingPage({ currentDateStr }: LandingPageProps) {
     () => getBtc20DRound(DEFAULT_BASE_DATE, currentDateStr),
     [currentDateStr]
   );
-  const basePrice = getCurrentBtcPrice(round.baseDate);
+  const basePrice = DEMO_BASE_PRICE;
   const liveCount = useMemo(() => {
     return repository
       .listFeed('all', currentDateStr)
       .filter(f => f.ticker === BTC_TICKER && f.baseDate === round.baseDate).length;
   }, [currentDateStr, round.baseDate]);
 
-  // 좌측 과거 일봉 데이터 (41개: PAD_L(24px)부터 splitX(584px)까지 14px 등간격으로 빈틈없이 채움)
-  const demoPastBars = useMemo(() => {
-    const all = getBtcHistoryBars();
-    return all.filter(b => b.date <= round.baseDate).slice(-41);
-  }, [round.baseDate]);
+  // 좌측 과거 일봉 데이터 (스크린샷과 100% 동일한 41개 캔들 고정)
+  const demoPastBars = DEMO_PAST_BARS;
 
   // 우측 미래 20일 실제 캔들 데이터
   const demoFutureBars = useMemo(() => {
@@ -396,25 +438,6 @@ export function LandingPage({ currentDateStr }: LandingPageProps) {
                 strokeDasharray="2 4"
               />
 
-              {/* Synchronized 10D / 20D Vertical Time Grid Across Past & Future */}
-              {[-30, -20, -10, 10, 20].map(offset => {
-                const gx = splitX + offset * stepX;
-                const isMajor = Math.abs(offset) % 20 === 0;
-                return (
-                  <line
-                    key={offset}
-                    x1={gx}
-                    y1={PAD_T}
-                    x2={gx}
-                    y2={H - PAD_B}
-                    stroke="var(--v-chart-grid)"
-                    strokeWidth="1"
-                    strokeDasharray="2 3"
-                    opacity={isMajor ? '0.8' : '0.4'}
-                  />
-                );
-              })}
-
               {/* Past Daily Candlesticks (정확히 14px 등간격 일치) */}
               {demoPastBars.map((bar, idx) => {
                 const x = pastIdxToX(idx);
@@ -503,7 +526,7 @@ export function LandingPage({ currentDateStr }: LandingPageProps) {
                 </g>
               )}
 
-              {/* PHASE 2: 실제 20일 일봉 캔들 순차 재생 (과거 캔들과 100% 동일한 14px 간격 & 폭) */}
+              {/* PHASE 2: 실제 20일 일봉 캔들 순차 재생 (과거 캔들과 100% 동일한 14px 간격 & 10.5px 폭) */}
               {phase === 2 &&
                 demoFutureBars.slice(0, revealedCandles).map(bar => {
                   const x = dayToX(bar.day);
@@ -682,7 +705,7 @@ export function LandingPage({ currentDateStr }: LandingPageProps) {
                 </g>
               )}
 
-              {/* 하단 시간축 라벨 (20일 단위 1:1 등간격 동기화) */}
+              {/* 하단 시간축 라벨 */}
               <text
                 x={PAD_L + 12}
                 y={H - 10}

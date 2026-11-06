@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ThumbsUp,
@@ -25,7 +25,6 @@ import {
 } from '../../domain/elo';
 import { formatPct } from '../../domain/format';
 import { Polyline20DCanvas } from '../studio/Polyline20DCanvas';
-import { STUDIO_TIME_STEPS } from '../studio/StudioCommandBar';
 import { ShareTicketModal } from '../../components/ShareTicketModal';
 import type { AnchorPoint, Forecast } from '../../domain/types';
 
@@ -34,11 +33,11 @@ interface DetailPageProps {
   onDateChange?: (date: string) => void;
 }
 
-export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
+export function DetailPage({ currentDateStr }: DetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [forecast, setForecast] = useState<Forecast | undefined>(() =>
+  const [rawForecast, setRawForecast] = useState<Forecast | undefined>(() =>
     id ? repository.getForecast(id) : undefined
   );
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -46,7 +45,7 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
 
   const reloadData = useCallback(() => {
     if (!id) return;
-    setForecast(repository.getForecast(id));
+    setRawForecast(repository.getForecast(id));
   }, [id]);
 
   useEffect(() => {
@@ -55,7 +54,37 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
     return () => unsub();
   }, [reloadData, currentDateStr]);
 
-  if (!forecast) {
+  // 해당 예측 라운드의 D-0, D+5, D+10, D+20 시점 스텝 구성
+  const roundTimeSteps = useMemo(() => {
+    if (!rawForecast) return [];
+    const evals = rawForecast.evalDates || [];
+    return [
+      { code: 'D-0', date: rawForecast.baseDate },
+      { code: 'D+5', date: evals[4] || rawForecast.baseDate },
+      { code: 'D+10', date: evals[9] || rawForecast.baseDate },
+      { code: 'D+20', date: evals[evals.length - 1] || rawForecast.baseDate },
+    ];
+  }, [rawForecast]);
+
+  // 상세/궤적 보기 진입 시 기본적으로 20일 정산 완료 시점(D+20) 캔들과 궤적이 함께 보이도록 설정
+  const [viewDateStr, setViewDateStr] = useState<string>(() => {
+    if (!rawForecast) return currentDateStr;
+    const lastEval = rawForecast.evalDates?.[rawForecast.evalDates.length - 1];
+    if (currentDateStr > rawForecast.baseDate) return currentDateStr;
+    return lastEval || currentDateStr;
+  });
+
+  useEffect(() => {
+    if (!rawForecast) return;
+    const lastEval = rawForecast.evalDates?.[rawForecast.evalDates.length - 1];
+    if (currentDateStr > rawForecast.baseDate) {
+      setViewDateStr(currentDateStr);
+    } else if (lastEval) {
+      setViewDateStr(lastEval);
+    }
+  }, [rawForecast?.id, currentDateStr]);
+
+  if (!rawForecast) {
     return (
       <div className="p-16 text-center space-y-4">
         <p className="v-heading-16" style={{ color: 'var(--v-ink)' }}>
@@ -72,6 +101,43 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
     );
   }
 
+  const stockBars = getStockHistory(rawForecast.ticker);
+  const historyBars = stockBars
+    .filter(b => b.date <= rawForecast.baseDate)
+    .slice(-180);
+
+  // D-0 마지막 일봉 종가와 예측 시작 기준가(basePrice)를 1:1로 동기화하여 궤적 시작점이 항상 D-0 캔들에 정확히 맞닿도록 보정
+  const actualD0Close =
+    historyBars.length > 0
+      ? historyBars[historyBars.length - 1].close
+      : rawForecast.basePrice;
+  const priceScale =
+    rawForecast.basePrice > 0 ? actualD0Close / rawForecast.basePrice : 1;
+
+  const forecast: Forecast = useMemo(() => {
+    if (Math.abs(priceScale - 1) < 1e-5) return rawForecast;
+    return {
+      ...rawForecast,
+      basePrice: actualD0Close,
+      anchors: rawForecast.anchors?.map(a => ({
+        day: a.day,
+        price: parseFloat((a.price * priceScale).toFixed(2)),
+      })),
+      path: rawForecast.path?.map(p => ({
+        date: p.date,
+        price: parseFloat((p.price * priceScale).toFixed(2)),
+      })),
+      versions: rawForecast.versions?.map(v => ({
+        ...v,
+        anchors: v.anchors.map(a => ({
+          day: a.day,
+          price: parseFloat((a.price * priceScale).toFixed(2)),
+        })),
+        prices: v.prices.map(p => parseFloat((p * priceScale).toFixed(2))),
+      })),
+    };
+  }, [rawForecast, actualD0Close, priceScale]);
+
   const author = forecast.authorId
     ? repository.getUser(forecast.authorId)
     : null;
@@ -82,25 +148,41 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
 
   const isLiked = repository.isLiked(forecast.id);
   const likesCount = repository.getLikesCount(forecast.id);
-  const status = deriveForecastStatus(forecast, currentDateStr);
-  const stockBars = getStockHistory(forecast.ticker);
-  const historyBars = stockBars
-    .filter(b => b.date <= forecast.baseDate)
-    .slice(-180);
-  const visibleBars = stockBars.filter(b => b.date <= currentDateStr);
+  const status = deriveForecastStatus(forecast, viewDateStr);
+  const visibleBars = stockBars.filter(b => b.date <= viewDateStr);
 
   const barMap = new Map(stockBars.map(b => [b.date, b]));
   const actualFutureBars = forecast.evalDates.map(d => {
-    if (currentDateStr > forecast.baseDate && d <= currentDateStr) {
+    if (viewDateStr > forecast.baseDate && d <= viewDateStr) {
       return barMap.get(d) || null;
     }
     return null;
   });
 
-  const allForecasts = repository.listFeed('all', currentDateStr);
-  const sameRoundForecasts = allForecasts.filter(
-    f => f.ticker === forecast.ticker && f.baseDate === forecast.baseDate
-  );
+  const allForecasts = repository.listFeed('all', viewDateStr);
+  const sameRoundForecasts = allForecasts
+    .filter(
+      f => f.ticker === forecast.ticker && f.baseDate === forecast.baseDate
+    )
+    .map(f => {
+      if (f.basePrice <= 0 || Math.abs(actualD0Close / f.basePrice - 1) < 1e-5) {
+        return f;
+      }
+      const s = actualD0Close / f.basePrice;
+      return {
+        ...f,
+        basePrice: actualD0Close,
+        anchors: f.anchors?.map(a => ({
+          day: a.day,
+          price: parseFloat((a.price * s).toFixed(2)),
+        })),
+        path: f.path?.map(p => ({
+          date: p.date,
+          price: parseFloat((p.price * s).toFixed(2)),
+        })),
+      };
+    });
+
   const crowd = aggregateCrowd(
     sameRoundForecasts,
     forecast.ticker,
@@ -128,7 +210,7 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
   const settlementRows = buildDailySettlementRows(
     forecast,
     stockBars,
-    currentDateStr
+    viewDateStr
   );
 
   const digestHash = computeForecastDigest(forecast);
@@ -179,13 +261,13 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
                 color: 'var(--v-mute)',
               }}
             >
-              {status}
+              {status === 'RESOLVED' ? '정산 완료' : status === 'LIVE' ? '진행 중' : status}
             </span>
             <span
               className="v-caption-mono"
               style={{ color: 'var(--v-mute)' }}
             >
-              해시: {digestHash.slice(0, 18)}...
+              기준일: {forecast.baseDate} · 해시: {digestHash.slice(0, 14)}...
             </span>
           </div>
 
@@ -198,30 +280,28 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {onDateChange && (
-            <div className="inline-flex items-center gap-1 mr-2">
-              {STUDIO_TIME_STEPS.map(s => (
-                <button
-                  key={s.date}
-                  type="button"
-                  onClick={() => onDateChange(s.date)}
-                  className="v-btn-secondary h-7 px-2 text-[11px]"
-                  style={{
-                    backgroundColor:
-                      s.date === currentDateStr
-                        ? 'var(--v-primary)'
-                        : 'var(--v-canvas)',
-                    color:
-                      s.date === currentDateStr
-                        ? 'var(--v-on-primary)'
-                        : 'var(--v-ink)',
-                  }}
-                >
-                  {s.code}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="inline-flex items-center gap-1 mr-1">
+            {roundTimeSteps.map(s => (
+              <button
+                key={s.code}
+                type="button"
+                onClick={() => setViewDateStr(s.date)}
+                className="v-btn-secondary h-7 px-2 text-[11px]"
+                style={{
+                  backgroundColor:
+                    s.date === viewDateStr
+                      ? 'var(--v-primary)'
+                      : 'var(--v-canvas)',
+                  color:
+                    s.date === viewDateStr
+                      ? 'var(--v-on-primary)'
+                      : 'var(--v-ink)',
+                }}
+              >
+                {s.code}
+              </button>
+            ))}
+          </div>
 
           <button
             type="button"
@@ -265,7 +345,7 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
           isConsensusUnlocked
           allForecasts={sameRoundForecasts}
           initialVersion={initialVersion}
-          headerSubtitle="내 예측 · 중앙값 · 실제 종가"
+          headerSubtitle="예측 궤적 · 시장 중앙값 · 실제 20일 일봉 비교"
         />
       </section>
 
@@ -288,14 +368,18 @@ export function DetailPage({ currentDateStr, onDateChange }: DetailPageProps) {
               예측 요약 및 채점 성적표
             </span>
             <span
-              className="v-caption-mono px-2 py-0.5 rounded-[4px]"
+              className="v-caption-mono px-2 py-0.5 rounded-[4px] inline-flex items-center gap-1.5"
               style={{
                 backgroundColor: 'var(--v-canvas)',
                 boxShadow: 'var(--v-shadow-border)',
                 color: 'var(--v-ink)',
               }}
             >
-              {authorTier.krTitle} ({settledElo} LP)
+              <span
+                className="w-2 h-2 rounded-[1.5px] flex-shrink-0"
+                style={{ backgroundColor: authorTier.accentHex }}
+              />
+              {authorTier.krTitle} ({settledElo.toLocaleString('en-US')} LP)
             </span>
           </div>
 
