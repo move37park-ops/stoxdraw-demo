@@ -1,13 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Trophy,
-  ShieldCheck,
-  Share2,
-  History,
-  Play,
-  ArrowUpRight,
-} from 'lucide-react';
+import { ArrowUpRight, UserCheck } from 'lucide-react';
 import { repository } from '../../data/localRepository';
 import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
 import { deriveForecastStatus } from '../../domain/lifecycle';
@@ -19,8 +12,6 @@ import {
   formatSignedLp,
   type EloTierInfo,
 } from '../../domain/elo';
-import { formatPct } from '../../domain/format';
-import { ShareTicketModal } from '../../components/ShareTicketModal';
 import type { User, Forecast, EloTier } from '../../domain/types';
 
 interface LeaderboardPageProps {
@@ -37,64 +28,59 @@ interface RankedUser extends User {
   verifiedCount: number;
   totalCount: number;
   avgMae: string;
-  specialty: string;
   latestForecast?: Forecast;
 }
 
 const USER_META: Record<
   string,
   {
-    specialty: string;
     defaultScore: number;
     baseElo: number;
   }
 > = {
   u_quant: {
-    specialty: 'BTC/USDT 20일 변동성 정규화 경로 & 파생상품 감마 변곡점',
     defaultScore: 91.4,
     baseElo: 1890,
   },
   u_alpha: {
-    specialty: '현물 ETF 수급 사이클 & 온체인 장기보유자 물량 소화 분석',
     defaultScore: 87.8,
     baseElo: 1820,
   },
   u_satoshi: {
-    specialty: '무기한 선물 펀딩비 과열 해소 & 눌림목 반등 변곡점 포착',
     defaultScore: 83.5,
     baseElo: 1640,
   },
   u_bull: {
-    specialty: '글로벌 유동성(M2) 및 매크로 추세 추종 20일 시나리오',
     defaultScore: 79.2,
     baseElo: 1460,
   },
   u_macro: {
-    specialty: '주요 매물대 지지·저항 리테스트 및 박스권 리스크 관리',
     defaultScore: 73.6,
     baseElo: 1240,
   },
   u_rookie: {
-    specialty: '연습 위주 추세 예측',
     defaultScore: 65.0,
     baseElo: 980,
   },
 };
 
-const TIER_FILTERS: { id: 'ALL' | EloTier; label: string }[] = [
-  { id: 'ALL', label: '전체 티어' },
-  { id: 'DIAMOND', label: '다이아몬드 (1800+)' },
-  { id: 'PLATINUM', label: '플래티넘 (1600+)' },
-  { id: 'GOLD', label: '골드 (1400+)' },
-  { id: 'SILVER', label: '실버 (1200+)' },
-  { id: 'BRONZE', label: '브론즈 (1000+)' },
+const TIER_FILTERS: {
+  id: 'ALL' | EloTier;
+  label: string;
+  minLp?: string;
+  color?: string;
+}[] = [
+  { id: 'ALL', label: '전체' },
+  { id: 'DIAMOND', label: '다이아몬드', minLp: '1,800+', color: '#3291ff' },
+  { id: 'PLATINUM', label: '플래티넘', minLp: '1,600+', color: '#00e599' },
+  { id: 'GOLD', label: '골드', minLp: '1,400+', color: '#f5a623' },
+  { id: 'SILVER', label: '실버', minLp: '1,200+', color: '#a1a1aa' },
+  { id: 'BRONZE', label: '브론즈', minLp: '1,000+', color: '#71717a' },
 ];
 
 export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
   const navigate = useNavigate();
   const [tierFilter, setTierFilter] = useState<'ALL' | EloTier>('ALL');
-  const [shareModalForecast, setShareModalForecast] =
-    useState<Forecast | null>(null);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -105,12 +91,6 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
   const currentUser = getCurrentUser();
   const anonId = getOrCreateAnonId();
   const allForecasts = repository.listFeed('all', currentDateStr);
-
-  const myForecasts = useMemo(() => {
-    return currentUser
-      ? allForecasts.filter(f => f.authorId === currentUser.id)
-      : allForecasts.filter(f => f.anonId === anonId);
-  }, [allForecasts, currentUser, anonId]);
 
   const rankedUsers: RankedUser[] = useMemo(() => {
     const rawUsers = repository.listAllUsers();
@@ -123,7 +103,6 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
       );
 
       const meta = USER_META[u.id] || {
-        specialty: 'BTC/USDT 20일 시계열 예측',
         defaultScore: 72.0,
         baseElo: u.elo ?? DEFAULT_ELO,
       };
@@ -178,7 +157,6 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
         verifiedCount: resolved.length + u.completedCount,
         totalCount: forecasts.length + u.forecastsCount,
         avgMae,
-        specialty: meta.specialty,
         latestForecast: forecasts[0],
       };
     });
@@ -198,16 +176,18 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
   const userHandle = currentUser
     ? currentUser.handle
     : `guest_${cleanAnonSuffix}`;
-  const myElo = currentUser?.elo ?? DEFAULT_ELO;
+  const myRankedEntry = currentUser
+    ? rankedUsers.find(u => u.id === currentUser.id)
+    : undefined;
+  const myElo = myRankedEntry?.liveElo ?? currentUser?.elo ?? DEFAULT_ELO;
   const myTierInfo = getEloTierInfo(myElo);
-  const topThreeUsers = rankedUsers.slice(0, 3);
 
   return (
     <div className="w-full relative">
       <span className="v-crosshair -top-[5px] -left-[6px]" aria-hidden="true" />
       <span className="v-crosshair -top-[5px] -right-[6px]" aria-hidden="true" />
 
-      {/* ZONE 1: Track & Prove Masthead Band */}
+      {/* 1. Compact Header & My Tier Summary */}
       <section
         className="relative px-5 py-4 flex flex-wrap items-center justify-between gap-4"
         style={{ borderBottom: '1px solid var(--v-hairline)' }}
@@ -216,606 +196,274 @@ export function LeaderboardPage({ currentDateStr }: LeaderboardPageProps) {
         <span className="v-crosshair -bottom-[6px] -right-[6px]" aria-hidden="true" />
 
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="v-display-md" style={{ color: 'var(--v-ink)' }}>
-              리더보드
-            </h1>
-            <span
-              className="v-caption-mono text-xs font-semibold px-2 py-0.5 rounded-[4px]"
-              style={{
-                backgroundColor: 'var(--v-canvas-soft-2)',
-                color: myTierInfo.accentHex,
-              }}
-            >
-              내 티어: {myTierInfo.krTitle} · {myElo} LP
-            </span>
-          </div>
+          <h1 className="v-display-md" style={{ color: 'var(--v-ink)' }}>
+            리더보드
+          </h1>
           <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
-            20일 예측의 오차와 방향으로 매긴 순위입니다.
+            20일 예측 경로의 일별 오차율과 방향 적중률을 반영한 평판(LP) 순위입니다.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* My Standing & Quick Navigation */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div
+            className="h-8 px-3 rounded-[5px] inline-flex items-center gap-2 text-xs"
+            style={{
+              backgroundColor: 'var(--v-canvas-soft)',
+              boxShadow: 'var(--v-shadow-border)',
+            }}
+          >
+            <span
+              className="w-2 h-2 rounded-[1.5px] flex-shrink-0"
+              style={{ backgroundColor: myTierInfo.accentHex }}
+            />
+            <span style={{ color: 'var(--v-mute)' }}>내 등급</span>
+            <span className="font-semibold" style={{ color: 'var(--v-ink)' }}>
+              {myTierInfo.krTitle}
+            </span>
+            <span
+              className="v-mono font-semibold"
+              style={{ color: myTierInfo.accentHex }}
+            >
+              {myElo.toLocaleString('en-US')} LP
+            </span>
+            {myRankedEntry && (
+              <span className="v-mono" style={{ color: 'var(--v-mute)' }}>
+                (#{myRankedEntry.rank})
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate(`/u/${userHandle}`)}
+            className="v-btn-secondary h-8 px-3 text-xs"
+          >
+            <UserCheck size={12} />
+            내 기록 보기
+          </button>
+
           <button
             type="button"
             onClick={() => navigate('/studio')}
             className="v-btn-primary h-8 px-3.5 text-xs font-semibold"
           >
-            실전 모드
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/practice')}
-            className="v-btn-secondary h-8 px-3 text-xs"
-          >
-            <Play size={11} />
-            연습 모드
+            실전 예측하기
           </button>
         </div>
       </section>
 
-      {/* ZONE 2: Interactive 5-Column Tier Ladder Strip (Bronze ~ Diamond) */}
+      {/* 2. Unified Tier Filter Bar */}
       <section
-        className="relative grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[var(--v-hairline)]"
-        style={{ borderBottom: '1px solid var(--v-hairline)' }}
+        className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-3"
+        style={{
+          backgroundColor: 'var(--v-canvas-soft)',
+          borderBottom: '1px solid var(--v-hairline)',
+        }}
       >
-        <span className="v-crosshair -bottom-[6px] -left-[6px]" aria-hidden="true" />
-        <span className="v-crosshair -bottom-[6px] -right-[6px]" aria-hidden="true" />
-
-        {(
-          [
-            {
-              tier: 'BRONZE' as EloTier,
-              kr: '브론즈',
-              range: '1,000+ LP',
-              desc: '입문',
-              color: '#71717a',
-            },
-            {
-              tier: 'SILVER' as EloTier,
-              kr: '실버',
-              range: '1,200+ LP',
-              desc: '기본 등급',
-              color: '#a1a1aa',
-            },
-            {
-              tier: 'GOLD' as EloTier,
-              kr: '골드',
-              range: '1,400+ LP',
-              desc: '방향 적중',
-              color: '#f5a623',
-            },
-            {
-              tier: 'PLATINUM' as EloTier,
-              kr: '플래티넘',
-              range: '1,600+ LP',
-              desc: '상위권',
-              color: '#00e599',
-            },
-            {
-              tier: 'DIAMOND' as EloTier,
-              kr: '다이아몬드',
-              range: '1,800+ LP',
-              desc: '최상위',
-              color: '#3291ff',
-            },
-          ] as const
-        ).map(item => {
-          const isSelected = tierFilter === item.tier;
-          const isMyTier = myTierInfo.tier === item.tier;
-          return (
-            <button
-              key={item.tier}
-              type="button"
-              onClick={() =>
-                setTierFilter(prev => (prev === item.tier ? 'ALL' : item.tier))
-              }
-              className="p-4 text-left space-y-1 transition-colors"
-              style={{
-                backgroundColor: isSelected
-                  ? 'var(--v-canvas-soft-2)'
-                  : isMyTier
-                  ? 'var(--v-canvas-soft)'
-                  : 'var(--v-canvas)',
-              }}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span
-                  className="v-body-sm-strong flex items-center gap-1.5"
-                  style={{ color: 'var(--v-ink)' }}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  {item.kr}
-                </span>
-                {isMyTier ? (
-                  <span
-                    className="v-caption-mono text-xs font-bold px-1.5 py-0.5 rounded-[3px]"
-                    style={{
-                      backgroundColor: 'var(--v-canvas-soft-2)',
-                      color: item.color,
-                      boxShadow: 'var(--v-shadow-border)',
-                    }}
-                  >
-                    MY TIER
-                  </span>
-                ) : (
-                  <span
-                    className="v-caption-mono text-xs"
-                    style={{ color: item.color }}
-                  >
-                    {item.tier}
-                  </span>
-                )}
-              </div>
-              <p
-                className="v-caption-mono text-[11px]"
-                style={{ color: 'var(--v-body)' }}
-              >
-                {item.range}
-              </p>
-              <p
-                className="v-caption text-[11px]"
-                style={{ color: 'var(--v-mute)' }}
-              >
-                {item.desc}
-              </p>
-            </button>
-          );
-        })}
-      </section>
-
-      {/* ZONE 2.5: Top 3 Forecasters Podium Grid */}
-      {topThreeUsers.length > 0 && (
-        <section style={{ borderBottom: '1px solid var(--v-hairline)' }}>
-          <div
-            className="px-5 py-2.5 flex items-center justify-between"
-            style={{
-              backgroundColor: 'var(--v-canvas-soft)',
-              borderBottom: '1px solid var(--v-hairline)',
-            }}
-          >
-            <span
-              className="v-caption font-semibold"
-              style={{ color: 'var(--v-ink)' }}
-            >
-              TOP 3 명예의 전당 (실시간 LP & 정확도 상위 랭커)
-            </span>
-            <span
-              className="v-caption-mono text-xs"
-              style={{ color: 'var(--v-mute)' }}
-            >
-              20D 정량 검증 완료
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--v-hairline)]">
-            {topThreeUsers.map((u, idx) => (
-              <div
-                key={u.id}
-                className="p-5 flex flex-col justify-between space-y-3"
+        <div className="flex flex-wrap items-center gap-1.5">
+          {TIER_FILTERS.map(tf => {
+            const active = tierFilter === tf.id;
+            return (
+              <button
+                key={tf.id}
+                type="button"
+                onClick={() => setTierFilter(tf.id)}
+                className="h-7 px-2.5 rounded-[5px] inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
                 style={{
-                  backgroundColor:
-                    idx === 0 ? 'var(--v-canvas-soft)' : 'var(--v-canvas)',
+                  backgroundColor: active ? 'var(--v-primary)' : 'var(--v-canvas)',
+                  color: active ? 'var(--v-on-primary)' : 'var(--v-body)',
+                  boxShadow: active ? 'none' : 'var(--v-shadow-border)',
                 }}
               >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="v-caption-mono text-xs font-bold px-2 py-0.5 rounded-[4px]"
-                      style={{
-                        backgroundColor:
-                          idx === 0
-                            ? 'var(--v-primary)'
-                            : 'var(--v-canvas-soft-2)',
-                        color:
-                          idx === 0 ? 'var(--v-on-primary)' : 'var(--v-ink)',
-                      }}
-                    >
-                      RANK #{u.rank}
-                    </span>
-                    <span
-                      className="v-caption-mono text-xs font-bold"
-                      style={{ color: u.tierInfo.accentHex }}
-                    >
-                      {u.tierInfo.krTitle} · {u.liveElo} LP
-                    </span>
-                  </div>
-
-                  <div className="flex items-baseline justify-between">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/u/${u.handle}`)}
-                      className="v-body-sm-strong hover:underline text-left"
-                      style={{ color: 'var(--v-ink)' }}
-                    >
-                      @{u.handle}
-                    </button>
-                    <span
-                      className="v-mono text-sm font-bold"
-                      style={{ color: 'var(--v-bull)' }}
-                    >
-                      평균 {u.score}점 (적중 {u.accuracy})
-                    </span>
-                  </div>
-
-                  {/* Score Gauge */}
-                  <div
-                    className="w-full h-1.5 rounded-full overflow-hidden"
-                    style={{ backgroundColor: 'var(--v-canvas-soft-2)' }}
-                  >
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.min(100, u.score)}%`,
-                        backgroundColor: u.tierInfo.accentHex,
-                      }}
-                    />
-                  </div>
-
-                  <p
-                    className="v-caption text-[11px] line-clamp-1"
-                    style={{ color: 'var(--v-mute)' }}
-                  >
-                    {u.specialty}
-                  </p>
-                </div>
-
-                <div className="pt-2.5 flex items-center justify-between border-t border-[var(--v-hairline-subtle)]">
+                {tf.color && (
                   <span
-                    className="v-caption-mono text-xs"
-                    style={{ color: 'var(--v-mute)' }}
+                    className="w-2 h-2 rounded-[1.5px] flex-shrink-0"
+                    style={{ backgroundColor: tf.color }}
+                  />
+                )}
+                <span>{tf.label}</span>
+                {tf.minLp && (
+                  <span
+                    className="v-mono text-[11px]"
+                    style={{
+                      color: active ? 'var(--v-on-primary)' : 'var(--v-mute)',
+                      opacity: active ? 0.8 : 1,
+                    }}
                   >
-                    오차율 ±{u.avgMae} · 검증 {u.verifiedCount}회
+                    {tf.minLp}
                   </span>
-                  {u.latestForecast ? (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/f/${u.latestForecast!.id}`)}
-                      className="v-btn-secondary h-6 px-2.5 text-[11px]"
-                    >
-                      상세 보기 <ArrowUpRight size={11} />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/u/${u.handle}`)}
-                      className="v-btn-secondary h-6 px-2.5 text-[11px]"
-                    >
-                      프로필
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ZONE 3: My Verifiable Record & Version Ledger */}
-      <section style={{ borderBottom: '1px solid var(--v-hairline)' }}>
-        <div
-          className="px-5 py-3 flex flex-wrap items-center justify-between gap-2"
-          style={{
-            backgroundColor: 'var(--v-canvas-soft)',
-            borderBottom: '1px solid var(--v-hairline)',
-          }}
-        >
-          <h2
-            className="v-body-sm-strong flex items-center gap-2"
-            style={{ color: 'var(--v-ink)' }}
-          >
-            <History size={13} />
-            내 예측 기록 (@{userHandle})
-          </h2>
-          <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
-            최초본(v1) 및 수정본(v2+) 보존
-          </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {myForecasts.length === 0 ? (
-          <div className="p-6 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="v-body-sm-strong" style={{ color: 'var(--v-ink)' }}>
-                아직 기록이 없습니다.
-              </p>
-              <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                첫 예측을 제출해 보세요.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/studio')}
-              className="v-btn-primary h-8 px-4 text-xs"
-            >
-              예측하기
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--v-hairline)]">
-            {myForecasts.map(fc => {
-              const path = fc.path || [];
-              const endP =
-                path.length > 0 ? path[path.length - 1].price : fc.basePrice;
-              const pct =
-                fc.basePrice > 0
-                  ? ((endP - fc.basePrice) / fc.basePrice) * 100
-                  : 0;
-              const verCount = fc.versions?.length ?? 1;
-
-              return (
-                <div
-                  key={fc.id}
-                  className="p-5 flex flex-col justify-between space-y-3"
-                >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="v-caption-mono font-semibold"
-                        style={{ color: 'var(--v-link)' }}
-                      >
-                        {fc.ticker} · 20일 예측 · 버전 v{verCount} 보존
-                      </span>
-                      <span
-                        className="v-mono text-sm font-bold"
-                        style={{
-                          color: pct >= 0 ? 'var(--v-bull)' : 'var(--v-bear)',
-                        }}
-                      >
-                        목표 ${Math.round(endP).toLocaleString('en-US')} (
-                        {formatPct(pct)})
-                      </span>
-                    </div>
-                    <p className="v-caption" style={{ color: 'var(--v-body)' }}>
-                      {fc.comment}
-                    </p>
-                  </div>
-
-                  <div className="pt-3 flex items-center justify-between gap-2 border-t border-[var(--v-hairline-subtle)]">
-                    <span
-                      className="v-caption-mono text-xs"
-                      style={{ color: 'var(--v-mute)' }}
-                    >
-                      기준일 {fc.baseDate} (${fc.basePrice.toLocaleString('en-US')})
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setShareModalForecast(fc)}
-                        className="v-btn-secondary h-7 px-2.5 text-xs"
-                      >
-                        <Share2 size={11} />
-                        공유 카드 이미지
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/f/${fc.id}`)}
-                        className="v-btn-secondary h-7 px-2.5 text-xs"
-                      >
-                        <ShieldCheck size={11} />
-                        상세
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <span className="v-caption-mono text-xs" style={{ color: 'var(--v-mute)' }}>
+          검증 참여자 {filteredUsers.length}명
+        </span>
       </section>
 
-      {/* ZONE 4: Official Forecaster Leaderboard Audit Table */}
+      {/* 3. Single Clean Ranking Table */}
       <section>
-        <div
-          className="px-5 py-3 flex flex-wrap items-center justify-between gap-3"
-          style={{
-            backgroundColor: 'var(--v-canvas-soft)',
-            borderBottom: '1px solid var(--v-hairline)',
-          }}
-        >
-          <h2
-            className="v-body-sm-strong flex items-center gap-2"
-            style={{ color: 'var(--v-ink)' }}
-          >
-            <Trophy size={14} style={{ color: 'var(--v-warning)' }} />
-            BTC/USDT 20일 공식 검증 리더보드
-          </h2>
-
-          <div className="flex flex-wrap items-center gap-1">
-            {TIER_FILTERS.map(tf => {
-              const active = tierFilter === tf.id;
-              return (
-                <button
-                  key={tf.id}
-                  type="button"
-                  onClick={() => setTierFilter(tf.id)}
-                  className="px-2.5 py-1 rounded-[5px] text-xs font-medium transition-colors"
-                  style={{
-                    backgroundColor: active
-                      ? 'var(--v-primary)'
-                      : 'var(--v-canvas)',
-                    color: active ? 'var(--v-on-primary)' : 'var(--v-mute)',
-                    boxShadow: active ? 'none' : 'var(--v-shadow-border)',
-                  }}
-                >
-                  {tf.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         <div className="overflow-x-auto">
           <table className="v-audit-table">
             <thead>
               <tr>
-                <th>순위</th>
-                <th>포캐스터</th>
-                <th>티어 등급 (브론즈~다이아몬드)</th>
-                <th>주요 변곡점 분석 스타일</th>
+                <th className="w-16">순위</th>
+                <th>예측자</th>
+                <th>티어</th>
                 <th className="v-numeric">평판 LP</th>
-                <th className="v-numeric">20D 채점 평균</th>
+                <th className="v-numeric">20일 평균 점수</th>
                 <th className="v-numeric">방향 적중률</th>
                 <th className="v-numeric">평균 오차율</th>
-                <th className="v-numeric">기록</th>
+                <th className="v-numeric">검증 횟수</th>
+                <th className="v-numeric">최근 예측</th>
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map(u => (
-                <tr key={u.id}>
-                  <td className="v-mono font-bold">#{u.rank}</td>
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/u/${u.handle}`)}
-                      className="text-left group"
-                    >
-                      <p
-                        className="v-body-sm-strong group-hover:underline"
-                        style={{ color: 'var(--v-ink)' }}
-                      >
-                        @{u.handle}
-                      </p>
-                      <p
-                        className="v-caption text-[11px]"
-                        style={{ color: 'var(--v-mute)' }}
-                      >
-                        {u.name}
-                      </p>
-                    </button>
-                  </td>
-                  <td>
-                    <span
-                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] v-caption-mono font-semibold"
-                      style={{
-                        backgroundColor: 'var(--v-canvas-soft)',
-                        boxShadow: 'var(--v-shadow-border)',
-                        color: 'var(--v-ink)',
-                      }}
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: u.tierInfo.accentHex }}
-                      />
-                      {u.tierInfo.krTitle} ({u.tierInfo.tier})
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className="v-caption"
-                      style={{ color: 'var(--v-body)' }}
-                    >
-                      {u.specialty}
-                    </span>
-                  </td>
-                  <td className="v-numeric font-semibold">
-                    <span>{u.liveElo} LP</span>
-                    {u.netLpDelta !== 0 && (
-                      <span
-                        className="ml-1.5 text-xs"
-                        style={{
-                          color:
-                            u.netLpDelta >= 0
-                              ? 'var(--v-bull)'
-                              : 'var(--v-bear)',
-                        }}
-                      >
-                        ({formatSignedLp(u.netLpDelta)})
-                      </span>
-                    )}
-                  </td>
-                  <td className="v-numeric">
-                    <div className="inline-flex flex-col items-end gap-1">
-                      <span
-                        className="font-bold"
-                        style={{ color: 'var(--v-link)' }}
-                      >
-                        {u.score}점
-                      </span>
-                      <span
-                        className="w-16 h-1.5 rounded-full overflow-hidden block"
-                        style={{ backgroundColor: 'var(--v-canvas-soft-2)' }}
-                      >
-                        <span
-                          className="h-full block rounded-full"
-                          style={{
-                            width: `${Math.min(100, u.score)}%`,
-                            backgroundColor: u.tierInfo.accentHex,
-                          }}
-                        />
-                      </span>
-                    </div>
-                  </td>
+              {filteredUsers.length === 0 ? (
+                <tr>
                   <td
-                    className="v-numeric font-semibold"
-                    style={{ color: 'var(--v-bull)' }}
+                    colSpan={9}
+                    className="py-12 text-center v-caption"
+                    style={{ color: 'var(--v-mute)' }}
                   >
-                    {u.accuracy}
-                  </td>
-                  <td className="v-numeric" style={{ color: 'var(--v-mute)' }}>
-                    ±{u.avgMae}
-                  </td>
-                  <td className="v-numeric">
-                    {u.latestForecast ? (
-                      <div className="inline-flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShareModalForecast(u.latestForecast!)
-                          }
-                          className="v-btn-secondary h-6 px-2 text-[11px]"
-                          title="공유 카드 보기"
-                        >
-                          <Share2 size={11} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/f/${u.latestForecast!.id}`)}
-                          className="v-btn-secondary h-6 px-2 text-[11px]"
-                        >
-                          상세 <ArrowUpRight size={11} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/u/${u.handle}`)}
-                        className="v-btn-secondary h-6 px-2 text-[11px]"
-                      >
-                        프로필
-                      </button>
-                    )}
+                    해당 티어에 속한 예측자가 없습니다.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredUsers.map(u => {
+                  const isMe = currentUser?.id === u.id;
+                  return (
+                    <tr
+                      key={u.id}
+                      style={{
+                        backgroundColor: isMe
+                          ? 'var(--v-canvas-soft)'
+                          : undefined,
+                      }}
+                    >
+                      <td className="v-mono font-bold">
+                        <span
+                          style={{
+                            color:
+                              u.rank <= 3 ? 'var(--v-ink)' : 'var(--v-mute)',
+                          }}
+                        >
+                          {u.rank}
+                        </span>
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/u/${u.handle}`)}
+                          className="text-left group inline-flex items-baseline gap-2"
+                        >
+                          <span
+                            className="v-body-sm-strong group-hover:underline"
+                            style={{ color: 'var(--v-ink)' }}
+                          >
+                            @{u.handle}
+                          </span>
+                          <span
+                            className="v-caption text-xs"
+                            style={{ color: 'var(--v-mute)' }}
+                          >
+                            {u.name}
+                          </span>
+                        </button>
+                      </td>
+
+                      <td>
+                        <span className="inline-flex items-center gap-1.5 v-caption font-semibold">
+                          <span
+                            className="w-2 h-2 rounded-[1.5px] flex-shrink-0"
+                            style={{ backgroundColor: u.tierInfo.accentHex }}
+                          />
+                          <span style={{ color: 'var(--v-ink)' }}>
+                            {u.tierInfo.krTitle}
+                          </span>
+                        </span>
+                      </td>
+
+                      <td className="v-numeric font-semibold">
+                        <span style={{ color: 'var(--v-ink)' }}>
+                          {u.liveElo.toLocaleString('en-US')} LP
+                        </span>
+                        {u.netLpDelta !== 0 && (
+                          <span
+                            className="ml-1.5 text-xs"
+                            style={{
+                              color:
+                                u.netLpDelta >= 0
+                                  ? 'var(--v-bull)'
+                                  : 'var(--v-bear)',
+                            }}
+                          >
+                            ({formatSignedLp(u.netLpDelta)})
+                          </span>
+                        )}
+                      </td>
+
+                      <td
+                        className="v-numeric font-semibold"
+                        style={{ color: 'var(--v-ink)' }}
+                      >
+                        {u.score.toFixed(1)}점
+                      </td>
+
+                      <td
+                        className="v-numeric font-semibold"
+                        style={{ color: 'var(--v-bull)' }}
+                      >
+                        {u.accuracy}
+                      </td>
+
+                      <td
+                        className="v-numeric"
+                        style={{ color: 'var(--v-mute)' }}
+                      >
+                        ±{u.avgMae}
+                      </td>
+
+                      <td
+                        className="v-numeric"
+                        style={{ color: 'var(--v-body)' }}
+                      >
+                        {u.verifiedCount}회
+                      </td>
+
+                      <td className="v-numeric">
+                        {u.latestForecast ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(`/f/${u.latestForecast!.id}`)
+                            }
+                            className="v-btn-secondary h-6 px-2.5 text-[11px]"
+                          >
+                            궤적 보기 <ArrowUpRight size={11} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/u/${u.handle}`)}
+                            className="v-btn-secondary h-6 px-2.5 text-[11px]"
+                          >
+                            기록 보기
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </section>
-
-      {shareModalForecast && (
-        <ShareTicketModal
-          isOpen={Boolean(shareModalForecast)}
-          onClose={() => setShareModalForecast(null)}
-          forecast={shareModalForecast}
-          authorHandle={
-            shareModalForecast.authorId
-              ? repository.getUser(shareModalForecast.authorId)?.handle ||
-                userHandle
-              : userHandle
-          }
-          authorElo={
-            shareModalForecast.authorId
-              ? repository.getUser(shareModalForecast.authorId)?.elo ??
-                DEFAULT_ELO
-              : DEFAULT_ELO
-          }
-        />
-      )}
     </div>
   );
 }
-
-export default LeaderboardPage;

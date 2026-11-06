@@ -261,14 +261,14 @@ export function LandingPage({ currentDateStr }: LandingPageProps) {
 
         {/* Main Headline */}
         <h1
-          className="text-3xl sm:text-5xl font-bold tracking-tight leading-[1.16] text-center"
+          className="text-3xl sm:text-5xl font-bold tracking-tight leading-[1.16] text-center break-keep"
           style={{ color: 'var(--v-ink)' }}
         >
           20일 뒤 비트코인, 시장은 어디를 보고 있을까요?
         </h1>
 
         <p
-          className="text-base sm:text-lg mt-4 max-w-2xl text-center leading-relaxed"
+          className="text-base sm:text-lg mt-4 max-w-3xl text-center leading-relaxed break-keep"
           style={{ color: 'var(--v-body)' }}
         >
           시장 참여자들의 20일 전망 궤적을 확인하고, 내 시나리오를 그려 정량 채점받으세요.
@@ -934,7 +934,7 @@ export function LandingPage({ currentDateStr }: LandingPageProps) {
             <div key={t.label} className="p-8 sm:p-10 flex flex-col justify-between min-h-[210px] sm:min-h-[240px]">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.dotColor }} />
+                  <span className="w-2.5 h-2.5 rounded-[1.5px]" style={{ backgroundColor: t.dotColor }} />
                   <span className="text-lg sm:text-xl font-bold" style={{ color: 'var(--v-ink)' }}>
                     {t.label}
                   </span>
@@ -964,10 +964,10 @@ export function LandingPage({ currentDateStr }: LandingPageProps) {
           5. CLOSING CTA: SPACIOUS BOTTOM SECTION
           ===================================================================== */}
       <section className="px-6 sm:px-12 py-20 sm:py-28 flex flex-col items-center text-center">
-        <h2 className="text-2xl sm:text-4xl font-bold tracking-tight" style={{ color: 'var(--v-ink)' }}>
+        <h2 className="text-2xl sm:text-4xl font-bold tracking-tight break-keep" style={{ color: 'var(--v-ink)' }}>
           지금 바로 20일 시나리오를 그려보세요
         </h2>
-        <p className="text-base sm:text-lg mt-3 max-w-xl leading-relaxed" style={{ color: 'var(--v-body)' }}>
+        <p className="text-base sm:text-lg mt-3 max-w-3xl leading-relaxed break-keep" style={{ color: 'var(--v-body)' }}>
           연습 모드에서 감을 잡거나, 실전 라운드에 참여해 시장의 집단지성을 확인할 수 있습니다.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5 w-full max-w-md">

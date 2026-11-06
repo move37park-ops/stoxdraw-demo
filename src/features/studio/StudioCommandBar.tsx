@@ -447,7 +447,7 @@ export function StudioCommandBar({
                 title={`${tierInfo.krTitle} · ${liveElo} LP (승급 진행률 ${tierInfo.progressPct}%)`}
               >
                 <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  className="w-2 h-2 rounded-[1.5px] flex-shrink-0"
                   style={{ backgroundColor: tierInfo.accentHex }}
                 />
                 <span className="v-caption-mono font-semibold">

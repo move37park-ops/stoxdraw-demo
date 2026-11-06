@@ -88,6 +88,7 @@
   font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
   min-height: 100vh;
   letter-spacing: -0.015em;
+  word-break: keep-all;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -182,7 +183,7 @@
   padding: 0 16px;
   border-radius: 6px;
   cursor: pointer;
-  user-select: none;
+  white-space: nowrap; flex-shrink: 0; user-select: none;
   transition: opacity 0.12s ease, transform 0.08s ease, filter 0.12s ease;
 }
 
@@ -211,7 +212,7 @@
   padding: 0 12px;
   border-radius: 6px;
   cursor: pointer;
-  user-select: none;
+  white-space: nowrap; flex-shrink: 0; user-select: none;
   transition: background-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, transform 0.08s ease;
 }
 

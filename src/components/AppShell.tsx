@@ -20,7 +20,7 @@ interface AppShellProps {
 export function AppShell({
   currentDateStr,
   onDateChange,
-  theme = 'dark',
+  theme = 'light',
   onToggleTheme = () => {},
 }: AppShellProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(() =>

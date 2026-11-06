@@ -8,6 +8,7 @@ import {
   History,
   Layers,
   ShieldCheck,
+  ArrowUpRight,
 } from 'lucide-react';
 import './vercel-geist.css';
 import { StudioCommandBar } from './StudioCommandBar';
@@ -68,7 +69,7 @@ export function TrajectoryStudioPage({
 }: TrajectoryStudioPageProps) {
   const navigate = useNavigate();
 
-  const [localTheme, setLocalTheme] = useState<'dark' | 'light'>('dark');
+  const [localTheme, setLocalTheme] = useState<'dark' | 'light'>('light');
   const theme = propTheme ?? localTheme;
   const handleToggleTheme =
     propToggleTheme ??
@@ -111,15 +112,22 @@ export function TrajectoryStudioPage({
       setAnimatedFutureCount(0);
       return;
     }
-    setAnimatedFutureCount(prev => (prev >= targetFutureBars.length ? 1 : Math.max(1, prev)));
+    setAnimatedFutureCount(prev =>
+      prev >= targetFutureBars.length ? 1 : Math.max(1, prev)
+    );
   }, [currentDateStr, targetFutureBars.length]);
 
   useEffect(() => {
-    if (animatedFutureCount === 0 || animatedFutureCount >= targetFutureBars.length) {
+    if (
+      animatedFutureCount === 0 ||
+      animatedFutureCount >= targetFutureBars.length
+    ) {
       return;
     }
     const timer = window.setTimeout(() => {
-      setAnimatedFutureCount(prev => Math.min(targetFutureBars.length, prev + 1));
+      setAnimatedFutureCount(prev =>
+        Math.min(targetFutureBars.length, prev + 1)
+      );
     }, 55);
     return () => window.clearTimeout(timer);
   }, [animatedFutureCount, targetFutureBars.length]);
@@ -141,6 +149,7 @@ export function TrajectoryStudioPage({
       setAllForecasts(repository.listFeed('all', currentDateStr));
       setCurrentUser(getCurrentUser());
     };
+    refresh();
     const unsubRepo = repository.subscribe(refresh);
     const unsubSession = subscribeSession(refresh);
     return () => {
@@ -333,9 +342,7 @@ export function TrajectoryStudioPage({
         }
       );
       const verCount = updated?.versions?.length ?? 2;
-      setJustSubmittedBanner(
-        `v${verCount} 저장됨`
-      );
+      setJustSubmittedBanner(`v${verCount} 저장됨`);
       return updated;
     }
   };
@@ -421,10 +428,6 @@ export function TrajectoryStudioPage({
             style={{ borderRight: '1px solid var(--v-hairline)' }}
           >
             <div className="flex flex-wrap items-center gap-3">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: 'var(--v-primary)' }}
-              />
               <h1 className="v-display-md" style={{ color: 'var(--v-ink)' }}>
                 BTC/USDT
               </h1>
@@ -453,7 +456,7 @@ export function TrajectoryStudioPage({
           <div className="lg:col-span-4 px-5 py-3.5 flex items-center justify-between gap-3 bg-[var(--v-canvas-soft)]">
             <div className="flex items-center gap-2 min-w-0">
               <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
+                className="w-2 h-2 rounded-[1.5px] flex-shrink-0"
                 style={{ backgroundColor: tierInfo.accentHex }}
               />
               <span
@@ -895,17 +898,17 @@ export function TrajectoryStudioPage({
           </div>
         </section>
 
-        {/* ZONE 3: Crowd Consensus & Peer Scenarios */}
+        {/* ZONE 3: Streamlined Crowd Consensus & Participant Table */}
         <section>
-          {/* Section Header Bar */}
+          {/* Header & Inline Consensus Summary Bar */}
           <div
-            className="px-5 py-3.5 flex flex-wrap items-center justify-between gap-4"
+            className="px-5 py-3 flex flex-wrap items-center justify-between gap-4"
             style={{
               backgroundColor: 'var(--v-canvas-soft)',
               borderBottom: '1px solid var(--v-hairline)',
             }}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <h2
                 className="v-body-sm-strong"
                 style={{ color: 'var(--v-ink)' }}
@@ -914,310 +917,247 @@ export function TrajectoryStudioPage({
               </h2>
               <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
                 {isConsensusUnlocked
-                  ? `${liveForecasts.length}명 참여 중`
-                  : '내 예측을 먼저 제출하면 공개됩니다'}
+                  ? `참여자 ${liveForecasts.length}명`
+                  : '제출 후 공개'}
               </span>
             </div>
+
+            {isConsensusUnlocked && (
+              <div className="flex flex-wrap items-center gap-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span style={{ color: 'var(--v-mute)' }}>대중 중앙값</span>
+                  <span
+                    className="v-mono font-semibold"
+                    style={{ color: 'var(--v-ink)' }}
+                  >
+                    ${Math.round(crowdFinalMedian).toLocaleString('en-US')}
+                  </span>
+                  <span
+                    className="v-mono font-semibold"
+                    style={{
+                      color:
+                        crowdFinalPct >= 0 ? 'var(--v-bull)' : 'var(--v-bear)',
+                    }}
+                  >
+                    ({formatPct(crowdFinalPct)})
+                  </span>
+                </div>
+
+                <span style={{ color: 'var(--v-hairline-strong)' }}>|</span>
+
+                <div className="flex items-center gap-1.5">
+                  <span style={{ color: 'var(--v-mute)' }}>
+                    상위 랭커 중앙값
+                  </span>
+                  <span
+                    className="v-mono font-semibold"
+                    style={{ color: 'var(--v-bull)' }}
+                  >
+                    ${Math.round(topFinalMedian).toLocaleString('en-US')} (
+                    {formatPct(topFinalPct)})
+                  </span>
+                </div>
+
+                <span style={{ color: 'var(--v-hairline-strong)' }}>|</span>
+
+                <div className="flex items-center gap-1.5">
+                  <span style={{ color: 'var(--v-mute)' }}>중앙값 대비 내 괴리</span>
+                  <span
+                    className="v-mono font-semibold"
+                    style={{
+                      color:
+                        finalChangePct - crowdFinalPct >= 0
+                          ? 'var(--v-bull)'
+                          : 'var(--v-bear)',
+                    }}
+                  >
+                    {formatPct(finalChangePct - crowdFinalPct)}p
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {!isConsensusUnlocked ? (
-            /* Lean Single Locked State Panel */
             <div
-              className="p-12 text-center space-y-3"
+              className="px-5 py-8 flex flex-wrap items-center justify-between gap-4"
               style={{ borderBottom: '1px solid var(--v-hairline)' }}
             >
-              <div
-                className="w-9 h-9 rounded-full mx-auto flex items-center justify-center"
-                style={{
-                  backgroundColor: 'var(--v-canvas-soft-2)',
-                  color: 'var(--v-mute)',
-                }}
-              >
-                <Lock size={15} />
-              </div>
-              <div className="max-w-md mx-auto space-y-1">
-                <p
-                  className="v-body-sm-strong"
-                  style={{ color: 'var(--v-ink)' }}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-8 h-8 rounded-[4px] flex items-center justify-center flex-shrink-0"
+                  style={{
+                    backgroundColor: 'var(--v-canvas-soft-2)',
+                    color: 'var(--v-mute)',
+                    boxShadow: 'var(--v-shadow-border)',
+                  }}
                 >
-                  제출 전 블라인드 상태
-                </p>
-                <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
-                  편향 없는 예측을 위해 내 궤적을 먼저 제출하면 시장 중앙값과 상위 랭커의 예측이 열립니다.
-                </p>
+                  <Lock size={14} />
+                </div>
+                <div>
+                  <p
+                    className="v-body-sm-strong"
+                    style={{ color: 'var(--v-ink)' }}
+                  >
+                    제출 전 블라인드 상태
+                  </p>
+                  <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
+                    편향 없는 예측을 위해 우측 패널에서 내 20일 궤적을 먼저 제출하면 시장 중앙값과 참여자별 예측 목록이 열립니다.
+                  </p>
+                </div>
               </div>
             </div>
           ) : (
-            /* Unlocked Flush 3-Column Metrics + Forecaster Grid */
-            <div>
-              <div
-                className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--v-hairline)]"
-                style={{ borderBottom: '1px solid var(--v-hairline)' }}
-              >
-                <div className="p-4 sm:p-5 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="v-caption"
-                      style={{ color: 'var(--v-mute)' }}
-                    >
-                      내 예측
-                    </span>
-                    <span
-                      className="v-caption-mono text-xs font-semibold px-1.5 py-0.5 rounded-[3px]"
-                      style={{
-                        backgroundColor: 'var(--v-canvas-soft-2)',
-                        color:
-                          finalChangePct - crowdFinalPct >= 0
-                            ? 'var(--v-bull)'
-                            : 'var(--v-bear)',
-                      }}
-                    >
-                      중앙값 대비 {formatPct(finalChangePct - crowdFinalPct)}p
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <span
-                      className="v-mono text-xl font-bold"
-                      style={{ color: 'var(--v-ink)' }}
-                    >
-                      ${Math.round(finalTargetPrice).toLocaleString('en-US')}
-                    </span>
-                    <span
-                      className="v-mono text-sm font-semibold"
-                      style={{
-                        color:
-                          finalChangePct >= 0
-                            ? 'var(--v-bull)'
-                            : 'var(--v-bear)',
-                      }}
-                    >
-                      {formatPct(finalChangePct)}
-                    </span>
-                  </div>
-                  <p
-                    className="v-caption text-[11px]"
-                    style={{ color: 'var(--v-mute)' }}
-                  >
-                    {eloProjection.difficultyLabel} · 적중 시 +{eloProjection.expectedWinLp} LP
-                  </p>
-                </div>
+            <div className="overflow-x-auto">
+              <table className="v-audit-table">
+                <thead>
+                  <tr>
+                    <th className="w-40 whitespace-nowrap">참여자</th>
+                    <th className="w-36 whitespace-nowrap">티어 · LP</th>
+                    <th className="v-numeric w-40 whitespace-nowrap">20일 목표가</th>
+                    <th>예측 근거</th>
+                    <th className="v-numeric w-52 whitespace-nowrap">차트 비교 · 상세</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {liveForecasts.map(fc => {
+                    const author = fc.authorId
+                      ? repository.getUser(fc.authorId)
+                      : null;
+                    const handle = author
+                      ? author.handle
+                      : `guest_${fc.anonId.slice(-4)}`;
+                    const elo = author?.elo ?? DEFAULT_ELO;
+                    const tier = getEloTierInfo(elo);
+                    const path = fc.path || [];
+                    const endP =
+                      path.length > 0
+                        ? path[path.length - 1].price
+                        : fc.basePrice;
+                    const pct =
+                      fc.basePrice > 0
+                        ? ((endP - fc.basePrice) / fc.basePrice) * 100
+                        : 0;
+                    const isOverlaid = overlaidRivals.some(
+                      r => r.forecast.id === fc.id
+                    );
+                    const isMyRow = myCurrentRoundForecast?.id === fc.id;
 
-                <div className="p-4 sm:p-5 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="v-caption"
-                      style={{ color: 'var(--v-mute)' }}
-                    >
-                      시장 중앙값
-                    </span>
-                    <span
-                      className="v-caption-mono text-xs"
-                      style={{ color: 'var(--v-mute)' }}
-                    >
-                      {crowdAggregate.participantsCount}명 참여
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <span
-                      className="v-mono text-xl font-bold"
-                      style={{ color: 'var(--v-ink)' }}
-                    >
-                      ${Math.round(crowdFinalMedian).toLocaleString('en-US')}
-                    </span>
-                    <span
-                      className="v-mono text-sm font-semibold"
-                      style={{
-                        color:
-                          crowdFinalPct >= 0
-                            ? 'var(--v-bull)'
-                            : 'var(--v-bear)',
-                      }}
-                    >
-                      {formatPct(crowdFinalPct)}
-                    </span>
-                  </div>
-                  <p
-                    className="v-caption text-[11px]"
-                    style={{ color: 'var(--v-mute)' }}
-                  >
-                    상위 25~75% 분위 밴드 차트 표시
-                  </p>
-                </div>
-
-                <div className="p-4 sm:p-5 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="v-caption"
-                      style={{ color: 'var(--v-mute)' }}
-                    >
-                      상위 랭커 중앙값
-                    </span>
-                    <span
-                      className="v-caption-mono text-xs font-semibold"
-                      style={{ color: 'var(--v-bull)' }}
-                    >
-                      다이아·플래티넘
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <span
-                      className="v-mono text-xl font-bold"
-                      style={{ color: 'var(--v-bull)' }}
-                    >
-                      ${Math.round(topFinalMedian).toLocaleString('en-US')}
-                    </span>
-                    <span
-                      className="v-mono text-sm font-semibold"
-                      style={{
-                        color:
-                          topFinalPct >= 0 ? 'var(--v-bull)' : 'var(--v-bear)',
-                      }}
-                    >
-                      {formatPct(topFinalPct)}
-                    </span>
-                  </div>
-                  <p
-                    className="v-caption text-[11px]"
-                    style={{ color: 'var(--v-mute)' }}
-                  >
-                    아래 카드를 눌러 차트에 궤적 겹쳐보기 가능
-                  </p>
-                </div>
-              </div>
-
-              {/* Flush Forecaster Matrix (1px hairline grid) */}
-              <div
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px"
-                style={{
-                  backgroundColor: 'var(--v-hairline)',
-                  borderBottom: '1px solid var(--v-hairline)',
-                }}
-              >
-                {liveForecasts.map((fc, idx) => {
-                  const author = fc.authorId
-                    ? repository.getUser(fc.authorId)
-                    : null;
-                  const handle = author
-                    ? author.handle
-                    : `guest_${fc.anonId.slice(-4)}`;
-                  const elo = author?.elo ?? DEFAULT_ELO;
-                  const tier = getEloTierInfo(elo);
-                  const path = fc.path || [];
-                  const endP =
-                    path.length > 0
-                      ? path[path.length - 1].price
-                      : fc.basePrice;
-                  const pct =
-                    fc.basePrice > 0
-                      ? ((endP - fc.basePrice) / fc.basePrice) * 100
-                      : 0;
-                  const isOverlaid = overlaidRivals.some(
-                    r => r.forecast.id === fc.id
-                  );
-                  const verCount = fc.versions?.length ?? 1;
-
-                  return (
-                    <div
-                      key={fc.id}
-                      className="p-4 sm:p-5 flex flex-col justify-between space-y-3 transition-colors"
-                      style={{
-                        backgroundColor: isOverlaid
-                          ? 'var(--v-canvas-soft)'
-                          : 'var(--v-canvas)',
-                      }}
-                    >
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
+                    return (
+                      <tr
+                        key={fc.id}
+                        style={{
+                          backgroundColor: isOverlaid
+                            ? 'var(--v-canvas-soft)'
+                            : undefined,
+                        }}
+                      >
+                        <td className="whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/u/${handle}`)}
+                            className="text-left group inline-flex items-center gap-1.5"
+                          >
                             <span
-                              className="v-caption-mono text-xs font-bold px-1.5 py-0.5 rounded-[3px] flex-shrink-0"
-                              style={{
-                                backgroundColor: 'var(--v-canvas-soft-2)',
-                                color:
-                                  idx < 3 ? 'var(--v-ink)' : 'var(--v-mute)',
-                              }}
-                            >
-                              #{idx + 1}
-                            </span>
-                            <span
-                              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: tier.accentHex }}
-                            />
-                            <span
-                              className="v-body-sm-strong truncate"
+                              className="v-body-sm-strong group-hover:underline"
                               style={{ color: 'var(--v-ink)' }}
                             >
                               @{handle}
                             </span>
+                            {isMyRow && (
+                              <span
+                                className="v-caption-mono text-[10px] px-1.5 py-0.5 rounded-[3px]"
+                                style={{
+                                  backgroundColor: 'var(--v-canvas-soft-2)',
+                                  color: 'var(--v-mute)',
+                                }}
+                              >
+                                나
+                              </span>
+                            )}
+                          </button>
+                        </td>
+
+                        <td className="whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5 v-caption">
                             <span
-                              className="v-caption-mono text-[11px] px-1.5 py-0.5 rounded-[3px] flex-shrink-0"
-                              style={{
-                                backgroundColor: 'var(--v-canvas-soft)',
-                                color: tier.accentHex,
-                              }}
+                              className="w-2 h-2 rounded-[1.5px] flex-shrink-0"
+                              style={{ backgroundColor: tier.accentHex }}
+                            />
+                            <span
+                              className="font-semibold"
+                              style={{ color: 'var(--v-ink)' }}
                             >
                               {tier.krTitle}
                             </span>
-                          </div>
+                            <span
+                              className="v-mono text-xs"
+                              style={{ color: 'var(--v-mute)' }}
+                            >
+                              {elo}
+                            </span>
+                          </span>
+                        </td>
 
+                        <td className="v-numeric font-semibold whitespace-nowrap">
+                          <span style={{ color: 'var(--v-ink)' }}>
+                            ${Math.round(endP).toLocaleString('en-US')}
+                          </span>
                           <span
-                            className="v-mono text-xs font-semibold flex-shrink-0"
+                            className="ml-1.5 text-xs"
                             style={{
                               color:
                                 pct >= 0 ? 'var(--v-bull)' : 'var(--v-bear)',
                             }}
                           >
-                            {formatPct(pct)}
+                            ({formatPct(pct)})
                           </span>
-                        </div>
+                        </td>
 
-                        <p
-                          className="v-caption line-clamp-1"
-                          style={{ color: 'var(--v-body)' }}
-                        >
-                          {fc.comment || '20일 변곡점 시계열 예측'}
-                        </p>
-                      </div>
-
-                      <div className="pt-2.5 flex items-center justify-between gap-2 border-t border-[var(--v-hairline-subtle)]">
-                        <span
-                          className="v-caption-mono text-xs"
-                          style={{ color: 'var(--v-mute)' }}
-                        >
-                          목표 ${Math.round(endP).toLocaleString('en-US')} · {elo} LP (v{verCount})
-                        </span>
-
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleToggleOverlayRival(fc, handle, elo)
-                            }
-                            className="v-btn-secondary h-6 px-2.5 text-[11px] font-medium"
-                            style={{
-                              backgroundColor: isOverlaid
-                                ? 'var(--v-primary)'
-                                : 'var(--v-canvas)',
-                              color: isOverlaid
-                                ? 'var(--v-on-primary)'
-                                : 'var(--v-ink)',
-                            }}
+                        <td>
+                          <span
+                            className="v-caption line-clamp-1"
+                            style={{ color: 'var(--v-body)' }}
                           >
-                            {isOverlaid ? '비교 해제' : 'VS 차트 대결'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/f/${fc.id}`)}
-                            className="v-btn-secondary h-6 px-2 text-[11px]"
-                          >
-                            상세
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                            {fc.comment || '20일 변곡점 시계열 예측'}
+                          </span>
+                        </td>
+
+                        <td className="v-numeric whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+                            {!isMyRow && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleToggleOverlayRival(fc, handle, elo)
+                                }
+                                className="v-btn-secondary h-6 px-2.5 text-[11px] font-medium whitespace-nowrap flex-shrink-0"
+                                style={{
+                                  backgroundColor: isOverlaid
+                                    ? 'var(--v-primary)'
+                                    : 'var(--v-canvas)',
+                                  color: isOverlaid
+                                    ? 'var(--v-on-primary)'
+                                    : 'var(--v-ink)',
+                                }}
+                              >
+                                {isOverlaid ? '겹쳐보는 중' : '차트 겹쳐보기'}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/f/${fc.id}`)}
+                              className="v-btn-secondary h-6 px-2 text-[11px] whitespace-nowrap flex-shrink-0"
+                            >
+                              상세 <ArrowUpRight size={11} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { LandingPage } from './features/landing/LandingPage';
@@ -11,7 +11,24 @@ import { ProfilePage } from './features/profile/ProfilePage';
 export function App() {
   // Unified Time-Warp simulator state for Live 20D tracking (defaults to D-0 Lock: 2026-10-02)
   const [currentDateStr, setCurrentDateStr] = useState<string>('2026-10-02');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('stoxdraw_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch {}
+    return 'light';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('stoxdraw_theme', theme);
+    } catch {}
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   const toggleTheme = () =>
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
