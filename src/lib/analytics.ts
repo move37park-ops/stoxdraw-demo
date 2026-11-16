@@ -8,7 +8,9 @@ export type AnalyticsEvent =
   | 'result_viewed'
   | 'signup_nudge_clicked'
   | 'round_changed'
-  | 'ticker_switched';
+  | 'ticker_switched'
+  | 'community_post_created'
+  | 'community_tab_switched';
 
 interface EventPayload {
   [key: string]: unknown;

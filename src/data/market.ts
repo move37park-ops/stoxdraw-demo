@@ -129,19 +129,24 @@ export function getCurrentStockPrice(ticker: string, asOfDate: string = '2026-10
   return bars[0].close;
 }
 
-export function getStockLandmarks(ticker: string, basePrice: number): MarketLandmark[] {
+export function getStockLandmarks(
+  ticker: string,
+  basePrice: number,
+  locale: 'ko' | 'en' = 'ko'
+): MarketLandmark[] {
   if (ticker.toUpperCase().includes('BTC')) {
-    return getBtcLandmarks(basePrice);
+    return getBtcLandmarks(basePrice, locale);
   }
   const meta = STOCKS.find(s => s.ticker === ticker) || STOCKS[0];
   const roundPrice = (p: number) => parseFloat(p.toFixed(2));
   const fiveDayVol = meta.volatility * Math.sqrt(5);
+  const isEn = locale === 'en';
 
   return [
     {
       id: 'lm_resistance',
-      label: '옵션 콜벽 저항 (Call Wall)',
-      shortLabel: '콜벽 저항',
+      label: isEn ? 'Call Wall Resistance' : '옵션 콜벽 저항 (Call Wall)',
+      shortLabel: isEn ? 'Call Wall' : '콜벽 저항',
       category: 'resistance',
       price: roundPrice(basePrice * (1 + fiveDayVol * 0.95)),
       changePct: parseFloat((fiveDayVol * 95).toFixed(1)),
@@ -149,8 +154,8 @@ export function getStockLandmarks(ticker: string, basePrice: number): MarketLand
     },
     {
       id: 'lm_consensus',
-      label: '월가 평균 목표선 (Wall St.)',
-      shortLabel: '월가 목표선',
+      label: isEn ? 'Wall St. Mean Target' : '월가 평균 목표선 (Wall St.)',
+      shortLabel: isEn ? 'Wall St. Avg' : '월가 목표선',
       category: 'consensus',
       price: roundPrice(basePrice * (1 + fiveDayVol * 0.42)),
       changePct: parseFloat((fiveDayVol * 42).toFixed(1)),
@@ -158,8 +163,8 @@ export function getStockLandmarks(ticker: string, basePrice: number): MarketLand
     },
     {
       id: 'lm_support',
-      label: '풋 지지선 (Put Support)',
-      shortLabel: '풋 지지선',
+      label: isEn ? 'Put Support' : '풋 지지선 (Put Support)',
+      shortLabel: isEn ? 'Put Support' : '풋 지지선',
       category: 'support',
       price: roundPrice(basePrice * (1 - fiveDayVol * 0.65)),
       changePct: parseFloat((-fiveDayVol * 65).toFixed(1)),

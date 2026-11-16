@@ -1,9 +1,9 @@
 import type { Forecast, MarketBar } from './types';
 
 export interface DailySettlementRow {
-  slot: string;          // 'D+1' .. 'D+5'
+  slot: string;          // 'D+1' .. 'D+N' (기본 N=7)
   date: string;          // 'YYYY-MM-DD'
-  weight: number;        // 시간 가중치 w_t (1..5)
+  weight: number;        // 시간 가중치 w_t (1..N)
   forecastPrice: number;
   forecastChangePct: number;
   actualClose: number | null;
@@ -39,7 +39,7 @@ export function computeForecastDigest(forecast: Forecast): string {
 
 /**
  * 예측 경로와 실제 시장 종가(OHLC Close)를 대조하여
- * 5거래일 일별 정산 원장(Settlement Ledger) 행 배열을 반환합니다.
+ * 평가 기간 일별 정산 원장(Settlement Ledger) 행 배열을 반환합니다.
  */
 export function buildDailySettlementRows(
   forecast: Forecast,

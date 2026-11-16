@@ -9,6 +9,8 @@ export const DEFAULT_BASE_DATE = '2026-10-02';
 export interface ReplayScenario {
   id: string;
   code: string;
+  blindLabel: string;
+  isRandom?: boolean;
   title: string;
   revealTitle: string;
   subtitle: string;
@@ -19,8 +21,8 @@ export interface ReplayScenario {
   baseDate: string;
   basePrice: number;
   evalDates: string[];
-  historyBars: MarketBar[]; // 과거 6개월(180일) 일봉 (블라인드 퀴즈에서 노출)
-  futureBars: MarketBar[];  // 향후 20일 실제 일봉 (제출 즉시 1초 만에 공개)
+  historyBars: MarketBar[]; // 과거 245일 일봉 (블라인드 구간에서 노출)
+  futureBars: MarketBar[];  // 향후 20일 실제 일봉 (제출 즉시 공개)
 }
 
 function createSeededRandom(seed: number) {
@@ -33,7 +35,8 @@ function createSeededRandom(seed: number) {
   };
 }
 
-const PAST_HISTORY_DAYS = 185; // 약 6개월 일봉 (baseDate 포함 185봉)
+const EXTRA_LEAD_DAYS = 60;
+const PAST_HISTORY_DAYS = 185 + EXTRA_LEAD_DAYS; // 과거 245일 + 미래 25일 (240D 줌 지원)
 
 const REALISTIC_BTC_210_OHLC: [number, number, number, number][] = [
   [80905.53, 82850.00, 80731.14, 81447.01],
@@ -249,14 +252,30 @@ const REALISTIC_BTC_210_OHLC: [number, number, number, number][] = [
 ];
 
 /**
- * 실제 시장 일봉 구조를 반영한 210일 BTC/USDT OHLC 시계열 (과거 185일 + 미래 25일)
- * 기준일(2026-10-02, index 184) 종가 = $75,897.47
+ * 실제 시장 일봉 구조를 반영한 270일 BTC/USDT OHLC 시계열 (과거 245일 + 미래 25일)
+ * 기준일(2026-10-02, index 244) 종가 = $75,897.47
  */
 function buildDeterministicBtcBars(): MarketBar[] {
   const baseDate = parseDateStr(DEFAULT_BASE_DATE);
-  const baseIdx = PAST_HISTORY_DAYS - 1; // 184 ("2026-10-02")
+  const baseIdx = PAST_HISTORY_DAYS - 1; // 244 ("2026-10-02")
+  const rand = createSeededRandom(20261002);
 
-  return REALISTIC_BTC_210_OHLC.map((ohlc, idx) => {
+  // REALISTIC_BTC_210_OHLC 이전 60일 일봉을 첫 날 시가 기준으로 역산 생성해 240D 줌을 지원
+  const leadBars: [number, number, number, number][] = new Array(EXTRA_LEAD_DAYS);
+  let nextOpen = REALISTIC_BTC_210_OHLC[0][0];
+  for (let i = EXTRA_LEAD_DAYS - 1; i >= 0; i--) {
+    const wave = Math.sin(i / 14) * 0.004 + (rand() - 0.505) * 0.024;
+    const close = parseFloat(nextOpen.toFixed(2));
+    const open = parseFloat(Math.max(58000, close / (1 + wave)).toFixed(2));
+    const high = parseFloat((Math.max(open, close) * (1 + 0.004 + rand() * 0.012)).toFixed(2));
+    const low = parseFloat((Math.min(open, close) * (1 - 0.004 - rand() * 0.012)).toFixed(2));
+    leadBars[i] = [open, high, low, close];
+    nextOpen = open;
+  }
+
+  const allOhlc = [...leadBars, ...REALISTIC_BTC_210_OHLC];
+
+  return allOhlc.map((ohlc, idx) => {
     const offset = idx - baseIdx;
     const d = new Date(baseDate);
     d.setDate(d.getDate() + offset);
@@ -304,13 +323,14 @@ export function getCurrentBtcPrice(asOfDate: string = DEFAULT_BASE_DATE): number
   return bars[0].close;
 }
 
-export function getBtcLandmarks(basePrice: number): MarketLandmark[] {
+export function getBtcLandmarks(basePrice: number, locale: 'ko' | 'en' = 'ko'): MarketLandmark[] {
   const roundPrice = (p: number) => parseFloat(p.toFixed(2));
+  const isEn = locale === 'en';
   return [
     {
       id: 'lm_resistance',
-      label: '상단 매물대 저항 (Orderbook Wall)',
-      shortLabel: '상단 저항선',
+      label: isEn ? 'Resistance Wall (Orderbook)' : '상단 매물대 저항 (Orderbook Wall)',
+      shortLabel: isEn ? 'Resistance' : '상단 저항선',
       category: 'resistance',
       price: roundPrice(basePrice * 1.085),
       changePct: 8.5,
@@ -318,8 +338,8 @@ export function getBtcLandmarks(basePrice: number): MarketLandmark[] {
     },
     {
       id: 'lm_consensus',
-      label: '상위 1% 고수 평균 목표선 (Top Tier)',
-      shortLabel: '고수 평균선',
+      label: isEn ? 'Top 1% Forecaster Target' : '상위 1% 고수 평균 목표선 (Top Tier)',
+      shortLabel: isEn ? 'Top-Tier Avg' : '고수 평균선',
       category: 'consensus',
       price: roundPrice(basePrice * 1.052),
       changePct: 5.2,
@@ -327,8 +347,8 @@ export function getBtcLandmarks(basePrice: number): MarketLandmark[] {
     },
     {
       id: 'lm_support',
-      label: '단기 지지 구간 (20D EMA Support)',
-      shortLabel: '단기 지지선',
+      label: isEn ? 'Short-Term Support (20D EMA)' : '단기 지지 구간 (20D EMA Support)',
+      shortLabel: isEn ? 'Support' : '단기 지지선',
       category: 'support',
       price: roundPrice(basePrice * 0.945),
       changePct: -5.5,
@@ -349,7 +369,7 @@ function buildScenarioBars(
 ): { historyBars: MarketBar[]; futureBars: MarketBar[]; evalDates: string[] } {
   const rand = createSeededRandom(seed);
   const baseDate = parseDateStr(baseDateStr);
-  const scenarioHistoryCount = 180; // 과거 6개월(180일) 일봉
+  const scenarioHistoryCount = 245; // 과거 245일 일봉 (240D 줌 지원)
 
   // 과거 180일 날짜 (baseDate 포함 총 180봉)
   const pastDates: string[] = [];
@@ -380,12 +400,15 @@ function buildScenarioBars(
     const open = idx > 0 ? pastCloses[idx - 1] : close * 0.99;
     const high = Math.max(open, close) + close * (0.005 + rand() * 0.01);
     const low = Math.min(open, close) - close * (0.005 + rand() * 0.01);
+    const moveRatio = open > 0 ? Math.abs(close - open) / open : 0.01;
+    const volume = parseFloat((18000 + moveRatio * 480000 + rand() * 9000).toFixed(1));
     return {
       date,
       open: parseFloat(open.toFixed(2)),
       high: parseFloat(high.toFixed(2)),
       low: parseFloat(low.toFixed(2)),
       close: parseFloat(close.toFixed(2)),
+      volume,
     };
   });
 
@@ -398,12 +421,14 @@ function buildScenarioBars(
     const open = prevClose;
     const high = Math.max(open, close) + close * (0.005 + rand() * 0.01);
     const low = Math.min(open, close) - close * (0.005 + rand() * 0.01);
+    const volume = parseFloat((20000 + Math.abs(r) * 520000 + rand() * 9000).toFixed(1));
     futureBars.push({
       date: evalDates[i],
       open: parseFloat(open.toFixed(2)),
       high: parseFloat(high.toFixed(2)),
       low: parseFloat(low.toFixed(2)),
       close,
+      volume,
     });
     prevClose = close;
   }
@@ -438,8 +463,9 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
     return {
       id: 'replay_2024_etf_breakout',
       code: '2024.02',
+      blindLabel: '변동성 수축 구간',
       title: '현물 ETF 승인 직후 매물 소화 및 수렴 구간',
-      revealTitle: '기관 ETF 순유입 전환 & $51.7K 돌파 (+21.3%)',
+      revealTitle: '기관 ETF 순유입 가속 & 7일 만기 $49.9K 돌파 (+17.1%)',
       subtitle: '2024년 2월 5일 기준 · 과거 6개월 실제 일봉',
       difficulty: 'NORMAL',
       marketHint: '2024년 1월 현물 ETF 승인 직후 차익실현 매물로 $39K까지 눌렸다가 $42.6K 부근에서 2주간 변동성이 수축된 시점입니다.',
@@ -448,7 +474,7 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
         { label: '차트 구조', value: '20일 이동평균선($42.1K) 안착 후 일봉 변동폭 축소' },
         { label: '당시 시장 배경', value: '현물 ETF 상장 3주 차, 초기 환매 물량과 신규 유입세 경합' },
       ],
-      revealTakeaway: '2024년 2월 6일부터 기관 현물 ETF 순유입이 본격화되며 D+10에 $52K를 돌파했고, 후반 10일간 $51K~52K 고가권 지지 테스트를 거쳐 +21.3% 상승 마감했습니다.',
+      revealTakeaway: '2024년 2월 6일부터 기관 현물 ETF 순유입이 가속화되며 D+4에 $47.2K를 돌파했고, 이어진 매수세로 D+7에 $49.9K(+17.1%) 상승 마감했습니다.',
       baseDate,
       basePrice,
       evalDates,
@@ -482,8 +508,9 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
     return {
       id: 'replay_2024_halving_whipsaw',
       code: '2024.04',
+      blindLabel: '고점 박스권 경계',
       title: '제4차 반감기 당일 고점 박스권 변곡점',
-      revealTitle: '초반 $66.8K 반등 후 $58K 조정 및 회복 (-1.2%)',
+      revealTitle: '반감기 직후 $66.8K 단기 반등 후 보합권 복귀 (-0.1%)',
       subtitle: '2024년 4월 19일 기준 · 과거 6개월 실제 일봉',
       difficulty: 'HARD',
       marketHint: '2024년 3월 $73K 신고가 달성 이후 고점이 낮아지는 박스권($61K~$71K) 안에서 네 번째 반감기 당일을 맞이한 시점입니다.',
@@ -492,7 +519,7 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
         { label: '차트 구조', value: '20일 이동평균선 하향 돌파 후 $63.8K 단기 반등 시도' },
         { label: '당시 시장 배경', value: '4월 19일 제4차 반감기 도래 및 중동 지정학적 변동성 확대' },
       ],
-      revealTakeaway: '반감기 직후 D+3까지 $66.8K로 소폭 반등했으나 차익 매물이 출회되며 D+12에 $58K 초반까지 밀렸고, 이후 저가 매수세 유입으로 D+20에 기준가 부근($63.0K)을 회복했습니다.',
+      revealTakeaway: '반감기 직후 D+3까지 $66.8K로 반등했으나 차익 매물이 출회되며 D+5에 $64.3K로 밀렸고, D+7 종가는 기준가 부근($63.7K, -0.1%)으로 수렴했습니다.',
       baseDate,
       basePrice,
       evalDates,
@@ -525,8 +552,9 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
     return {
       id: 'replay_2024_yen_carry_crash',
       code: '2024.08',
+      blindLabel: '단기 급락 직후',
       title: '8월 글로벌 증시 쇼크 & 단기 급락 직후 구간',
-      revealTitle: 'D+3 기술적 급반등 및 쌍바닥 확인 후 회복 (+18.9%)',
+      revealTitle: 'D+3 기술적 급반등($61.7K) 후 눌림 소화 (+9.8%)',
       subtitle: '2024년 8월 5일 기준 · 과거 6개월 실제 일봉',
       difficulty: 'HARD',
       marketHint: '7월 말 $68K 부근에서 엔 캐리 청산 쇼크로 닷새 만에 $54K까지 급락한 2024년 8월 5일 종가 시점입니다.',
@@ -535,7 +563,7 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
         { label: '차트 구조', value: '20일 이동평균선 대비 -15% 이상 단기 과매도 이격 발생' },
         { label: '당시 시장 배경', value: '일본 금리 인상발 엔 캐리 청산 및 레버리지 대규모 강제청산 직후' },
       ],
-      revealTakeaway: '패닉셀 직후 D+3 만에 $61.7K로 강하게 기술적 반등한 뒤, 중반부 $57.5K 재차 지지 확인(쌍바닥)을 거치며 D+20에 $64.2K(+18.9%)까지 회복했습니다.',
+      revealTakeaway: '패닉셀 직후 D+3 만에 $61.7K까지 강하게 기술적 반등한 뒤, D+6에 $58.7K 부근 숨고르기를 거쳐 D+7에 $59.3K(+9.8%)를 회복했습니다.',
       baseDate,
       basePrice,
       evalDates,
@@ -568,8 +596,9 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
     return {
       id: 'replay_2024_nov_ath_breakout',
       code: '2024.11',
+      blindLabel: '전고점 저항 돌파전',
       title: '7개월 장기 채널 상단 저항 및 눌림목 구간',
-      revealTitle: '7개월 박스권 상단 돌파 & $90K+ 신고가 랠리 (+34.2%)',
+      revealTitle: '7개월 박스권 상단 돌파 & $88K 가속 랠리 (+26.6%)',
       subtitle: '2024년 11월 5일 기준 · 과거 6개월 실제 일봉',
       difficulty: 'EXPERT',
       marketHint: '2024년 3월 고점 이후 7개월간 이어진 장기 조정 채널 상단($72K)을 테스트한 뒤 $69.3K로 눌린 시점입니다.',
@@ -578,7 +607,95 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
         { label: '차트 구조', value: '10월 상승 추세선 및 20일 이동평균선($68.5K) 위 지지 유지' },
         { label: '당시 시장 배경', value: '미국 대선 이벤트 당일, 7개월간의 장기 매물대 소화 막바지' },
       ],
-      revealTakeaway: '기준일 직후 D+1에 +9% 장대양봉으로 7개월 박스권을 돌파한 뒤, D+6에 $88K, D+16에 $98K 부근까지 가속 상승하며 20일 만에 +34% 이상의 강세장을 기록했습니다.',
+      revealTakeaway: '기준일 직후 D+1에 +9.0% 장대양봉으로 7개월 박스권을 돌파한 뒤, D+6에 $88.6K까지 가속 상승하며 7일 만에 $87.8K(+26.6%)를 기록했습니다.',
+      baseDate,
+      basePrice,
+      evalDates,
+      historyBars,
+      futureBars,
+    };
+  })(),
+  (() => {
+    const baseDate = '2024-06-17';
+    const basePrice = 66494;
+    // 2024년 6월 초 $71.9K 삼중 고점 저항 실패 후 완만히 꺾이며 $66.5K 하단 지지 테스트 구간
+    const recent29Returns = [
+      0.015, 0.008, -0.009, 0.012, -0.006, 0.004, -0.016, -0.007, 0.005, -0.022,
+      -0.011, 0.009, -0.008, -0.014, 0.006, -0.004,
+    ];
+    // 2024-06-18 ~ 2024-07-07 실제 하방 이탈 궤적 (D+7 $60.2K, -9.4%)
+    const future20Returns = [
+      -0.021, -0.003, -0.001, -0.012, 0.002,
+      -0.017, -0.045, 0.026, -0.016, 0.013,
+      -0.019, 0.008, 0.029, 0.003, -0.014,
+      -0.032, -0.054, -0.006, 0.027, -0.039,
+    ];
+    const { historyBars, futureBars, evalDates } = buildScenarioBars(
+      20240617,
+      baseDate,
+      basePrice,
+      recent29Returns,
+      future20Returns
+    );
+    return {
+      id: 'replay_2024_jun_mtgox_fade',
+      code: '2024.06',
+      blindLabel: '삼중 고점 후 약세 이탈',
+      title: '고점 박스권 이탈 직전 지지선 테스트 구간',
+      revealTitle: '$65K 지지 붕괴 & 7일 연속 하락 조정 (-9.4%)',
+      subtitle: '2024년 6월 17일 기준 · 과거 6개월 실제 일봉',
+      difficulty: 'HARD',
+      marketHint: '5월 말~6월 초 $71.5K 돌파를 세 차례 시도했으나 실패한 뒤 20일 이동평균선 아래로 밀리며 하단 지지를 테스트하는 시점입니다.',
+      contextCues: [
+        { label: '주요 가격대', value: '상단 삼중 저항 $71.5K · 단기 지지 $65.0K' },
+        { label: '차트 구조', value: '20일 이동평균선 하향 이탈 후 고점이 점진적으로 낮아지는 약세 흐름' },
+        { label: '당시 시장 배경', value: '마운트곡스 상환 예고 및 현물 수급 둔화 경계감 확산' },
+      ],
+      revealTakeaway: '지지선 붕괴와 함께 기관·국가 물량 출회 우려가 겹치며 반등 없이 계단식 하락이 이어졌고, D+7에 $60.2K(-9.4%)까지 밀렸습니다.',
+      baseDate,
+      basePrice,
+      evalDates,
+      historyBars,
+      futureBars,
+    };
+  })(),
+  (() => {
+    const baseDate = '2025-02-23';
+    const basePrice = 96265;
+    // 2025년 1~2월 $94K~$106K 고점 박스권 횡보 말기
+    const recent29Returns = [
+      -0.012, 0.009, -0.005, 0.011, -0.008, -0.014, 0.006, 0.003, -0.009, 0.012,
+      -0.007, 0.015, -0.021, 0.004, -0.003,
+    ];
+    // 2025-02-24 ~ 2025-03-15 박스권 하단 붕괴 급락 후 기술적 되돌림 (D+7 $94K 복귀 전 $78K~$84K 급락)
+    const future20Returns = [
+      -0.050, -0.031, -0.048, 0.004, -0.004,
+      0.019, 0.095, -0.085, 0.012, 0.038,
+      -0.007, -0.035, -0.008, -0.064, -0.028,
+      0.056, 0.009, -0.029, 0.036, 0.005,
+    ];
+    const { historyBars, futureBars, evalDates } = buildScenarioBars(
+      20250223,
+      baseDate,
+      basePrice,
+      recent29Returns,
+      future20Returns
+    );
+    return {
+      id: 'replay_2025_feb_bull_trap',
+      code: '2025.02',
+      blindLabel: '고가권 하단 붕괴 경계',
+      title: '장기 고가 박스권 수렴 말기 변곡 구간',
+      revealTitle: '하단 붕괴 급락 후 D+7 급반등 휩쏘 (-2.2%)',
+      subtitle: '2025년 2월 23일 기준 · 과거 6개월 실제 일봉',
+      difficulty: 'EXPERT',
+      marketHint: '수개월간 $94K~$105K 고가권에 머물며 변동성이 좁아진 상태로, 박스권 하단 지지를 재테스트하는 시점입니다.',
+      contextCues: [
+        { label: '주요 가격대', value: '고가 박스 상단 $102K · 핵심 지지선 $94.0K' },
+        { label: '차트 구조', value: '단기 반등 시도가 고점을 넘지 못하며 하단 지지선 압박 누적' },
+        { label: '당시 시장 배경', value: '관세·매크로 불확실성 속 고점 피로감과 롱 포지션 누적 구간' },
+      ],
+      revealTakeaway: '직후 $94K 지지가 깨지며 D+4까지 -12% 이상 급락했으나, D+7 급반등으로 -2.2% 마감하며 극심한 양방향 변동성을 보였습니다.',
       baseDate,
       basePrice,
       evalDates,
@@ -589,62 +706,184 @@ export const REPLAY_SCENARIOS: ReplayScenario[] = [
 ];
 
 let replayFetchInitiated = false;
+let binanceArchiveBars: MarketBar[] = [];
+
+function parseBinanceKlines(raw: unknown[]): MarketBar[] {
+  return raw.map(item => {
+    const row = item as [number, string, string, string, string, string?];
+    const d = new Date(row[0]);
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const vol = row[5] !== undefined ? parseFloat(row[5]) : 0;
+    return {
+      date: `${yyyy}-${mm}-${dd}`,
+      open: parseFloat(parseFloat(row[1]).toFixed(2)),
+      high: parseFloat(parseFloat(row[2]).toFixed(2)),
+      low: parseFloat(parseFloat(row[3]).toFixed(2)),
+      close: parseFloat(parseFloat(row[4]).toFixed(2)),
+      volume: Number.isFinite(vol) ? parseFloat(vol.toFixed(1)) : undefined,
+    };
+  });
+}
+
+function classifyPastBlindLabel(historyBars: MarketBar[]): string {
+  const recent20 = historyBars.slice(-20);
+  if (recent20.length < 10) return '추세 분기 구간';
+  const lastClose = recent20[recent20.length - 1].close;
+  const ma20 = recent20.reduce((s, b) => s + b.close, 0) / recent20.length;
+  const devPct = ma20 > 0 ? ((lastClose - ma20) / ma20) * 100 : 0;
+
+  const recent5 = recent20.slice(-5);
+  const range5 = recent5.reduce((s, b) => s + Math.abs(b.high - b.low) / Math.max(1, b.close), 0) / recent5.length;
+  const range20 = recent20.reduce((s, b) => s + Math.abs(b.high - b.low) / Math.max(1, b.close), 0) / recent20.length;
+
+  if (devPct <= -7) return '단기 급락 이격';
+  if (devPct >= 7) return '단기 과열 이격';
+  if (range20 > 0 && range5 / range20 < 0.72) return '변동성 수축 구간';
+  return '박스권 변곡 구간';
+}
+
+export function hasRealArchivePool(): boolean {
+  return binanceArchiveBars.length >= 265;
+}
 
 /**
- * 연습 모드(REPLAY_SCENARIOS)의 4개 실제 과거 시점(2024.02 / 2024.04 / 2024.08 / 2024.11)에 대해
- * Binance 공개 API에서 실제 과거 180일 + 향후 20일(총 200봉) 1D OHLC 데이터를 로드합니다.
+ * 바이낸스 1,000일 실제 일봉 풀(오프라인 시 폴백 시계열)에서
+ * 매번 새로운 과거 구간을 무작위로 뽑아 완전 블라인드 시나리오를 생성합니다.
+ */
+export function createRandomReplayScenario(excludeBaseDates: string[] = []): ReplayScenario {
+  const excludeSet = new Set(excludeBaseDates);
+  const pools: { bars: MarketBar[]; minHistory: number }[] =
+    binanceArchiveBars.length >= 265
+      ? [{ bars: binanceArchiveBars, minHistory: 245 }]
+      : [
+          { bars: cachedBtcBars, minHistory: 120 },
+          ...REPLAY_SCENARIOS.map(s => ({
+            bars: [...s.historyBars, ...s.futureBars],
+            minHistory: 120,
+          })),
+        ];
+
+  interface Candidate {
+    historyBars: MarketBar[];
+    futureBars: MarketBar[];
+    baseBar: MarketBar;
+    ret7Pct: number;
+  }
+
+  const allCandidates: Candidate[] = [];
+  for (const pool of pools) {
+    const step = binanceArchiveBars.length >= 265 ? 3 : 7;
+    for (let i = pool.minHistory; i <= pool.bars.length - 8; i += step) {
+      const baseBar = pool.bars[i - 1];
+      if (!baseBar || excludeSet.has(baseBar.date)) continue;
+      const historyBars = pool.bars.slice(Math.max(0, i - 245), i);
+      const futureBars = pool.bars.slice(i, Math.min(pool.bars.length, i + 20));
+      if (futureBars.length < 7) continue;
+      const end7 = futureBars[6].close;
+      const ret7Pct = baseBar.close > 0 ? ((end7 - baseBar.close) / baseBar.close) * 100 : 0;
+      allCandidates.push({ historyBars, futureBars, baseBar, ret7Pct });
+    }
+  }
+
+  // 상승 / 하락 / 보합 구간이 편중되지 않도록 버킷 선택 후 무작위 추첨
+  const upPool = allCandidates.filter(c => c.ret7Pct > 2.5);
+  const downPool = allCandidates.filter(c => c.ret7Pct < -2.5);
+  const flatPool = allCandidates.filter(c => c.ret7Pct >= -2.5 && c.ret7Pct <= 2.5);
+  const buckets = [upPool, downPool, flatPool].filter(b => b.length > 0);
+  const chosenBucket =
+    buckets.length > 0 ? buckets[Math.floor(Math.random() * buckets.length)] : allCandidates;
+  const picked =
+    chosenBucket[Math.floor(Math.random() * chosenBucket.length)] ??
+    {
+      historyBars: REPLAY_SCENARIOS[0].historyBars,
+      futureBars: REPLAY_SCENARIOS[0].futureBars,
+      baseBar: REPLAY_SCENARIOS[0].historyBars[REPLAY_SCENARIOS[0].historyBars.length - 1],
+      ret7Pct: 0,
+    };
+
+  const end7Price = picked.futureBars[6]?.close ?? picked.baseBar.close;
+  const pct = picked.ret7Pct;
+  const pctStr = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+  const difficulty: 'NORMAL' | 'HARD' | 'EXPERT' =
+    Math.abs(pct) >= 12 ? 'EXPERT' : Math.abs(pct) >= 5 ? 'HARD' : 'NORMAL';
+
+  return {
+    id: `random_${picked.baseBar.date}`,
+    code: picked.baseBar.date.slice(0, 7).replace('-', '.'),
+    blindLabel: classifyPastBlindLabel(picked.historyBars),
+    isRandom: true,
+    title: `${picked.baseBar.date} 실제 BTC 7일 구간`,
+    revealTitle: `${picked.baseBar.date} 기준 · 7일 실제 종가 $${Math.round(end7Price).toLocaleString('en-US')} (${pctStr})`,
+    subtitle: `${picked.baseBar.date} 기준 · 과거 실제 일봉`,
+    difficulty,
+    marketHint: `${picked.baseBar.date} 종가($${Math.round(picked.baseBar.close).toLocaleString('en-US')}) 기준 실전 캔들·거래량 구간입니다.`,
+    contextCues: [],
+    revealTakeaway: `${picked.baseBar.date} 이후 7거래일간 $${Math.round(picked.baseBar.close).toLocaleString('en-US')}에서 $${Math.round(end7Price).toLocaleString('en-US')}(${pctStr})로 마감했습니다.`,
+    baseDate: picked.baseBar.date,
+    basePrice: picked.baseBar.close,
+    evalDates: picked.futureBars.map(b => b.date),
+    historyBars: picked.historyBars,
+    futureBars: picked.futureBars,
+  };
+}
+
+/**
+ * 연습 모드(REPLAY_SCENARIOS)의 실제 과거 시점 및 바이낸스 1,000일 아카이브에 대해
+ * Binance 공개 API에서 실제 과거 1D OHLCV 데이터를 로드합니다.
  */
 export async function syncReplayScenariosFromBinance(): Promise<void> {
   if (replayFetchInitiated) return;
   replayFetchInitiated = true;
 
   try {
-    await Promise.all(
-      REPLAY_SCENARIOS.map(async scenario => {
-        const base = parseDateStr(scenario.baseDate);
-        const startDate = new Date(
-          Date.UTC(base.getFullYear(), base.getMonth(), base.getDate() - 179, 0, 0, 0)
-        );
-        const startTimeMs = startDate.getTime();
+    const scenarioJobs = REPLAY_SCENARIOS.map(async scenario => {
+      const base = parseDateStr(scenario.baseDate);
+      const startDate = new Date(
+        Date.UTC(base.getFullYear(), base.getMonth(), base.getDate() - 244, 0, 0, 0)
+      );
+      const startTimeMs = startDate.getTime();
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
-        const res = await fetch(
-          `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=${startTimeMs}&limit=200`,
-          { signal: controller.signal }
-        );
-        clearTimeout(timeout);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=${startTimeMs}&limit=265`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeout);
 
-        if (!res.ok) return;
-        const raw: unknown[] = await res.json();
-        if (!Array.isArray(raw) || raw.length < 200) return;
+      if (!res.ok) return;
+      const raw: unknown[] = await res.json();
+      if (!Array.isArray(raw) || raw.length < 265) return;
 
-        const bars: MarketBar[] = raw.slice(0, 200).map(item => {
-          const row = item as [number, string, string, string, string];
-          const d = new Date(row[0]);
-          const yyyy = d.getUTCFullYear();
-          const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-          const dd = String(d.getUTCDate()).padStart(2, '0');
-          return {
-            date: `${yyyy}-${mm}-${dd}`,
-            open: parseFloat(parseFloat(row[1]).toFixed(2)),
-            high: parseFloat(parseFloat(row[2]).toFixed(2)),
-            low: parseFloat(parseFloat(row[3]).toFixed(2)),
-            close: parseFloat(parseFloat(row[4]).toFixed(2)),
-          };
-        });
+      const bars = parseBinanceKlines(raw.slice(0, 265));
+      const historyBars = bars.slice(0, 245);
+      const futureBars = bars.slice(245, 265);
+      const baseBar = historyBars[historyBars.length - 1];
 
-        const historyBars = bars.slice(0, 180);
-        const futureBars = bars.slice(180, 200);
-        const baseBar = historyBars[historyBars.length - 1];
+      scenario.baseDate = baseBar.date;
+      scenario.basePrice = baseBar.close;
+      scenario.historyBars = historyBars;
+      scenario.futureBars = futureBars;
+      scenario.evalDates = futureBars.map(b => b.date);
+    });
 
-        scenario.baseDate = baseBar.date;
-        scenario.basePrice = baseBar.close;
-        scenario.historyBars = historyBars;
-        scenario.futureBars = futureBars;
-        scenario.evalDates = futureBars.map(b => b.date);
-      })
-    );
+    const archiveJob = (async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(
+        'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=1000',
+        { signal: controller.signal }
+      );
+      clearTimeout(timeout);
+      if (!res.ok) return;
+      const raw: unknown[] = await res.json();
+      if (!Array.isArray(raw) || raw.length < 265) return;
+      binanceArchiveBars = parseBinanceKlines(raw);
+    })();
+
+    await Promise.all([...scenarioJobs, archiveJob]);
     notifyMarketListeners();
   } catch {
     // 오프라인이거나 요청 제한 시 시드 폴백 유지

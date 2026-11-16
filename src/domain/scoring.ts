@@ -1,8 +1,8 @@
 export interface ScoreBreakdown {
-  total: number;       // 0 ~ 100점
-  pathScore: number;   // /50 (경로 밀착도 & 스킬)
-  directionScore: number; // /30 (일별 및 최종 방향성)
-  targetScore: number; // /20 (변동성 대비 종가 정밀도)
+  total: number;          // 0 ~ 100점
+  pathScore: number;      // /50 (변동성 정규화 경로 정확도)
+  directionScore: number; // /25 (일별 수익률 형태 유사도)
+  targetScore: number;    // /25 (종가 정밀도 15 + 최종 방향 적중 10)
   grade: 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
   directionHit: boolean;
   endErrorPct: number;
@@ -11,11 +11,34 @@ export interface ScoreBreakdown {
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
 /**
- * 100점 만점 하이브리드 주가 궤적 채점 엔진 (PRD v2.0 스펙)
- * @param forecastPrices 5거래일 예측 가격 배열 [p1, p2, p3, p4, p5]
- * @param actualPrices 실제 시장 종가 배열 [a1, a2, a3, a4, a5] (길이 <= 5)
- * @param basePrice 기준가 (p0)
- * @param dailyVolatility 종목의 일일 변동성 (예: NVDA=0.038, AAPL=0.018, 기본 0.03)
+ * 최근 일간 종가 배열에서 일일 로그 수익률 표준편차(실현 변동성)를 계산합니다.
+ */
+export function calculateRealizedDailyVolatility(
+  closes: number[],
+  fallback: number = 0.032,
+  lookback: number = 30
+): number {
+  const valid = closes.filter((c) => Number.isFinite(c) && c > 0);
+  if (valid.length < 6) return clamp(fallback, 0.008, 0.12);
+
+  const slice = valid.slice(-(lookback + 1));
+  const returns: number[] = [];
+  for (let i = 1; i < slice.length; i++) {
+    returns.push(Math.log(slice[i] / slice[i - 1]));
+  }
+  if (returns.length < 5) return clamp(fallback, 0.008, 0.12);
+
+  const mean = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+  const variance = returns.reduce((sum, r) => sum + (r - mean) ** 2, 0) / Math.max(1, returns.length - 1);
+  const std = Math.sqrt(variance);
+  return clamp(std, 0.008, 0.12);
+}
+
+/**
+ * 100점 만점 변동성 정규화 + 형태 분리 주가 궤적 채점 엔진
+ * - 50점: 변동성 정규화(σ√t) 시간가중 경로 오차 점수
+ * - 25점: 일별 로그 수익률 벡터 코사인 유사도 (연속 노이즈 감쇠로 수평선 편법 방지)
+ * - 25점: 최종 종가 변동성 정규화 정밀도(15) + 연속 램프 최종 방향 보너스(10)
  */
 export function calculateForecastScore(
   forecastPrices: number[],
@@ -36,70 +59,88 @@ export function calculateForecastScore(
     };
   }
 
-  // 1. 경로 스킬 점수 (50점): 기준가 수평선(Flat baseline) 대비 오차 개선율
-  let errSum = 0;
-  let baseErrSum = 0;
+  const effectiveVol = clamp(dailyVolatility, 0.008, 0.12);
+
+  // 1. 변동성 정규화 경로 정확도 (50점)
+  let weightedZSum = 0;
+  let weightTotal = 0;
 
   for (let t = 0; t < T; t++) {
-    const weight = t + 1; // 시간 가중치 w_t = t (후반부 오차에 더 큰 가중치)
     const act = actualPrices[t];
     const pred = forecastPrices[t];
-    const floor = 0.5 * dailyVolatility * Math.sqrt(t + 1);
+    if (act <= 0 || pred <= 0) continue;
 
-    errSum += weight * (Math.abs(pred - act) / act);
-    baseErrSum += weight * Math.max(Math.abs(basePrice - act) / act, floor);
+    const weight = t + 1;
+    const scale = effectiveVol * Math.sqrt(t + 1);
+    const z_t = Math.abs(Math.log(pred / act)) / scale;
+    weightedZSum += weight * z_t;
+    weightTotal += weight;
   }
 
-  const skill = baseErrSum > 0 ? 1 - (errSum / baseErrSum) : 0;
-  // skill = 1 (완벽 적중) -> 50점
-  // skill = 0 (수평선 수준) -> 20점
-  // skill < 0 (수평선보다 못함) -> 0 ~ 20점
-  const pathScore = 50 * clamp(0.4 + 0.6 * skill, 0, 1);
+  const avgZPath = weightTotal > 0 ? weightedZSum / weightTotal : 4;
+  const pathScore = 50 * Math.exp(-0.6 * avgZPath);
 
-  // 2. 방향성 유사도 (30점): 일별 부호 일치율(10) + 최종 방향 일치(20)
-  let dailyDirectionMatches = 0;
+  // 2. 일별 수익률 형태 유사도 (25점) — 클리프 없는 연속 코사인 유사도
   const predReturns: number[] = [];
   const actReturns: number[] = [];
-
   let prevPred = basePrice;
   let prevAct = basePrice;
+
   for (let t = 0; t < T; t++) {
-    const rPred = (forecastPrices[t] - prevPred) / prevPred;
-    const rAct = (actualPrices[t] - prevAct) / prevAct;
-    predReturns.push(rPred);
-    actReturns.push(rAct);
-
-    // 둘 다 상승이거나 둘 다 하락 (단, 평평한 수평선은 불일치 처리)
-    if (Math.sign(rPred) === Math.sign(rAct) && Math.abs(rPred) > 1e-5 && Math.abs(rAct) > 1e-5) {
-      dailyDirectionMatches++;
-    }
-
-    prevPred = forecastPrices[t];
-    prevAct = actualPrices[t];
+    const pred = Math.max(1e-6, forecastPrices[t]);
+    const act = Math.max(1e-6, actualPrices[t]);
+    predReturns.push(Math.log(pred / Math.max(1e-6, prevPred)));
+    actReturns.push(Math.log(act / Math.max(1e-6, prevAct)));
+    prevPred = pred;
+    prevAct = act;
   }
 
-  const lastPred = forecastPrices[T - 1];
-  const lastAct = actualPrices[T - 1];
-  const finalPredDiff = lastPred - basePrice;
-  const finalActDiff = lastAct - basePrice;
-  const directionHit = Math.sign(finalPredDiff) === Math.sign(finalActDiff) && Math.abs(finalPredDiff) > 1e-4;
+  let dot = 0;
+  let normPredSq = 0;
+  let normActSq = 0;
+  for (let t = 0; t < T; t++) {
+    dot += predReturns[t] * actReturns[t];
+    normPredSq += predReturns[t] ** 2;
+    normActSq += actReturns[t] ** 2;
+  }
 
-  const dailyDirPts = (dailyDirectionMatches / T) * 10;
-  const finalDirPts = directionHit ? 20 : 0;
-  const directionScore = dailyDirPts + finalDirPts;
+  const normPred = Math.sqrt(normPredSq);
+  const normAct = Math.sqrt(normActSq);
+  const noiseFloor = 0.15 * effectiveVol * Math.sqrt(T);
 
-  // 3. 타깃 정규화 적중 점수 (20점): 최종일 종가 오차를 종목 변동성(σ√T) 단위로 스케일링
+  let shapeSimilarity = 0;
+  if (normAct < 1e-5 && normPred < 1e-5) {
+    shapeSimilarity = 1;
+  } else if (normAct >= 1e-5 && normPred > 0) {
+    const denom = Math.sqrt(normPredSq + noiseFloor ** 2) * normAct;
+    shapeSimilarity = clamp(dot / denom, 0, 1);
+  }
+  const directionScore = 25 * shapeSimilarity;
+
+  // 3. 최종 종가 정밀도(15점) + 최종 방향성 적중(10점, 연속 램프 적용) = 25점
+  const lastPred = Math.max(1e-6, forecastPrices[T - 1]);
+  const lastAct = Math.max(1e-6, actualPrices[T - 1]);
   const endError = Math.abs(lastPred - lastAct) / lastAct;
   const endErrorPct = parseFloat((endError * 100).toFixed(2));
-  const z = endError / (dailyVolatility * Math.sqrt(T));
-  const targetScore = 20 * Math.exp(-1.0 * z);
 
-  // 확신도 가중 (Conviction factor):
-  // 예측 변동폭이 0.5% 미만인 극단적 수평선 꼼수는 점수를 감점 보정
-  const avgPredChange = predReturns.reduce((sum, r) => sum + Math.abs(r), 0) / T;
-  const convictionPenalty = avgPredChange < 0.003 ? 0.75 : 1.0;
+  const zEnd = Math.abs(Math.log(lastPred / lastAct)) / (effectiveVol * Math.sqrt(T));
+  const targetPrecision = 15 * Math.exp(-0.85 * zEnd);
 
-  const rawTotal = (pathScore + directionScore + targetScore) * convictionPenalty;
+  const predTotalRet = (lastPred - basePrice) / basePrice;
+  const actTotalRet = (lastAct - basePrice) / basePrice;
+  const directionHit =
+    Math.abs(actTotalRet) < 1e-4
+      ? Math.abs(predTotalRet) < 1e-4
+      : Math.sign(predTotalRet) === Math.sign(actTotalRet) && Math.abs(predTotalRet) > 1e-4;
+
+  // 방향성 가산점(10점)도 미세 노이즈 구간에서의 불연속 점프를 막기 위해 변동성 대비 연속 램프 적용
+  const convictionScale =
+    Math.abs(actTotalRet) < 1e-4
+      ? 1
+      : clamp(Math.abs(predTotalRet) / (0.15 * effectiveVol * Math.sqrt(T)), 0, 1);
+  const targetScore = targetPrecision + (directionHit ? 10 * convictionScale : 0);
+
+  const rawTotal = pathScore + directionScore + targetScore;
   const total = parseFloat(clamp(rawTotal, 0, 100).toFixed(1));
 
   // 등급 산출 (S, A, B, C, D, F)

@@ -1,13 +1,15 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Outlet } from 'react-router-dom';
-import '../features/studio/vercel-geist.css';
-import { StudioCommandBar } from '../features/studio/StudioCommandBar';
+import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
+import { Outlet, useSearchParams } from 'react-router-dom';
+import { TopNav } from './TopNav';
+import { Footer } from './Footer';
+import { GuideModal } from '../features/onboarding/GuideModal';
+import { useI18n } from '../lib/i18nCore';
 import { repository } from '../data/localRepository';
 import { getCurrentUser, getOrCreateAnonId, subscribeSession } from '../data/session';
 import { deriveForecastStatus } from '../domain/lifecycle';
-import { resolveForecast } from '../domain/resolution';
-import { getBtcHistoryBars, BTC_TICKER } from '../data/btcMarket';
-import { DEFAULT_ELO } from '../domain/elo';
+import { resolveForecastsWithCohort } from '../domain/resolution';
+import { getBtcHistoryBars } from '../data/btcMarket';
+import { DEFAULT_ELO, MIN_ELO } from '../domain/elo';
 import type { Forecast, User } from '../domain/types';
 
 interface AppShellProps {
@@ -17,27 +19,47 @@ interface AppShellProps {
   onToggleTheme?: () => void;
 }
 
+const GUIDE_SEEN_KEY = 'op_guide_seen';
+
 export function AppShell({
   currentDateStr,
   onDateChange,
-  theme = 'light',
+  theme = 'dark',
   onToggleTheme = () => {},
 }: AppShellProps) {
-  const [currentUser, setCurrentUser] = useState<User | null>(() =>
-    getCurrentUser()
-  );
+  const { t } = useI18n();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [currentUser, setCurrentUser] = useState<User | null>(() => getCurrentUser());
   const [allForecasts, setAllForecasts] = useState<Forecast[]>(() =>
     repository.listFeed('all', currentDateStr)
   );
+  const [guideRequested, setGuideRequested] = useState<boolean>(false);
+  const isGuideOpen = guideRequested || searchParams.get('guide') === '1';
+
+  const handleOpenGuide = useCallback(() => {
+    setGuideRequested(true);
+  }, []);
+
+  const handleCloseGuide = useCallback(() => {
+    setGuideRequested(false);
+    try {
+      localStorage.setItem(GUIDE_SEEN_KEY, '1');
+    } catch {}
+    if (searchParams.get('guide') === '1') {
+      const next = new URLSearchParams(searchParams);
+      next.delete('guide');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    const refresh = () => {
+    const unsubRepo = repository.subscribe(() => {
       setAllForecasts(repository.listFeed('all', currentDateStr));
+    });
+    const unsubSession = subscribeSession(() => {
       setCurrentUser(getCurrentUser());
-    };
-    refresh();
-    const unsubRepo = repository.subscribe(refresh);
-    const unsubSession = subscribeSession(refresh);
+      setAllForecasts(repository.listFeed('all', currentDateStr));
+    });
     return () => {
       unsubRepo();
       unsubSession();
@@ -53,81 +75,75 @@ export function AppShell({
 
   const liveElo = useMemo(() => {
     const base = currentUser?.elo ?? DEFAULT_ELO;
-    let delta = 0;
     const allBars = getBtcHistoryBars().filter(b => b.date <= currentDateStr);
+    const resolvedAll = allForecasts.filter(
+      f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED'
+    );
+    const userEloMap: Record<string, number> = {};
+    for (const u of repository.listAllUsers()) {
+      userEloMap[u.id] = u.elo ?? DEFAULT_ELO;
+    }
+    if (currentUser) {
+      userEloMap[currentUser.id] = currentUser.elo ?? DEFAULT_ELO;
+    }
+    const cohortResults = resolveForecastsWithCohort(resolvedAll, allBars, userEloMap);
+
+    let delta = 0;
     myForecasts.forEach(f => {
       if (deriveForecastStatus(f, currentDateStr) === 'RESOLVED') {
-        const res = resolveForecast(f, allBars);
-        if (res.eloSettlement) {
+        const res = cohortResults.get(f.id);
+        if (res?.eloSettlement) {
           delta += res.eloSettlement.deltaLp;
         }
       }
     });
-    return base + delta;
-  }, [currentUser, myForecasts, currentDateStr]);
+    return Math.max(MIN_ELO, base + delta);
+  }, [currentUser, myForecasts, allForecasts, currentDateStr]);
 
   const cleanAnonSuffix = anonId.replace(/^anon[_-]?/i, '').slice(0, 4) || 'guest';
-  const userHandle = currentUser
-    ? currentUser.handle
-    : `guest_${cleanAnonSuffix}`;
+  const userHandle = currentUser ? currentUser.handle : `guest_${cleanAnonSuffix}`;
 
   return (
     <div
-      className="v-studio-root min-h-screen w-full flex flex-col"
-      data-theme={theme}
+      className="op-root v-studio-root min-h-screen w-full flex flex-col"
     >
-      {/* WCAG 2.4.1: Bypass Blocks (Skip to main content) */}
       <a href="#main" className="skip-link">
-        본문 바로가기
+        {t('본문 바로가기', 'Skip to content')}
       </a>
 
-      <StudioCommandBar
-        ticker={BTC_TICKER}
-        studioDateStr={currentDateStr}
-        onStudioDateChange={onDateChange}
+      <TopNav
         userHandle={userHandle}
         liveElo={liveElo}
-        myForecasts={myForecasts}
         theme={theme}
         onToggleTheme={onToggleTheme}
+        onOpenGuide={handleOpenGuide}
       />
 
       <main
         id="main"
         tabIndex={-1}
-        className="flex-1 w-full max-w-[1360px] mx-auto relative focus:outline-none"
-        style={{
-          borderLeft: '1px solid var(--v-hairline)',
-          borderRight: '1px solid var(--v-hairline)',
-        }}
+        className="flex-1 w-full relative focus:outline-none"
       >
-        <Outlet />
+        <Suspense
+          fallback={
+            <div
+              className="py-20 text-center text-xs op-mono"
+              style={{ color: 'var(--op-ink-3)' }}
+            >
+              Loading...
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
-      <footer
-        className="w-full"
-        style={{
-          borderTop: '1px solid var(--v-hairline)',
-          backgroundColor: 'var(--v-canvas)',
-        }}
-      >
-        <div
-          className="max-w-[1360px] mx-auto px-5 py-6 flex flex-wrap items-center justify-between gap-4"
-          style={{
-            borderLeft: '1px solid var(--v-hairline)',
-            borderRight: '1px solid var(--v-hairline)',
-          }}
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="v-serif-brand text-lg font-normal tracking-wider" style={{ color: 'var(--v-ink)' }}>
-              STOXDRAW
-            </span>
-          </div>
-          <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
-            © 2026 STOXDRAW
-          </p>
-        </div>
-      </footer>
+      <Footer
+        currentDateStr={currentDateStr}
+        onDateChange={onDateChange}
+      />
+
+      <GuideModal isOpen={isGuideOpen} onClose={handleCloseGuide} />
     </div>
   );
 }

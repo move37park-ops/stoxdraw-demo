@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { repository } from '../../data/localRepository';
-import { getCurrentUser, getOrCreateAnonId } from '../../data/session';
+import { getCurrentUser, getOrCreateAnonId, subscribeSession } from '../../data/session';
 import { deriveForecastStatus } from '../../domain/lifecycle';
-import { resolveForecast } from '../../domain/resolution';
+import { resolveForecastsWithCohort } from '../../domain/resolution';
 import { getStockHistory } from '../../data/market';
-import { getEloTierInfo, DEFAULT_ELO, formatSignedLp } from '../../domain/elo';
+import { getEloTierInfo, DEFAULT_ELO, MIN_ELO, formatSignedLp } from '../../domain/elo';
 import { CompactForecastCard } from '../../components/CompactForecastCard';
-import { ConnectModal } from '../auth/ConnectModal';
+import { localizeDataText, useI18n } from '../../lib/i18nCore';
 import type { User, Forecast } from '../../domain/types';
 
 interface ProfilePageProps {
@@ -15,73 +15,121 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ currentDateStr }: ProfilePageProps) {
+  const { locale, t } = useI18n();
   const { handle } = useParams<{ handle: string }>();
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
 
   const [activeTab, setActiveTab] = useState<'forecasts' | 'results'>('forecasts');
-  const [user, setUser] = useState<User | undefined>(undefined);
-  const [forecasts, setForecasts] = useState<Forecast[]>([]);
-  const [isConnectOpen, setIsConnectOpen] = useState(false);
+  const [repoTick, setRepoTick] = useState(0);
   const [, setFollowTick] = useState(0);
+
+  useEffect(() => {
+    const bump = () => setRepoTick(c => c + 1);
+    const unsubRepo = repository.subscribe(bump);
+    const unsubSession = subscribeSession(bump);
+    return () => {
+      unsubRepo();
+      unsubSession();
+    };
+  }, []);
 
   const isMeRoute = !handle || handle === 'me' || handle === 'record';
 
-  const loadData = useCallback(() => {
+  const currentUser = useMemo(() => {
+    void repoTick;
+    return getCurrentUser();
+  }, [repoTick]);
+
+  const { user, forecasts } = useMemo<{ user: User | undefined; forecasts: Forecast[] }>(() => {
+    void repoTick;
     if (isMeRoute) {
       if (currentUser) {
-        setUser(currentUser);
-        setForecasts(repository.listByUser(currentUser.id));
-      } else {
-        const anonId = getOrCreateAnonId();
-        const cleanSuffix = anonId.replace(/^anon[_-]?/i, '').slice(0, 4) || 'guest';
-        const all = repository.listFeed('all', currentDateStr);
-        const myAnonList = all.filter(f => f.anonId === anonId);
-        const myAnonUser: User = {
-          id: anonId,
-          handle: `guest_${cleanSuffix}`,
-          name: '로컬 세션 예측자',
-          avatarUrl: '',
-          bio: '이 브라우저에 저장된 제출 기록입니다.',
-          forecastsCount: myAnonList.length,
-          completedCount: myAnonList.filter(
-            f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED'
-          ).length,
-          elo: DEFAULT_ELO,
+        return {
+          user: currentUser,
+          forecasts: repository.listByUser(currentUser.id),
         };
-        setUser(myAnonUser);
-        setForecasts(myAnonList);
       }
-      return;
+      const anonId = getOrCreateAnonId();
+      const cleanSuffix = anonId.replace(/^anon[_-]?/i, '').slice(0, 4) || 'guest';
+      const all = repository.listFeed('all', currentDateStr);
+      const myAnonList = all.filter(f => f.anonId === anonId);
+      const myAnonUser: User = {
+        id: anonId,
+        handle: `guest_${cleanSuffix}`,
+        name: '로컬 세션 예측자',
+        avatarUrl: '',
+        bio: '이 브라우저에 저장된 제출 기록입니다.',
+        forecastsCount: myAnonList.length,
+        completedCount: myAnonList.filter(
+          f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED'
+        ).length,
+        elo: DEFAULT_ELO,
+      };
+      return { user: myAnonUser, forecasts: myAnonList };
     }
 
-    const targetUser = repository.getUserByHandle(handle);
-    setUser(targetUser);
-    if (targetUser) {
-      setForecasts(repository.listByUser(targetUser.id));
-    } else {
-      setForecasts([]);
-    }
-  }, [handle, isMeRoute, currentUser, currentDateStr]);
+    const targetUser = handle ? repository.getUserByHandle(handle) : undefined;
+    return {
+      user: targetUser,
+      forecasts: targetUser ? repository.listByUser(targetUser.id) : [],
+    };
+  }, [handle, isMeRoute, currentUser, currentDateStr, repoTick]);
 
-  useEffect(() => {
-    loadData();
-    const unsub = repository.subscribe(loadData);
-    return () => unsub();
-  }, [loadData]);
+  const resolvedForecasts = forecasts.filter(
+    f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED'
+  );
+
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  const tabBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [tabRect, setTabRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    ready: boolean;
+  }>({ left: 0, top: 0, width: 0, height: 0, ready: false });
+
+  useLayoutEffect(() => {
+    if (!user) return;
+    const syncTab = () => {
+      const idx = activeTab === 'forecasts' ? 0 : 1;
+      const el = tabBtnRefs.current[idx];
+      if (!el) return;
+      setTabRect({
+        left: el.offsetLeft,
+        top: el.offsetTop,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+        ready: el.offsetWidth > 0,
+      });
+    };
+
+    syncTab();
+    const bar = tabBarRef.current;
+    let observer: ResizeObserver | null = null;
+    if (bar && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(syncTab);
+      observer.observe(bar);
+    }
+    window.addEventListener('resize', syncTab);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', syncTab);
+    };
+  }, [user, activeTab, forecasts.length, resolvedForecasts.length, locale]);
 
   if (!user) {
     return (
       <div className="p-16 text-center space-y-4">
         <p className="v-heading-16" style={{ color: 'var(--v-ink)' }}>
-          예측자 프로필을 찾을 수 없습니다.
+          {t('예측자 프로필을 찾을 수 없습니다.', 'Forecaster profile not found.')}
         </p>
         <button
           type="button"
-          onClick={() => navigate('/studio')}
-          className="v-btn-primary"
+          onClick={() => navigate('/')}
+          className="op-btn-primary"
         >
-          라이브 스튜디오로 돌아가기
+          {t('예측 화면으로 돌아가기', 'Back to Predict')}
         </button>
       </div>
     );
@@ -90,7 +138,6 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
   const isMe =
     isMeRoute ||
     (currentUser && handle?.toLowerCase() === currentUser.handle.toLowerCase());
-  const isAnonymousDevice = isMe && !currentUser;
   const isFollowing = repository.isFollowing(user.id);
 
   const handleFollowToggle = () => {
@@ -98,20 +145,30 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
     setFollowTick(t => t + 1);
   };
 
-  const resolvedForecasts = forecasts.filter(
-    f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED'
-  );
-
   const baseElo = user.elo ?? DEFAULT_ELO;
   let hitCount = 0;
   let totalScoreSum = 0;
   let scoredCount = 0;
   let netLpDelta = 0;
 
+  const allResolvedInRepo = repository
+    .listFeed('all', currentDateStr)
+    .filter(f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED');
+  const userEloMap: Record<string, number> = {};
+  repository.listAllUsers().forEach(u => {
+    userEloMap[u.id] = u.elo ?? DEFAULT_ELO;
+  });
+  userEloMap[user.id] = baseElo;
+  const visibleBtcBars = getStockHistory('BTC/USDT').filter(b => b.date <= currentDateStr);
+  const cohortResults = resolveForecastsWithCohort(
+    allResolvedInRepo,
+    visibleBtcBars,
+    userEloMap
+  );
+
   resolvedForecasts.forEach(f => {
-    const stockBars = getStockHistory(f.ticker);
-    const visibleBars = stockBars.filter(b => b.date <= currentDateStr);
-    const res = resolveForecast(f, visibleBars);
+    const res = cohortResults.get(f.id);
+    if (!res) return;
     const isHit = f.mode === 'breakout' ? res.breakoutHit : res.directionHit;
     if (isHit) hitCount++;
     if (res.score) {
@@ -123,7 +180,7 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
     }
   });
 
-  const liveElo = Math.max(800, baseElo + netLpDelta);
+  const liveElo = Math.max(MIN_ELO, baseElo + netLpDelta);
   const tierInfo = getEloTierInfo(liveElo);
 
   const hitRate =
@@ -135,42 +192,20 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
 
   const displayedList = activeTab === 'results' ? resolvedForecasts : forecasts;
 
+  const boxStyle = {
+    backgroundColor: 'var(--op-canvas)',
+    border: '1px solid var(--op-line-strong)',
+    borderRadius: '2px',
+  } as const;
+
   return (
-    <div className="w-full">
-      {/* Optional Ephemeral Session Notice Strip */}
-      {isAnonymousDevice && (
-        <div
-          className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-3"
-          style={{
-            backgroundColor: 'var(--v-canvas-soft)',
-            borderBottom: '1px solid var(--v-hairline)',
-          }}
-        >
-          <span className="v-caption" style={{ color: 'var(--v-body)' }}>
-            현재 예측 기록은 이 브라우저에 임시 저장되어 있습니다. 계정을 연결하면 기기 간 Elo 레이팅과 트랙 레코드가 영구 동기화됩니다.
-          </span>
-          <button
-            type="button"
-            onClick={() => setIsConnectOpen(true)}
-            className="v-btn-secondary"
-          >
-            계정 연결
-          </button>
-        </div>
-      )}
-
-      {/* ZONE 1: Forecaster Dossier Masthead Band */}
-      <div
-        className="relative grid grid-cols-1 lg:grid-cols-12"
-        style={{ borderBottom: '1px solid var(--v-hairline)' }}
-      >
-        <span className="v-crosshair" style={{ bottom: -6, left: -6 }} />
-        <span className="v-crosshair" style={{ bottom: -6, right: -6 }} />
-
-        {/* Left 7 Cols: Identity, Bio & Elo Tier Progression */}
+    <div className="px-4 sm:px-6 pt-4 pb-6 space-y-4 op-view-enter" style={{ backgroundColor: 'var(--op-canvas)' }}>
+      {/* ZONE 1: 12-Col Bento Header (7 Cols Profile Box | 5 Cols 3 KPI Boxes) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        {/* Left 7 Cols Box: Identity, Bio & Elo Tier Progression */}
         <div
           className="lg:col-span-7 p-5 flex flex-col justify-between gap-4 min-w-0"
-          style={{ borderRight: '1px solid var(--v-hairline)' }}
+          style={boxStyle}
         >
           <div>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -182,14 +217,19 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
                   @{user.handle}
                 </h1>
                 <span
-                  className="v-caption-mono px-2 py-0.5 rounded-[4px]"
+                  className="v-caption-mono px-2 py-0.5 rounded-[2px] inline-flex items-center gap-1.5 font-semibold"
                   style={{
-                    backgroundColor: 'var(--v-canvas-soft-2)',
-                    boxShadow: 'var(--v-shadow-border)',
+                    backgroundColor: 'var(--op-panel)',
+                    border: '1px solid var(--op-line-strong)',
                     color: tierInfo.accentHex,
                   }}
                 >
-                  {tierInfo.krTitle} ({tierInfo.tier}) · {liveElo} LP
+                  <span
+                    className="w-2 h-2 rounded-[1.5px] flex-shrink-0"
+                    style={{ backgroundColor: tierInfo.accentHex }}
+                    aria-hidden="true"
+                  />
+                  {locale === 'en' ? tierInfo.title : `${tierInfo.krTitle} (${tierInfo.tier})`} · {liveElo} LP
                 </span>
                 {netLpDelta !== 0 && (
                   <span
@@ -204,27 +244,19 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
                 )}
               </div>
 
-              {!isMe ? (
+              {!isMe && (
                 <button
                   type="button"
                   onClick={handleFollowToggle}
-                  className={isFollowing ? 'v-btn-secondary' : 'v-btn-primary'}
+                  className={isFollowing ? 'v-btn-secondary rounded-[2px]' : 'v-btn-primary rounded-[2px]'}
                 >
-                  {isFollowing ? '팔로잉' : '팔로우'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => navigate('/studio')}
-                  className="v-btn-secondary"
-                >
-                  + 새 예측
+                  {isFollowing ? t('팔로잉', 'Following') : t('팔로우', 'Follow')}
                 </button>
               )}
             </div>
 
             <p className="v-body-sm mt-2" style={{ color: 'var(--v-body)' }}>
-              {user.bio}
+              {localizeDataText(user.bio, locale)}
             </p>
           </div>
 
@@ -232,38 +264,38 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between v-caption-mono">
               <span style={{ color: 'var(--v-ink)' }}>
-                티어 승급 진척도 ({tierInfo.progressPct}%)
+                {t(`티어 승급 진척도 (${tierInfo.progressPct}%)`, `Tier Progress (${tierInfo.progressPct}%)`)}
               </span>
               <span style={{ color: tierInfo.accentHex }}>
                 {tierInfo.nextTierElo
-                  ? `다음 티어까지 ${tierInfo.nextTierElo - liveElo} LP`
-                  : '최상위 다이아몬드 달성'}
+                  ? t(`다음 티어까지 ${tierInfo.nextTierElo - liveElo} LP`, `${tierInfo.nextTierElo - liveElo} LP to next tier`)
+                  : t('최상위 다이아몬드 달성', 'Max Diamond Tier Reached')}
               </span>
             </div>
             <div
-              className="w-full h-2 rounded-full overflow-hidden"
-              style={{ backgroundColor: 'var(--v-canvas-soft-2)' }}
+              className="w-full h-2 rounded-[2px] overflow-hidden"
+              style={{ backgroundColor: 'var(--op-raised)' }}
             >
               <div
-                className="h-full rounded-full transition-all duration-300"
+                className="h-full rounded-[2px] transition-all duration-300"
                 style={{
                   width: `${Math.max(6, tierInfo.progressPct)}%`,
                   backgroundColor: tierInfo.accentHex,
                 }}
               />
             </div>
-            <div className="flex items-center justify-between v-caption-mono text-xs pt-0.5">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 v-caption-mono text-xs pt-0.5">
               {[
-                { label: '브론즈', lp: 1000 },
-                { label: '실버', lp: 1200 },
-                { label: '골드', lp: 1400 },
-                { label: '플래티넘', lp: 1600 },
-                { label: '다이아', lp: 1800 },
+                { label: t('브론즈', 'Bronze'), lp: 600 },
+                { label: t('실버', 'Silver'), lp: 1200 },
+                { label: t('골드', 'Gold'), lp: 1400 },
+                { label: t('플래티넘', 'Platinum'), lp: 1600 },
+                { label: t('다이아', 'Diamond'), lp: 1800 },
               ].map(m => {
                 const reached = liveElo >= m.lp;
                 return (
                   <span
-                    key={m.label}
+                    key={m.lp}
                     style={{
                       color: reached ? 'var(--v-ink)' : 'var(--v-mute)',
                       fontWeight: reached ? 600 : 400,
@@ -277,158 +309,160 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
           </div>
         </div>
 
-        {/* Right 5 Cols: Flush 3-Column Career Telemetry Strip */}
-        <div className="lg:col-span-5 grid grid-cols-3 min-w-0">
-          <div
-            className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
-            style={{ borderRight: '1px solid var(--v-hairline)' }}
-          >
+        {/* Right 5 Cols: Compact Unified 3-Metric Box */}
+        <div
+          className="lg:col-span-5 grid grid-cols-3 divide-x divide-[var(--op-line)] min-w-0"
+          style={boxStyle}
+        >
+          <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
             <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
-              제출
+              {t('제출', 'Submitted')}
             </span>
-            <div className="mt-2">
-              <p
-                className="v-mono text-xl font-semibold tracking-tight"
-                style={{ color: 'var(--v-ink)' }}
-              >
-                {forecasts.length}건
-              </p>
-              <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                불변 20일 시나리오
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="p-4 sm:p-5 flex flex-col justify-between min-w-0"
-            style={{ borderRight: '1px solid var(--v-hairline)' }}
-          >
-            <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
-              정산 완료
-            </span>
-            <div className="mt-2">
-              <p
-                className="v-mono text-xl font-semibold tracking-tight"
-                style={{ color: 'var(--v-ink)' }}
-              >
-                {resolvedForecasts.length}건
-              </p>
-              <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                {currentDateStr} 기준
-              </p>
-            </div>
+            <p
+              className="v-mono text-xl font-semibold tracking-tight mt-2"
+              style={{ color: 'var(--v-ink)' }}
+            >
+              {t(`${forecasts.length}건`, `${forecasts.length}`)}
+            </p>
           </div>
 
           <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
             <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
-              {avgScore !== null ? '평균 점수' : '방향 적중률'}
+              {t('정산', 'Settled')}
             </span>
-            <div className="mt-2">
-              <p
-                className="v-mono text-xl font-semibold tracking-tight"
-                style={{ color: 'var(--v-bull)' }}
-              >
-                {avgScore !== null
-                  ? `${avgScore}점`
-                  : hitRate !== null
-                  ? `${hitRate}%`
-                  : '-'}
-              </p>
-              <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
-                100점 정량 루브릭
-              </p>
-            </div>
+            <p
+              className="v-mono text-xl font-semibold tracking-tight mt-2"
+              style={{ color: 'var(--v-ink)' }}
+            >
+              {t(`${resolvedForecasts.length}건`, `${resolvedForecasts.length}`)}
+            </p>
+          </div>
+
+          <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
+            <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
+              {avgScore !== null ? t('평균 점수', 'Avg Score') : t('적중률', 'Hit Rate')}
+            </span>
+            <p
+              className="v-mono text-xl font-semibold tracking-tight mt-2"
+              style={{ color: 'var(--v-bull)' }}
+            >
+              {avgScore !== null
+                ? t(`${avgScore}점`, `${avgScore}`)
+                : hitRate !== null
+                ? `${hitRate}%`
+                : '-'}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* ZONE 2: Forecaster Deployment & Settlement History */}
-      <div>
+      {/* ZONE 2: Boxed Forecaster Deployment & Settlement History */}
+      <section className="overflow-hidden" style={boxStyle}>
         <div
           className="px-5 flex flex-wrap items-center justify-between gap-3"
           style={{
-            backgroundColor: 'var(--v-canvas-soft)',
-            borderBottom: '1px solid var(--v-hairline)',
+            backgroundColor: 'var(--op-panel)',
+            borderBottom: '1px solid var(--op-line)',
           }}
         >
-          <div className="flex items-center gap-6">
+          <div
+            ref={tabBarRef}
+            role="tablist"
+            aria-label={t('예측 기록 탭', 'Forecast record tabs')}
+            className="relative flex items-center gap-2"
+          >
+            <span
+              aria-hidden="true"
+              className="op-sliding-glow"
+              style={{
+                transform: `translate3d(${tabRect.left}px, ${tabRect.top + 6}px, 0)`,
+                width: `${tabRect.width}px`,
+                height: `${Math.max(0, tabRect.height - 12)}px`,
+                opacity: tabRect.ready ? 1 : 0,
+              }}
+            />
+            <span
+              aria-hidden="true"
+              className="op-sliding-underline"
+              style={{
+                transform: `translate3d(${tabRect.left}px, 0, 0)`,
+                width: `${tabRect.width}px`,
+                opacity: tabRect.ready ? 1 : 0,
+              }}
+            />
             {[
               {
                 id: 'forecasts' as const,
-                label: `전체 (${forecasts.length})`,
+                label: t(`전체 (${forecasts.length})`, `All (${forecasts.length})`),
               },
               {
                 id: 'results' as const,
-                label: `정산 완료 영수증 (${resolvedForecasts.length})`,
+                label: t(`정산 완료 (${resolvedForecasts.length})`, `Settled (${resolvedForecasts.length})`),
               },
-            ].map(tab => {
+            ].map((tab, idx) => {
               const active = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  id={`profile-tab-${tab.id}`}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`profile-tabpanel-${tab.id}`}
+                  ref={el => {
+                    tabBtnRefs.current[idx] = el;
+                  }}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className="relative py-3 text-xs font-medium transition-colors"
+                  className="relative z-10 px-2.5 py-3 text-xs font-medium transition-colors whitespace-nowrap"
                   style={{
-                    color: active ? 'var(--v-ink)' : 'var(--v-mute)',
+                    color: active ? 'var(--op-orange)' : 'var(--v-mute)',
                   }}
                 >
                   {tab.label}
-                  {active && (
-                    <span
-                      className="absolute bottom-0 left-0 right-0 h-[2px]"
-                      style={{ backgroundColor: 'var(--v-primary)' }}
-                    />
-                  )}
                 </button>
               );
             })}
           </div>
-
-          <span className="v-caption-mono" style={{ color: 'var(--v-mute)' }}>
-            rules:v1 · append-only 불변 검증
-          </span>
         </div>
 
-        {displayedList.length > 0 ? (
-          <div>
-            {displayedList.map(forecast => (
-              <CompactForecastCard
-                key={forecast.id}
-                forecast={forecast}
-                currentDateStr={currentDateStr}
-                borderless={true}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="p-16 text-center space-y-4">
-            <p className="v-body-sm" style={{ color: 'var(--v-mute)' }}>
-              {activeTab === 'results'
-                ? '정산된 예측이 없습니다.'
-                : '아직 예측이 없습니다.'}
-            </p>
-            {isMe && (
-              <button
-                type="button"
-                onClick={() => navigate('/studio')}
-                className="v-btn-primary"
-              >
-                예측하러 가기
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      <ConnectModal
-        isOpen={isConnectOpen}
-        onClose={() => setIsConnectOpen(false)}
-        onSuccess={() => {
-          setIsConnectOpen(false);
-          loadData();
-        }}
-      />
+        <div
+          key={activeTab}
+          role="tabpanel"
+          id={`profile-tabpanel-${activeTab}`}
+          aria-labelledby={`profile-tab-${activeTab}`}
+          className="op-view-enter"
+        >
+          {displayedList.length > 0 ? (
+            <div className="divide-y divide-[var(--op-line)]">
+              {displayedList.map(forecast => (
+                <CompactForecastCard
+                  key={forecast.id}
+                  forecast={forecast}
+                  currentDateStr={currentDateStr}
+                  borderless={true}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-16 text-center space-y-4">
+              <p className="v-body-sm" style={{ color: 'var(--v-mute)' }}>
+                {activeTab === 'results'
+                  ? t('정산된 예측이 없습니다.', 'No settled forecasts yet.')
+                  : t('아직 예측이 없습니다.', 'No forecasts yet.')}
+              </p>
+              {isMe && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  className="op-btn-primary"
+                >
+                  {t('예측하러 가기', 'Make a Forecast')}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

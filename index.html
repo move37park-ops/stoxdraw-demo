@@ -4,58 +4,37 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#ffffff" />
-    <title>STOXDRAW — 비트코인 20일 시나리오 예측 및 집단지성 검증</title>
-    <meta name="description" content="비트코인 20일 가격 경로를 차트 위에 직접 그려 예측하고, 시장 집단지성 중앙값과 대조해 100점 만점으로 정량 채점받으세요." />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        const saved = localStorage.getItem('op_theme');
+        if (saved === 'light' || saved === 'dark') {
+          document.querySelector('meta[name="color-scheme"]').content = saved;
+        }
+      } catch {}
+    </script>
+    <meta name="theme-color" content="#050505" />
+    <title>Orange Paths — 차트에 직접 그리는 7일 BTC 예측</title>
+    <meta name="description" content="7일 비트코인 예상 경로를 차트에 직접 그려 제출하고, 집단 분석 그래프와 정량 채점으로 실력을 검증하세요." />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="STOXDRAW" />
-    <meta property="og:title" content="STOXDRAW — 비트코인 20일 시나리오 예측" />
-    <meta property="og:description" content="변곡점 클릭으로 20일 예상 궤적을 작도하고 시장 참여자들의 집단지성 및 실전 적중률을 확인하세요." />
+    <meta property="og:site_name" content="Orange Paths" />
+    <meta property="og:title" content="Orange Paths — 차트에 직접 그리는 7일 BTC 예측" />
+    <meta property="og:description" content="7일 비트코인 예상 경로를 차트에 직접 그려 제출하고, 집단 분석 그래프와 정량 채점으로 실력을 검증하세요." />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="STOXDRAW — 비트코인 20일 시나리오 예측" />
-    <meta name="twitter:description" content="변곡점 클릭으로 20일 예상 궤적을 작도하고 시장 참여자들의 집단지성 및 실전 적중률을 확인하세요." />
+    <meta name="twitter:title" content="Orange Paths — 차트에 직접 그리는 7일 BTC 예측" />
+    <meta name="twitter:description" content="7일 비트코인 예상 경로를 차트에 직접 그려 제출하고, 집단 분석 그래프와 정량 채점으로 실력을 검증하세요." />
     <link rel="preload" href="/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/TimesNewerRoman-Bold.otf" as="font" type="font/otf" crossorigin />
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable.css"
+      integrity="sha384-ibFbybJ6PggxRvIHmU1Ev0cJP1iQRYYeVs/vOrlRzPEyHM79xSfKH2pMLOlIbzJA"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: [
-                '"Pretendard Variable"',
-                'Pretendard',
-                '-apple-system',
-                'BlinkMacSystemFont',
-                'system-ui',
-                'sans-serif'
-              ],
-              mono: [
-                '"Pretendard Variable"',
-                'Pretendard',
-                '-apple-system',
-                'BlinkMacSystemFont',
-                'system-ui',
-                'sans-serif'
-              ],
-              serif: [
-                '"Times Newer Roman"',
-                '"Tinos"',
-                '"Instrument Serif"',
-                'Didot',
-                'Georgia',
-                'serif'
-              ],
-            }
-          }
-        }
-      }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>

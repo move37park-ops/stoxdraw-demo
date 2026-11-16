@@ -1,4 +1,4 @@
-export type Horizon = '20D' | '5D' | '30D';
+export type Horizon = '7D' | '20D' | '5D' | '30D';
 export type Mode = 'path' | 'breakout';
 export type ForecastStatus = 'DRAFT' | 'LOCKED' | 'LIVE' | 'RESOLVED';
 
@@ -8,15 +8,15 @@ export interface PathPoint {
 }
 
 export interface AnchorPoint {
-  day: number; // 1 ~ 20 (D+1 ~ D+20)
+  day: number; // 1 ~ N (D+1 ~ D+N, 기본 N=7)
   price: number;
 }
 
 export interface ForecastVersion {
-  version: number;          // 1 (최초 제출본), 2, 3...
+  version: number;          // 1 (최초 확정 제출본)
   createdAt: string;        // 박제 시각 (ISO String)
   anchors: AnchorPoint[];   // 클릭하여 작도한 변곡점 목록
-  prices: number[];         // 자동 보간된 20일 시계열 가격 (길이 20)
+  prices: number[];         // 자동 보간된 일봉 시계열 가격 (길이 N)
   comment: string;          // 해당 버전 코멘트
   digestHash: string;       // 불변 검증 해시
 }
@@ -31,19 +31,19 @@ export interface Forecast {
   authorId: string | null;       // null = Anonymous
   anonId: string;                // 익명 디바이스 ID (계정 연결 시 귀속)
   ticker: string;                // 'BTC/USDT'
-  horizon: Horizon;              // 기본 '20D'
+  horizon: Horizon;              // 기본 '7D'
   mode: Mode;
   comment: string;
   lockedAt: string;              // 최초 제출 시각 (ISO String)
   updatedAt?: string;            // 최근 수정 시각 (ISO String)
   basePrice: number;             // Lock 시점 기준가
   baseDate: string;              // YYYY-MM-DD
-  evalDates: string[];           // 평가 일봉 목록 (20일)
+  evalDates: string[];           // 평가 일봉 목록 (기본 7일)
   anchors?: AnchorPoint[];       // 현재 활성 변곡점 배열
-  versions?: ForecastVersion[];  // 최초 제출본(v1) 및 수정 이력(v2+) 보존 원장
-  path?: PathPoint[];            // 보간된 20일 시계열 가격 배열
+  versions?: ForecastVersion[];  // 최초 제출본(v1) 보존 원장
+  path?: PathPoint[];            // 보간된 시계열 가격 배열
   pathPct?: number[];            // 기준가 대비 % 변동률 배열 [-0.02, 0.01, ...]
-  roundId?: string;              // 라운드 ID (e.g. R2026-BTC-20D)
+  roundId?: string;              // 라운드 ID (e.g. R2026-W40-BTCUSDT-7D)
   breakout?: BreakoutTarget;     // Mode === 'breakout'
   parentId?: string;             // 원본 Forecast ID (맞불 대결 관계)
   rulesVersion: 'v1';
@@ -52,8 +52,8 @@ export interface Forecast {
 export interface ScoreBreakdown {
   total: number;                 // 0 ~ 100점
   pathScore: number;             // /50 (오차 정밀도)
-  directionScore: number;        // /30 (방향성 적중)
-  targetScore: number;           // /20 (변동성·목표가 정밀도)
+  directionScore: number;        // /25 (일별 수익률 형태 유사도)
+  targetScore: number;           // /25 (종가 정밀도 15 + 최종 방향 10)
   grade: 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
   directionHit: boolean;
   endErrorPct: number;
@@ -154,6 +154,7 @@ export interface MarketBar {
   high: number;
   low: number;
   close: number;
+  volume?: number;
 }
 
 export interface PracticeAttempt {
@@ -166,4 +167,28 @@ export interface PracticeAttempt {
   forecastPrices: number[];
   actualPrices: number[];
   score: ScoreBreakdown;
+}
+
+export type CommunityTopic = 'market' | 'review' | 'discussion';
+
+export interface CommunityPost {
+  id: string;
+  authorId: string | null;
+  authorHandle: string;
+  authorName: string;
+  topic: CommunityTopic;
+  title: string;
+  body: string;
+  createdAt: string;
+  forecastId?: string;
+}
+
+export interface CommunityComment {
+  id: string;
+  postId: string;
+  userId: string | null;
+  authorHandle: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
 }

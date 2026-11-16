@@ -1,111 +1,182 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
-import { LandingPage } from './features/landing/LandingPage';
-import { TrajectoryStudioPage } from './features/studio/TrajectoryStudioPage';
-import { ReplayLabPage } from './features/practice/ReplayLabPage';
-import { LeaderboardPage } from './features/leaderboard/LeaderboardPage';
-import { DetailPage } from './features/detail/DetailPage';
-import { ProfilePage } from './features/profile/ProfilePage';
+import { I18nProvider } from './lib/i18n';
+import { PredictPage } from './features/predict/PredictPage';
+
+const CommunityPage = lazy(() =>
+  import('./features/community/CommunityPage').then(m => ({ default: m.CommunityPage }))
+);
+const DetailPage = lazy(() =>
+  import('./features/detail/DetailPage').then(m => ({ default: m.DetailPage }))
+);
+const ProfilePage = lazy(() =>
+  import('./features/profile/ProfilePage').then(m => ({ default: m.ProfilePage }))
+);
+const DocsPage = lazy(() =>
+  import('./features/docs/DocsPage').then(m => ({ default: m.DocsPage }))
+);
+const PracticePage = lazy(() =>
+  import('./features/practice/PracticePage').then(m => ({ default: m.PracticePage }))
+);
+
+const THEME_STORAGE_KEY = 'op_theme';
+
+function readStoredThemeOverride(): 'dark' | 'light' | null {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {}
+  return null;
+}
+
+function getSystemTheme(): 'dark' | 'light' {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return 'dark';
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 export function App() {
-  // Unified Time-Warp simulator state for Live 20D tracking (defaults to D-0 Lock: 2026-10-02)
+  // Unified Demo Time-Warp state for Live 7D tracking (defaults to D-0 Lock: 2026-10-02)
   const [currentDateStr, setCurrentDateStr] = useState<string>('2026-10-02');
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    try {
-      const saved = localStorage.getItem('stoxdraw_theme');
-      if (saved === 'dark' || saved === 'light') return saved;
-    } catch {}
-    return 'light';
-  });
+  const [themeOverride, setThemeOverride] = useState<'dark' | 'light' | null>(readStoredThemeOverride);
+  const [systemTheme, setSystemTheme] = useState<'dark' | 'light'>(getSystemTheme);
+
+  const theme: 'dark' | 'light' = themeOverride ?? systemTheme;
 
   useEffect(() => {
-    try {
-      localStorage.setItem('stoxdraw_theme', theme);
-    } catch {}
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'color-scheme';
+      document.head.appendChild(meta);
     }
-  }, [theme]);
+    meta.content = themeOverride ?? 'light dark';
 
-  const toggleTheme = () =>
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    const themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.content = theme === 'dark' ? '#000000' : '#ffffff';
+    }
+  }, [themeOverride, theme]);
+
+  useEffect(() => {
+    const mediaQuery =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : null;
+
+    const handleSystemChange = (event: MediaQueryListEvent) => {
+      setSystemTheme(event.matches ? 'dark' : 'light');
+    };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === THEME_STORAGE_KEY || event.key === null) {
+        setThemeOverride(
+          event.newValue === 'dark' || event.newValue === 'light'
+            ? event.newValue
+            : readStoredThemeOverride()
+        );
+      }
+    };
+
+    mediaQuery?.addEventListener('change', handleSystemChange);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      mediaQuery?.removeEventListener('change', handleSystemChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  const toggleTheme = () => {
+    const target: 'dark' | 'light' = theme === 'dark' ? 'light' : 'dark';
+    const currentSystem = getSystemTheme();
+    if (target === currentSystem) {
+      try {
+        localStorage.removeItem(THEME_STORAGE_KEY);
+      } catch {}
+      setThemeOverride(null);
+    } else {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, target);
+      } catch {}
+      setThemeOverride(target);
+    }
+  };
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* 1. Live Mode Studio - BTC/USDT 20D Polyline Studio & Consensus Compare */}
-        <Route
-          path="/studio"
-          element={
-            <TrajectoryStudioPage
-              currentDateStr={currentDateStr}
-              onDateChange={setCurrentDateStr}
-              theme={theme}
-              onToggleTheme={toggleTheme}
-            />
-          }
-        />
-        <Route
-          path="/live"
-          element={
-            <TrajectoryStudioPage
-              currentDateStr={currentDateStr}
-              onDateChange={setCurrentDateStr}
-              theme={theme}
-              onToggleTheme={toggleTheme}
-            />
-          }
-        />
-
-        {/* 2. Unified Geist AppShell Routes (Landing Gateway, Practice Mode, Leaderboard & Record) */}
-        <Route
-          element={
-            <AppShell
-              currentDateStr={currentDateStr}
-              onDateChange={setCurrentDateStr}
-              theme={theme}
-              onToggleTheme={toggleTheme}
-            />
+    <I18nProvider>
+      <BrowserRouter>
+        <Suspense
+          fallback={
+            <div
+              className="min-h-screen w-full flex items-center justify-center text-xs op-mono"
+              style={{ backgroundColor: 'var(--op-canvas)', color: 'var(--op-ink-3)' }}
+            >
+              Loading...
+            </div>
           }
         >
-          {/* Root Landing & Mode Selector Gateway */}
+          <Routes>
           <Route
-            path="/"
-            element={<LandingPage currentDateStr={currentDateStr} />}
-          />
-
-          {/* Tab 2: Practice Mode - Replay Lab (Blind Quiz & 1-Second Grading) */}
-          <Route path="practice" element={<ReplayLabPage />} />
-
-          {/* Tab 3: Leaderboard (Bronze ~ Diamond) & Verifiable Track Record */}
-          <Route
-            path="leaderboard"
-            element={<LeaderboardPage currentDateStr={currentDateStr} />}
-          />
-          <Route
-            path="record"
-            element={<ProfilePage currentDateStr={currentDateStr} />}
-          />
-          <Route
-            path="u/:handle"
-            element={<ProfilePage currentDateStr={currentDateStr} />}
-          />
-          <Route
-            path="f/:id"
             element={
-              <DetailPage
+              <AppShell
                 currentDateStr={currentDateStr}
                 onDateChange={setCurrentDateStr}
+                theme={theme}
+                onToggleTheme={toggleTheme}
               />
             }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+          >
+            {/* Root = Live 7D Chart Drawing & Consensus Studio */}
+            <Route
+              index
+              element={
+                <PredictPage
+                  currentDateStr={currentDateStr}
+                  onDateChange={setCurrentDateStr}
+                />
+              }
+            />
+            <Route
+              path="community"
+              element={<CommunityPage currentDateStr={currentDateStr} />}
+            />
+            <Route
+              path="leaderboard"
+              element={<CommunityPage currentDateStr={currentDateStr} />}
+            />
+            <Route path="docs" element={<DocsPage />} />
+            <Route path="guide" element={<Navigate to="/docs" replace />} />
+            <Route
+              path="me"
+              element={<ProfilePage currentDateStr={currentDateStr} />}
+            />
+            <Route
+              path="u/:handle"
+              element={<ProfilePage currentDateStr={currentDateStr} />}
+            />
+            <Route
+              path="f/:id"
+              element={
+                <DetailPage
+                  currentDateStr={currentDateStr}
+                  onDateChange={setCurrentDateStr}
+                />
+              }
+            />
+
+            {/* Legacy route redirects */}
+            <Route path="studio" element={<Navigate to="/" replace />} />
+            <Route path="live" element={<Navigate to="/" replace />} />
+            <Route path="record" element={<Navigate to="/me" replace />} />
+            <Route path="practice" element={<PracticePage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </I18nProvider>
   );
 }
 

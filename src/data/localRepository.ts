@@ -9,49 +9,129 @@ import type {
   AnchorPoint,
   ForecastVersion,
   PracticeAttempt,
+  CommunityPost,
+  CommunityComment,
+  CommunityTopic,
 } from '../domain/types';
-import { SEED_USERS, generateSeedForecasts, SEED_COMMENTS, SEED_NOTIFICATIONS } from './seed';
+import {
+  SEED_USERS,
+  generateSeedForecasts,
+  SEED_COMMENTS,
+  SEED_NOTIFICATIONS,
+  SEED_COMMUNITY_POSTS,
+  SEED_COMMUNITY_COMMENTS,
+} from './seed';
 import { deriveForecastStatus } from '../domain/lifecycle';
 import { computeForecastDigest } from '../domain/audit';
 
 const KEYS = {
-  FORECASTS: 'stoxdraw_v9_btc20d_forecasts',
-  USERS: 'stoxdraw_v9_btc20d_users',
-  LIKES: 'stoxdraw_v9_btc20d_likes',
-  FOLLOWS: 'stoxdraw_v9_btc20d_follows',
-  COMMENTS: 'stoxdraw_v9_btc20d_comments',
-  NOTIFICATIONS: 'stoxdraw_v9_btc20d_notifications',
-  PRACTICE: 'stoxdraw_v9_btc20d_practice',
+  FORECASTS: 'op_v2_btc7d_forecasts',
+  USERS: 'op_v2_btc7d_users',
+  LIKES: 'op_v2_btc7d_likes',
+  FOLLOWS: 'op_v2_btc7d_follows',
+  COMMENTS: 'op_v2_btc7d_comments',
+  NOTIFICATIONS: 'op_v2_btc7d_notifications',
+  PRACTICE: 'op_v2_btc7d_practice',
+  COMMUNITY_POSTS: 'op_v2_btc7d_community_posts',
+  COMMUNITY_LIKES: 'op_v2_btc7d_community_likes',
+  COMMUNITY_COMMENTS: 'op_v2_btc7d_community_comments',
 };
+
+function safeReadJson<T>(key: string, fallback: T): T {
+  if (typeof localStorage === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return (parsed ?? fallback) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function safeWriteJson(key: string, value: unknown): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore quota / restricted storage errors
+  }
+}
+
+function safeHasKey(key: string): boolean {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch {
+    return false;
+  }
+}
 
 class LocalRepository implements Repository {
   private listeners = new Set<() => void>();
+  private readCache = new Map<string, unknown>();
 
   constructor() {
     this.ensureInitialized();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', () => {
+        this.readCache.clear();
+        this.notify();
+      });
+    }
+  }
+
+  private readCached<T>(key: string, fallback: T): T {
+    if (this.readCache.has(key)) {
+      return this.readCache.get(key) as T;
+    }
+    const parsed = safeReadJson<T>(key, fallback);
+    if (parsed !== fallback) {
+      this.readCache.set(key, parsed);
+    }
+    return parsed;
+  }
+
+  private writeCached(key: string, value: unknown): void {
+    this.readCache.set(key, value);
+    safeWriteJson(key, value);
   }
 
   private ensureInitialized() {
-    if (!localStorage.getItem(KEYS.USERS)) {
-      localStorage.setItem(KEYS.USERS, JSON.stringify(SEED_USERS));
+    if (!safeHasKey(KEYS.USERS)) {
+      this.writeCached(KEYS.USERS, SEED_USERS);
     }
-    if (!localStorage.getItem(KEYS.FORECASTS)) {
-      localStorage.setItem(KEYS.FORECASTS, JSON.stringify(generateSeedForecasts()));
+    if (!safeHasKey(KEYS.FORECASTS)) {
+      this.writeCached(KEYS.FORECASTS, generateSeedForecasts());
     }
-    if (!localStorage.getItem(KEYS.COMMENTS)) {
-      localStorage.setItem(KEYS.COMMENTS, JSON.stringify(SEED_COMMENTS));
+    if (!safeHasKey(KEYS.COMMENTS)) {
+      this.writeCached(KEYS.COMMENTS, SEED_COMMENTS);
     }
-    if (!localStorage.getItem(KEYS.NOTIFICATIONS)) {
-      localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(SEED_NOTIFICATIONS));
+    if (!safeHasKey(KEYS.NOTIFICATIONS)) {
+      this.writeCached(KEYS.NOTIFICATIONS, SEED_NOTIFICATIONS);
     }
-    if (!localStorage.getItem(KEYS.LIKES)) {
-      localStorage.setItem(
-        KEYS.LIKES,
-        JSON.stringify({ fc_btc_live_quant: 31, fc_btc_live_alpha: 24, fc_btc_live_satoshi: 17 })
-      );
+    if (!safeHasKey(KEYS.LIKES)) {
+      this.writeCached(KEYS.LIKES, {
+        fc_btc_live_quant: 31,
+        fc_btc_live_alpha: 24,
+        fc_btc_live_satoshi: 17,
+      });
     }
-    if (!localStorage.getItem(KEYS.FOLLOWS)) {
-      localStorage.setItem(KEYS.FOLLOWS, JSON.stringify(['u_quant', 'u_alpha']));
+    if (!safeHasKey(KEYS.FOLLOWS)) {
+      this.writeCached(KEYS.FOLLOWS, ['u_quant', 'u_alpha']);
+    }
+    if (!safeHasKey(KEYS.COMMUNITY_POSTS)) {
+      this.writeCached(KEYS.COMMUNITY_POSTS, SEED_COMMUNITY_POSTS);
+    }
+    if (!safeHasKey(KEYS.COMMUNITY_LIKES)) {
+      this.writeCached(KEYS.COMMUNITY_LIKES, {
+        cp_seed_review_sep: 19,
+        cp_seed_market_vol: 14,
+        cp_seed_disc_shape: 11,
+      });
+    }
+    if (!safeHasKey(KEYS.COMMUNITY_COMMENTS)) {
+      this.writeCached(KEYS.COMMUNITY_COMMENTS, SEED_COMMUNITY_COMMENTS);
     }
   }
 
@@ -65,12 +145,12 @@ class LocalRepository implements Repository {
   }
 
   private getForecasts(): Forecast[] {
-    const raw = localStorage.getItem(KEYS.FORECASTS);
-    return raw ? JSON.parse(raw) : [];
+    const raw = this.readCached<Forecast[]>(KEYS.FORECASTS, []);
+    return Array.isArray(raw) ? raw : [];
   }
 
   private setForecasts(list: Forecast[]) {
-    localStorage.setItem(KEYS.FORECASTS, JSON.stringify(list));
+    this.writeCached(KEYS.FORECASTS, list);
     this.notify();
   }
 
@@ -85,7 +165,7 @@ class LocalRepository implements Repository {
     }
 
     if (tab === 'following') {
-      const follows: string[] = JSON.parse(localStorage.getItem(KEYS.FOLLOWS) || '[]');
+      const follows = safeReadJson<string[]>(KEYS.FOLLOWS, []);
       return sorted.filter(f => f.authorId && follows.includes(f.authorId));
     }
 
@@ -121,7 +201,7 @@ class LocalRepository implements Repository {
     breakout?: { direction: 'up' | 'down'; price: number };
     parentId?: string;
   }): Forecast {
-    const forecasts = this.getForecasts();
+    const forecasts = [...this.getForecasts()];
     const nowIso = new Date().toISOString();
     const id = 'fc_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
 
@@ -162,17 +242,17 @@ class LocalRepository implements Repository {
           actorName: actor ? actor.name : 'Anonymous Trader',
           forecastId: newForecast.id,
           ticker: newForecast.ticker,
-          message: `님이 회원님의 ${newForecast.ticker} 20일 시나리오에 맞불 작도를 제출했습니다.`,
+          message: `님이 회원님의 ${newForecast.ticker} 7일 시나리오에 맞불 작도를 제출했습니다.`,
         });
       }
     }
 
     if (input.authorId) {
-      const users = this.listAllUsers();
+      const users = [...this.listAllUsers()];
       const idx = users.findIndex(u => u.id === input.authorId);
       if (idx !== -1) {
-        users[idx].forecastsCount += 1;
-        localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+        users[idx] = { ...users[idx], forecastsCount: users[idx].forecastsCount + 1 };
+        this.writeCached(KEYS.USERS, users);
       }
     }
 
@@ -193,7 +273,7 @@ class LocalRepository implements Repository {
       digestHash: string;
     }
   ): Forecast | undefined {
-    const forecasts = this.getForecasts();
+    const forecasts = [...this.getForecasts()];
     const idx = forecasts.findIndex(f => f.id === forecastId);
     if (idx === -1) return undefined;
 
@@ -239,33 +319,33 @@ class LocalRepository implements Repository {
   }
 
   claimAnonymous(anonId: string, userId: string) {
-    const forecasts = this.getForecasts();
     let changed = false;
-    forecasts.forEach(f => {
+    const next = this.getForecasts().map(f => {
       if (f.anonId === anonId && !f.authorId) {
-        f.authorId = userId;
         changed = true;
+        return { ...f, authorId: userId };
       }
+      return f;
     });
     if (changed) {
-      this.setForecasts(forecasts);
+      this.setForecasts(next);
     }
   }
 
   listPracticeAttempts(): PracticeAttempt[] {
-    const raw = localStorage.getItem(KEYS.PRACTICE);
-    return raw ? JSON.parse(raw) : [];
+    const raw = this.readCached<PracticeAttempt[]>(KEYS.PRACTICE, []);
+    return Array.isArray(raw) ? raw : [];
   }
 
   savePracticeAttempt(attempt: Omit<PracticeAttempt, 'id' | 'createdAt'>): PracticeAttempt {
-    const list = this.listPracticeAttempts();
+    const list = [...this.listPracticeAttempts()];
     const newAttempt: PracticeAttempt = {
       ...attempt,
       id: 'prac_' + Math.random().toString(36).substring(2, 8) + '_' + Date.now().toString(36),
       createdAt: new Date().toISOString(),
     };
     list.unshift(newAttempt);
-    localStorage.setItem(KEYS.PRACTICE, JSON.stringify(list.slice(0, 50)));
+    this.writeCached(KEYS.PRACTICE, list.slice(0, 50));
     this.notify();
     return newAttempt;
   }
@@ -279,17 +359,29 @@ class LocalRepository implements Repository {
   }
 
   listAllUsers(): User[] {
-    const raw = localStorage.getItem(KEYS.USERS);
-    return raw ? JSON.parse(raw) : SEED_USERS;
+    const raw = this.readCached<User[]>(KEYS.USERS, SEED_USERS);
+    return Array.isArray(raw) ? raw : SEED_USERS;
+  }
+
+  upsertUser(user: User): void {
+    const users = [...this.listAllUsers()];
+    const idx = users.findIndex(u => u.id === user.id);
+    if (idx !== -1) {
+      users[idx] = { ...users[idx], ...user };
+    } else {
+      users.push(user);
+    }
+    this.writeCached(KEYS.USERS, users);
+    this.notify();
   }
 
   private getLikesMap(): Record<string, number> {
-    return JSON.parse(localStorage.getItem(KEYS.LIKES) || '{}');
+    return this.readCached<Record<string, number>>(KEYS.LIKES, {});
   }
 
   private getMyLikedSet(): Set<string> {
-    const raw = localStorage.getItem(KEYS.LIKES + '_my') || '[]';
-    return new Set(JSON.parse(raw));
+    const raw = this.readCached<string[]>(KEYS.LIKES + '_my', []);
+    return new Set(Array.isArray(raw) ? raw : []);
   }
 
   isLiked(forecastId: string): boolean {
@@ -297,7 +389,7 @@ class LocalRepository implements Repository {
   }
 
   toggleLike(forecastId: string): boolean {
-    const map = this.getLikesMap();
+    const map = { ...this.getLikesMap() };
     const mySet = this.getMyLikedSet();
     let liked = false;
 
@@ -311,8 +403,8 @@ class LocalRepository implements Repository {
       liked = true;
     }
 
-    localStorage.setItem(KEYS.LIKES, JSON.stringify(map));
-    localStorage.setItem(KEYS.LIKES + '_my', JSON.stringify(Array.from(mySet)));
+    this.writeCached(KEYS.LIKES, map);
+    this.writeCached(KEYS.LIKES + '_my', Array.from(mySet));
     this.notify();
     return liked;
   }
@@ -323,12 +415,13 @@ class LocalRepository implements Repository {
   }
 
   isFollowing(userId: string): boolean {
-    const follows: string[] = JSON.parse(localStorage.getItem(KEYS.FOLLOWS) || '[]');
-    return follows.includes(userId);
+    const follows = this.readCached<string[]>(KEYS.FOLLOWS, []);
+    return Array.isArray(follows) && follows.includes(userId);
   }
 
   toggleFollow(userId: string): boolean {
-    const follows: string[] = JSON.parse(localStorage.getItem(KEYS.FOLLOWS) || '[]');
+    const raw = this.readCached<string[]>(KEYS.FOLLOWS, []);
+    const follows = Array.isArray(raw) ? [...raw] : [];
     const idx = follows.indexOf(userId);
     let nowFollowing = false;
     if (idx !== -1) {
@@ -338,18 +431,19 @@ class LocalRepository implements Repository {
       follows.push(userId);
       nowFollowing = true;
     }
-    localStorage.setItem(KEYS.FOLLOWS, JSON.stringify(follows));
+    this.writeCached(KEYS.FOLLOWS, follows);
     this.notify();
     return nowFollowing;
   }
 
   listComments(forecastId: string): Comment[] {
-    const all: Comment[] = JSON.parse(localStorage.getItem(KEYS.COMMENTS) || '[]');
-    return all.filter(c => c.forecastId === forecastId);
+    const all = this.readCached<Comment[]>(KEYS.COMMENTS, []);
+    return Array.isArray(all) ? all.filter(c => c.forecastId === forecastId) : [];
   }
 
   addComment(forecastId: string, author: User, content: string): Comment {
-    const all: Comment[] = JSON.parse(localStorage.getItem(KEYS.COMMENTS) || '[]');
+    const raw = this.readCached<Comment[]>(KEYS.COMMENTS, []);
+    const all = Array.isArray(raw) ? [...raw] : [];
     const newComment: Comment = {
       id: 'c_' + Date.now().toString(36),
       forecastId,
@@ -361,7 +455,7 @@ class LocalRepository implements Repository {
       createdAt: new Date().toISOString(),
     };
     all.push(newComment);
-    localStorage.setItem(KEYS.COMMENTS, JSON.stringify(all));
+    this.writeCached(KEYS.COMMENTS, all);
 
     const forecast = this.getForecast(forecastId);
     if (forecast && forecast.authorId && forecast.authorId !== author.id) {
@@ -380,19 +474,119 @@ class LocalRepository implements Repository {
     return newComment;
   }
 
+  listCommunityPosts(): CommunityPost[] {
+    const all = this.readCached<CommunityPost[]>(KEYS.COMMUNITY_POSTS, []);
+    if (!Array.isArray(all)) return [];
+    return [...all].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  createCommunityPost(input: {
+    authorId: string | null;
+    authorHandle: string;
+    authorName: string;
+    topic: CommunityTopic;
+    title: string;
+    body: string;
+    forecastId?: string;
+  }): CommunityPost {
+    const all = this.listCommunityPosts();
+    const post: CommunityPost = {
+      id: 'cp_' + Math.random().toString(36).substring(2, 8) + '_' + Date.now().toString(36),
+      authorId: input.authorId,
+      authorHandle: input.authorHandle,
+      authorName: input.authorName,
+      topic: input.topic,
+      title: input.title.trim(),
+      body: input.body.trim(),
+      createdAt: new Date().toISOString(),
+      forecastId: input.forecastId,
+    };
+    all.unshift(post);
+    this.writeCached(KEYS.COMMUNITY_POSTS, all);
+    this.notify();
+    return post;
+  }
+
+  private getCommunityLikesMap(): Record<string, number> {
+    return this.readCached<Record<string, number>>(KEYS.COMMUNITY_LIKES, {});
+  }
+
+  private getMyCommunityLikedSet(): Set<string> {
+    const arr = this.readCached<string[]>(KEYS.COMMUNITY_LIKES + '_my', []);
+    return new Set(Array.isArray(arr) ? arr : []);
+  }
+
+  isCommunityPostLiked(postId: string): boolean {
+    return this.getMyCommunityLikedSet().has(postId);
+  }
+
+  toggleCommunityPostLike(postId: string): boolean {
+    const map = { ...this.getCommunityLikesMap() };
+    const mySet = this.getMyCommunityLikedSet();
+    let liked = false;
+    if (mySet.has(postId)) {
+      mySet.delete(postId);
+      map[postId] = Math.max(0, (map[postId] || 1) - 1);
+      liked = false;
+    } else {
+      mySet.add(postId);
+      map[postId] = (map[postId] || 0) + 1;
+      liked = true;
+    }
+    this.writeCached(KEYS.COMMUNITY_LIKES, map);
+    this.writeCached(KEYS.COMMUNITY_LIKES + '_my', Array.from(mySet));
+    this.notify();
+    return liked;
+  }
+
+  getCommunityPostLikesCount(postId: string): number {
+    return this.getCommunityLikesMap()[postId] || 0;
+  }
+
+  listCommunityPostComments(postId: string): CommunityComment[] {
+    const all = this.readCached<CommunityComment[]>(KEYS.COMMUNITY_COMMENTS, []);
+    if (!Array.isArray(all)) return [];
+    return all.filter(c => c.postId === postId);
+  }
+
+  addCommunityPostComment(
+    postId: string,
+    author: { id: string | null; handle: string; name: string },
+    content: string
+  ): CommunityComment {
+    const all = this.readCached<CommunityComment[]>(KEYS.COMMUNITY_COMMENTS, []);
+    const list = Array.isArray(all) ? [...all] : [];
+    const entry: CommunityComment = {
+      id: 'cc_' + Math.random().toString(36).substring(2, 7) + '_' + Date.now().toString(36),
+      postId,
+      userId: author.id,
+      authorHandle: author.handle,
+      authorName: author.name,
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    list.push(entry);
+    this.writeCached(KEYS.COMMUNITY_COMMENTS, list);
+    this.notify();
+    return entry;
+  }
+
   private getNotifications(): Notification[] {
-    return JSON.parse(localStorage.getItem(KEYS.NOTIFICATIONS) || '[]');
+    const raw = this.readCached<Notification[]>(KEYS.NOTIFICATIONS, []);
+    return Array.isArray(raw) ? raw : [];
   }
 
   private createNotification(input: Omit<Notification, 'id' | 'createdAt' | 'read'>) {
-    const all = this.getNotifications();
+    const all = [...this.getNotifications()];
     all.unshift({
       ...input,
       id: 'n_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
       createdAt: new Date().toISOString(),
       read: false,
     });
-    localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(all));
+    this.writeCached(KEYS.NOTIFICATIONS, all);
   }
 
   listNotifications(userId: string): Notification[] {
@@ -400,11 +594,11 @@ class LocalRepository implements Repository {
   }
 
   markNotificationRead(id: string) {
-    const all = this.getNotifications();
-    const target = all.find(n => n.id === id);
-    if (target) {
-      target.read = true;
-      localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(all));
+    const all = [...this.getNotifications()];
+    const idx = all.findIndex(n => n.id === id);
+    if (idx !== -1) {
+      all[idx] = { ...all[idx], read: true };
+      this.writeCached(KEYS.NOTIFICATIONS, all);
       this.notify();
     }
   }

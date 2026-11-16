@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { getRoundFor, getISOWeekNumber, getCountdownRemaining } from './round';
+import { getRoundFor, getISOWeekNumber, getCountdownRemaining, getDailyRollingBtcRounds } from './round';
 
-describe('Round Engine (Weekly Cohorts)', () => {
+describe('Round Engine (Daily Rolling & Weekly Cohorts)', () => {
   it('correctly calculates round for a given date in 2026', () => {
     // 2026-10-05 is a Monday (Week 41)
     expect(getISOWeekNumber(new Date('2026-10-05'))).toEqual({ year: 2026, week: 41 });
@@ -17,6 +17,16 @@ describe('Round Engine (Weekly Cohorts)', () => {
       '2026-10-09',
     ]);
     expect(round.status).toBe('LIVE');
+  });
+
+  it('generates overlapping daily rolling 7D BTC cohorts with distinct status states', () => {
+    const rounds = getDailyRollingBtcRounds('2026-10-02', '2026-10-02', 4, 7);
+    expect(rounds).toHaveLength(4);
+    expect(rounds[0].baseDate).toBe('2026-10-02');
+    expect(rounds[0].status).toBe('OPEN');
+    expect(rounds[1].baseDate).toBe('2026-10-01');
+    expect(rounds[1].status).toBe('LIVE');
+    expect(rounds[0].evalDates).toHaveLength(7);
   });
 
   it('calculates countdown remaining accurately', () => {

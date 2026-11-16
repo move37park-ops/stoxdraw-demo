@@ -7,6 +7,9 @@ import type {
   Mode,
   AnchorPoint,
   PracticeAttempt,
+  CommunityPost,
+  CommunityComment,
+  CommunityTopic,
 } from '../domain/types';
 
 export type FeedTab = 'all' | 'following' | 'results';
@@ -55,6 +58,7 @@ export interface Repository {
   getUser(id: string): User | undefined;
   getUserByHandle(handle: string): User | undefined;
   listAllUsers(): User[];
+  upsertUser(user: User): void;
 
   // Social
   isLiked(forecastId: string): boolean;
@@ -66,6 +70,27 @@ export interface Repository {
   // Comments
   listComments(forecastId: string): Comment[];
   addComment(forecastId: string, author: User, content: string): Comment;
+
+  // Community Feed & Discussions
+  listCommunityPosts(): CommunityPost[];
+  createCommunityPost(input: {
+    authorId: string | null;
+    authorHandle: string;
+    authorName: string;
+    topic: CommunityTopic;
+    title: string;
+    body: string;
+    forecastId?: string;
+  }): CommunityPost;
+  isCommunityPostLiked(postId: string): boolean;
+  toggleCommunityPostLike(postId: string): boolean;
+  getCommunityPostLikesCount(postId: string): number;
+  listCommunityPostComments(postId: string): CommunityComment[];
+  addCommunityPostComment(
+    postId: string,
+    author: { id: string | null; handle: string; name: string },
+    content: string
+  ): CommunityComment;
 
   // Notifications
   listNotifications(userId: string): Notification[];

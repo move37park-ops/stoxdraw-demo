@@ -1,8 +1,32 @@
 import type { AnchorPoint, PathPoint } from './types';
 import { formatDateStr, parseDateStr } from './tradingCalendar';
 
-export const DEFAULT_HORIZON_DAYS = 20;
-export const MAX_ANCHORS = 4;
+export const DEFAULT_HORIZON_DAYS = 7;
+export const MAX_ANCHORS = 5;
+
+/**
+ * 경로가 만기일(D+horizonDays)까지 완성되었는지 확인합니다.
+ */
+export function isPathComplete(
+  anchors: AnchorPoint[],
+  horizonDays: number = DEFAULT_HORIZON_DAYS
+): boolean {
+  return normalizeAnchors(anchors, horizonDays).some(a => a.day === horizonDays);
+}
+
+/**
+ * 화면 작도용 구간 좌표(D-0 기준점 + 정규화된 변곡점)를 반환합니다.
+ * 변곡점이 비어 있으면 빈 배열을 반환하며, 마지막 변곡점이 D+horizonDays 이전이어도 자동 연장하지 않습니다.
+ */
+export function buildDrawnSegment(
+  basePrice: number,
+  anchors: AnchorPoint[],
+  horizonDays: number = DEFAULT_HORIZON_DAYS
+): AnchorPoint[] {
+  const sorted = normalizeAnchors(anchors, horizonDays);
+  if (sorted.length === 0) return [];
+  return [{ day: 0, price: basePrice }, ...sorted];
+}
 
 /**
  * 기준일(baseDateStr: YYYY-MM-DD) 이후 N개의 연속 달력일(365일 크립토 일봉 기준) 생성
@@ -18,7 +42,7 @@ export function getNextCalendarDays(baseDateStr: string, count: number = DEFAULT
 }
 
 /**
- * 변곡점(AnchorPoint) 배열을 일자(day) 오름차순으로 정규화하고 중복 일자를 병합하며 최대 MAX_ANCHORS(4개)로 제한합니다.
+ * 변곡점(AnchorPoint) 배열을 일자(day) 오름차순으로 정규화하고 중복 일자를 병합하며 최대 MAX_ANCHORS(5개)로 제한합니다.
  */
 export function normalizeAnchors(
   anchors: AnchorPoint[],
@@ -49,12 +73,12 @@ export function normalizeAnchors(
 
 /**
  * 기준가(day=0, basePrice)와 유저가 찍은 변곡점(AnchorPoint[])을 기반으로
- * 향후 20일(D+1 ~ D+20) 일봉 가격 배열(number[20])을 선형 보간(Linear Interpolation)으로 즉시 산출합니다.
+ * 향후 N일(기본 7일, D+1 ~ D+N) 일봉 가격 배열을 선형 보간(Linear Interpolation)으로 즉시 산출합니다.
  *
  * - 변곡점이 하나도 없으면 기준가 수평선을 반환합니다.
- * - 마지막 변곡점이 20일 이전에 찍혀 있으면 마지막 변곡점 가격을 20일차까지 유지합니다.
+ * - 마지막 변곡점이 만기일 이전에 찍혀 있으면 마지막 변곡점 가격을 만기일까지 유지합니다.
  */
-export function interpolate20DayPath(
+export function interpolateHorizonPath(
   basePrice: number,
   anchors: AnchorPoint[],
   horizonDays: number = DEFAULT_HORIZON_DAYS
@@ -116,7 +140,7 @@ export function buildInterpolatedTrajectory(
   path: PathPoint[];
   pathPct: number[];
 } {
-  const prices = interpolate20DayPath(basePrice, anchors, evalDates.length);
+  const prices = interpolateHorizonPath(basePrice, anchors, evalDates.length);
   const path = evalDates.map((date, idx) => ({
     date,
     price: prices[idx] ?? basePrice,
@@ -126,6 +150,9 @@ export function buildInterpolatedTrajectory(
   );
   return { prices, path, pathPct };
 }
+
+/** @deprecated interpolateHorizonPath 사용 권장 (기존 호환 별칭) */
+export const interpolate20DayPath = interpolateHorizonPath;
 
 export type TrajectoryPresetId = 'dip_rally' | 'breakout' | 'pullback_bounce' | 'bear_slide' | 'range_up';
 
@@ -137,12 +164,54 @@ export function buildPresetAnchors(
   preset: TrajectoryPresetId = 'dip_rally',
   horizonDays: number = DEFAULT_HORIZON_DAYS
 ): AnchorPoint[] {
+  const roundPrice = (mult: number) => parseFloat((basePrice * (1 + mult)).toFixed(2));
+
+  if (horizonDays <= 7) {
+    const d1 = Math.max(1, Math.round(horizonDays * 0.28)); // D+2
+    const d2 = Math.max(d1 + 1, Math.round(horizonDays * 0.55)); // D+4
+    const d3 = Math.max(d2 + 1, Math.min(horizonDays - 1, Math.round(horizonDays * 0.72))); // D+5
+    const d4 = horizonDays; // D+7
+
+    switch (preset) {
+      case 'dip_rally':
+        return [
+          { day: d1, price: roundPrice(0.018) },
+          { day: d2, price: roundPrice(-0.012) },
+          { day: d3, price: roundPrice(0.036) },
+          { day: d4, price: roundPrice(0.058) },
+        ];
+      case 'breakout':
+        return [
+          { day: d1, price: roundPrice(0.016) },
+          { day: d2, price: roundPrice(0.039) },
+          { day: d4, price: roundPrice(0.072) },
+        ];
+      case 'pullback_bounce':
+        return [
+          { day: d1, price: roundPrice(-0.024) },
+          { day: d2, price: roundPrice(0.014) },
+          { day: d4, price: roundPrice(0.048) },
+        ];
+      case 'bear_slide':
+        return [
+          { day: d1, price: roundPrice(0.016) },
+          { day: d2, price: roundPrice(-0.022) },
+          { day: d4, price: roundPrice(-0.042) },
+        ];
+      case 'range_up':
+        return [
+          { day: d1, price: roundPrice(0.012) },
+          { day: d2, price: roundPrice(-0.011) },
+          { day: d3, price: roundPrice(0.015) },
+          { day: d4, price: roundPrice(0.024) },
+        ];
+    }
+  }
+
   const d1 = Math.max(3, Math.round(horizonDays * 0.25));  // D+5
   const d2 = Math.max(7, Math.round(horizonDays * 0.55));  // D+11
   const d3 = Math.max(12, Math.round(horizonDays * 0.8));  // D+16
   const d4 = horizonDays;                                  // D+20
-
-  const roundPrice = (mult: number) => parseFloat((basePrice * (1 + mult)).toFixed(2));
 
   switch (preset) {
     case 'dip_rally':

@@ -12,23 +12,25 @@ export function formatPct(pct: number): string {
   return `${sign}${pct.toFixed(2)}%`;
 }
 
-export function formatDateShort(dateStr: string): string {
+export function formatDateShort(dateStr: string, locale: 'ko' | 'en' = 'ko'): string {
   try {
     const [_y, m, d] = dateStr.split('-');
-    return `${parseInt(m, 10)}월 ${parseInt(d, 10)}일`;
+    const month = parseInt(m, 10);
+    const day = parseInt(d, 10);
+    return locale === 'en' ? `${month}/${day}` : `${month}월 ${day}일`;
   } catch {
     return dateStr;
   }
 }
 
-export function formatRelativeTime(isoString: string): string {
+export function formatRelativeTime(isoString: string, locale: 'ko' | 'en' = 'ko'): string {
   const diffMs = Date.now() - new Date(isoString).getTime();
   const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return '방금 전';
+  if (diffSec < 60) return locale === 'en' ? 'just now' : '방금 전';
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}분 전`;
+  if (diffMin < 60) return locale === 'en' ? `${diffMin}m ago` : `${diffMin}분 전`;
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}시간 전`;
+  if (diffHour < 24) return locale === 'en' ? `${diffHour}h ago` : `${diffHour}시간 전`;
   const diffDay = Math.floor(diffHour / 24);
-  return `${diffDay}일 전`;
+  return locale === 'en' ? `${diffDay}d ago` : `${diffDay}일 전`;
 }

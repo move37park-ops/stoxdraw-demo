@@ -5,6 +5,8 @@ import {
   getNextCalendarDays,
   buildPresetAnchors,
   normalizeAnchors,
+  isPathComplete,
+  buildDrawnSegment,
   MAX_ANCHORS,
 } from './interpolation';
 
@@ -32,17 +34,20 @@ describe('20-Day Polyline Linear Interpolation Engine (interpolation.ts)', () =>
     expect(prices[19]).toBe(62000); // D+20
   });
 
-  it('extends final anchor price to day 20 if last anchor is before day 20', () => {
-    const basePrice = 50000;
-    const anchors = [{ day: 5, price: 55000 }];
-    const prices = interpolate20DayPath(basePrice, anchors, 20);
-
-    expect(prices.length).toBe(20);
-    expect(prices[4]).toBe(55000);  // D+5
-    expect(prices[19]).toBe(55000); // Extended to D+20
+  it('does not auto-extend drawn segment when last anchor is before D+20', () => {
+    const basePrice = 75000;
+    expect(buildDrawnSegment(basePrice, [], 20)).toEqual([]);
+    const drawn = buildDrawnSegment(basePrice, [{ day: 8, price: 78000 }], 20);
+    expect(drawn).toEqual([
+      { day: 0, price: 75000 },
+      { day: 8, price: 78000 },
+    ]);
+    expect(isPathComplete([], 20)).toBe(false);
+    expect(isPathComplete([{ day: 8, price: 78000 }], 20)).toBe(false);
+    expect(isPathComplete([{ day: 8, price: 78000 }, { day: 20, price: 82000 }], 20)).toBe(true);
   });
 
-  it('builds complete path and percentage series from preset anchors', () => {
+  it('builds complete path and percentage series from anchors', () => {
     const basePrice = 68420;
     const evalDates = getNextCalendarDays('2026-10-02', 20);
     const anchors = buildPresetAnchors(basePrice, 'dip_rally', 20);
@@ -54,7 +59,20 @@ describe('20-Day Polyline Linear Interpolation Engine (interpolation.ts)', () =>
     expect(res.path[19].date).toBe('2026-10-22');
   });
 
-  it('caps inflection points at MAX_ANCHORS (4) while preserving final target anchor', () => {
+  it('builds complete 7-day preset anchors and trajectory without day collisions', () => {
+    const basePrice = 75897;
+    const evalDates = getNextCalendarDays('2026-10-02', 7);
+    const anchors = buildPresetAnchors(basePrice, 'dip_rally', 7);
+    expect(anchors.length).toBeGreaterThanOrEqual(3);
+    expect(anchors[anchors.length - 1].day).toBe(7);
+    expect(isPathComplete(anchors, 7)).toBe(true);
+    const res = buildInterpolatedTrajectory(basePrice, evalDates, anchors);
+    expect(res.prices.length).toBe(7);
+    expect(res.path[6].date).toBe('2026-10-09');
+  });
+
+  it('caps inflection points at MAX_ANCHORS (5) while preserving final target anchor', () => {
+    expect(MAX_ANCHORS).toBe(5);
     const raw = [
       { day: 3, price: 61000 },
       { day: 7, price: 62500 },

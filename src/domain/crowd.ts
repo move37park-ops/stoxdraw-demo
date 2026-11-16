@@ -49,66 +49,114 @@ function getEstimatedPriceAtDate(f: Forecast, targetDate: string): number | null
   return sorted[sorted.length - 1].price;
 }
 
+function weightedQuantile(entries: { value: number; weight: number }[], q: number): number {
+  if (entries.length === 0) return 0;
+  const sorted = [...entries].sort((a, b) => a.value - b.value);
+  const totalWeight = sorted.reduce((sum, e) => sum + e.weight, 0);
+  if (totalWeight <= 0) return quantile(sorted.map((e) => e.value), q);
+
+  const target = clampWeight(q) * totalWeight;
+  let cum = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    const prevCum = cum;
+    cum += sorted[i].weight;
+    if (cum >= target) {
+      if (i === 0 || sorted[i].weight <= 0) return sorted[i].value;
+      const frac = (target - prevCum) / sorted[i].weight;
+      return sorted[i - 1].value + frac * (sorted[i].value - sorted[i - 1].value);
+    }
+  }
+  return sorted[sorted.length - 1].value;
+}
+
+function clampWeight(val: number): number {
+  return Math.max(0, Math.min(1, val));
+}
+
+function getEloSkillWeight(elo: number | undefined): number {
+  if (elo === undefined || !Number.isFinite(elo)) return 1;
+  return Math.max(0.5, Math.min(2.0, 0.5 + (elo - 1000) / 800));
+}
+
 export interface DailyConsensusBandPoint {
-  day: number;       // 1..20
+  day: number;       // 1..N
   date: string;
   p15: number;       // 하위 15% 분위수
   p25: number;       // 하위 25% 분위수
-  median: number;    // Crowd Median (중앙값)
+  median: number;    // Crowd Median (실력 가중 중앙값)
   p75: number;       // 상위 75% 분위수
   p85: number;       // 상위 85% 분위수
-  topForecasterMedian: number; // 상위 고수(Top Forecasters) 중앙값
+  topForecasterMedian: number; // 상위 티어(Top Forecasters) 가중 중앙값
 }
 
 /**
- * 20일 시계열 전체에 대해 Crowd Median, 분포 밴드(P15~P85, P25~P75),
- * 그리고 상위 고수(Top Forecasters) 시나리오 중앙값을 계산합니다.
+ * 전체 기간 시계열에 대해 Elo 가중 Crowd Median, 분포 밴드(P15~P85, P25~P75),
+ * 그리고 동적 고티어(Top-Tier: Elo 1500+ 또는 상위 25%) 시나리오 중앙값을 계산합니다.
  */
-export function compute20DConsensusBand(
+export function computeConsensusBand(
   forecasts: Forecast[],
   evalDates: string[],
   basePrice: number,
-  topAuthorIds: Set<string> = new Set(['u_quant', 'u_alpha'])
+  topAuthorIds?: Set<string>,
+  authorEloMap?: Record<string, number>
 ): DailyConsensusBandPoint[] {
   const valid = forecasts.filter(
-    f => f.mode === 'path' && f.path && f.path.length > 0 && f.basePrice > 0
+    (f) => f.mode === 'path' && f.path && f.path.length > 0 && f.basePrice > 0
   );
 
   if (valid.length === 0 || evalDates.length === 0) {
     return [];
   }
 
-  const topForecasts = valid.filter(f => f.authorId && topAuthorIds.has(f.authorId));
+  let effectiveTopIds = topAuthorIds;
+  if (!effectiveTopIds && authorEloMap) {
+    const rankedAuthors = valid
+      .map((f) => ({ id: f.authorId || f.id, elo: authorEloMap[f.authorId || ''] ?? 1200 }))
+      .sort((a, b) => b.elo - a.elo);
+    const highEloIds = rankedAuthors.filter((a) => a.elo >= 1500).map((a) => a.id);
+    if (highEloIds.length >= 2) {
+      effectiveTopIds = new Set(highEloIds);
+    } else {
+      const topSliceCount = Math.max(1, Math.ceil(rankedAuthors.length * 0.25));
+      effectiveTopIds = new Set(rankedAuthors.slice(0, topSliceCount).map((a) => a.id));
+    }
+  }
+  const fallbackTopIds = effectiveTopIds ?? new Set(['u_quant', 'u_alpha']);
+  const topForecasts = valid.filter((f) => f.authorId && fallbackTopIds.has(f.authorId));
+  const topPool = topForecasts.length > 0 ? topForecasts : valid;
 
   return evalDates.map((date, stepIdx) => {
-    const pcts = valid
-      .map(f => {
-        const pt = f.path![stepIdx] ?? f.path![f.path!.length - 1];
-        return pt ? (pt.price - f.basePrice) / f.basePrice : 0;
-      })
-      .sort((a, b) => a - b);
+    const entries = valid.map((f) => {
+      const pt = f.path![stepIdx] ?? f.path![f.path!.length - 1];
+      const value = pt ? (pt.price - f.basePrice) / f.basePrice : 0;
+      const weight = authorEloMap ? getEloSkillWeight(authorEloMap[f.authorId || '']) : 1;
+      return { value, weight };
+    });
 
-    const topPcts = (topForecasts.length > 0 ? topForecasts : valid)
-      .map(f => {
-        const pt = f.path![stepIdx] ?? f.path![f.path!.length - 1];
-        return pt ? (pt.price - f.basePrice) / f.basePrice : 0;
-      })
-      .sort((a, b) => a - b);
+    const topEntries = topPool.map((f) => {
+      const pt = f.path![stepIdx] ?? f.path![f.path!.length - 1];
+      const value = pt ? (pt.price - f.basePrice) / f.basePrice : 0;
+      const weight = authorEloMap ? getEloSkillWeight(authorEloMap[f.authorId || '']) : 1;
+      return { value, weight };
+    });
 
     const toPrice = (pct: number) => parseFloat((basePrice * (1 + pct)).toFixed(2));
 
     return {
       day: stepIdx + 1,
       date,
-      p15: toPrice(quantile(pcts, 0.15)),
-      p25: toPrice(quantile(pcts, 0.25)),
-      median: toPrice(quantile(pcts, 0.5)),
-      p75: toPrice(quantile(pcts, 0.75)),
-      p85: toPrice(quantile(pcts, 0.85)),
-      topForecasterMedian: toPrice(quantile(topPcts, 0.5)),
+      p15: toPrice(weightedQuantile(entries, 0.15)),
+      p25: toPrice(weightedQuantile(entries, 0.25)),
+      median: toPrice(weightedQuantile(entries, 0.5)),
+      p75: toPrice(weightedQuantile(entries, 0.75)),
+      p85: toPrice(weightedQuantile(entries, 0.85)),
+      topForecasterMedian: toPrice(weightedQuantile(topEntries, 0.5)),
     };
   });
 }
+
+/** @deprecated computeConsensusBand 사용 권장 (기존 호환 별칭) */
+export const compute20DConsensusBand = computeConsensusBand;
 
 export function aggregateCrowd(
   forecasts: Forecast[],

@@ -1,6 +1,8 @@
 import type { EloProjection, EloSettlement, EloTier, ScoreBreakdown } from './types';
 
 export const DEFAULT_ELO = 1200;
+export const MIN_ELO = 600;
+export const PROVISIONAL_MIN_ROUNDS = 3;
 const K_FACTOR = 40;
 
 export interface EloTierInfo {
@@ -14,14 +16,59 @@ export interface EloTierInfo {
   accentHex: string;
 }
 
+export interface EloCohortOptions {
+  peerScores?: number[];
+  userElo?: number;
+  cohortMeanElo?: number;
+}
+
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
 /**
+ * 공인 랭킹 등재를 위한 최소 라운드 충족 여부 판정
+ */
+export function isProvisionalAccount(verifiedRounds: number): boolean {
+  return verifiedRounds < PROVISIONAL_MIN_ROUNDS;
+}
+
+/**
+ * 표준 Elo 기대 승률 E = 1 / (1 + 10^((cohortMeanElo - userElo) / 400))
+ */
+export function calculateExpectedPeerPercentile(
+  userElo: number = DEFAULT_ELO,
+  cohortMeanElo: number = DEFAULT_ELO
+): number {
+  const safeUser = Number.isFinite(userElo) ? userElo : DEFAULT_ELO;
+  const safeCohort = Number.isFinite(cohortMeanElo) ? cohortMeanElo : DEFAULT_ELO;
+  return parseFloat(
+    clamp(1 / (1 + Math.pow(10, (safeCohort - safeUser) / 400)), 0.15, 0.85).toFixed(3)
+  );
+}
+
+/**
+ * 동일 라운드 경쟁자 점수 배열 대비 내 점수의 순위 백분위 [0, 1] 계산 (동점자는 mid-rank 처리)
+ */
+export function computeCohortPercentile(myScore: number, peerScores: number[]): number {
+  const validPeers = peerScores.filter((s) => Number.isFinite(s));
+  if (validPeers.length === 0) return 0.5;
+
+  let below = 0;
+  let equal = 0;
+  for (const peer of validPeers) {
+    if (peer < myScore - 1e-6) {
+      below += 1;
+    } else if (Math.abs(peer - myScore) <= 1e-6) {
+      equal += 1;
+    }
+  }
+  return parseFloat(clamp((below + 0.5 * equal) / validPeers.length, 0, 1).toFixed(4));
+}
+
+/**
  * 현재 Elo 레이팅에 따른 브론즈 ~ 다이아몬드 5단계 티어 및 진행률 정보 반환
- * (피치덱 02.3 & 05.2: 브론즈 ~ 다이아몬드 실력 등급 체계)
  */
 export function getEloTierInfo(elo: number = DEFAULT_ELO): EloTierInfo {
-  const safeElo = Math.max(600, Math.round(elo));
+  const safeElo = Math.max(MIN_ELO, Math.round(elo));
 
   if (safeElo >= 1800) {
     return {
@@ -78,12 +125,12 @@ export function getEloTierInfo(elo: number = DEFAULT_ELO): EloTierInfo {
     };
   }
 
-  const progressPct = Math.round(((Math.max(1000, safeElo) - 1000) / (1200 - 1000)) * 100);
+  const progressPct = Math.round(((safeElo - MIN_ELO) / (1200 - MIN_ELO)) * 100);
   return {
     tier: 'BRONZE',
     title: 'BRONZE',
     krTitle: '브론즈',
-    minElo: 1000,
+    minElo: MIN_ELO,
     nextTierElo: 1200,
     progressPct: clamp(progressPct, 0, 100),
     badgeClass: 'bg-zinc-950 text-zinc-400 border-zinc-800',
@@ -92,22 +139,26 @@ export function getEloTierInfo(elo: number = DEFAULT_ELO): EloTierInfo {
 }
 
 /**
- * 예측 경로의 목표 수익률과 시장 컨센서스(Crowd)/변동성(σ)을 바탕으로
- * 사전 기대 성취 확률(E) 및 예상 LP 변동폭(+Win LP / -Lose LP)을 산출합니다.
+ * 제로 편향 사전 LP 변동폭 추정기
+ * - 기대 성취 백분위 E는 코호트 평균 레이팅 대비 내 Elo 차이로만 결정되어 방향/역발상 편법을 차단합니다.
+ * - divergence/변동성 대비 목표 수익률은 시나리오 성격 레이블(Consensus Aligned / Off-Consensus / Contrarian Call) 표시용으로만 사용합니다.
  */
 export function calculateEloProjection(
   myChangePct: number,
   crowdChangePct?: number,
   dailyVolatility: number = 0.032,
-  horizonDays: number = 20
+  horizonDays: number = 7,
+  locale: 'ko' | 'en' = 'ko',
+  userElo: number = DEFAULT_ELO,
+  cohortMeanElo: number = DEFAULT_ELO
 ): EloProjection {
-  const horizonVolPct = Math.max(2.5, dailyVolatility * 100 * Math.sqrt(horizonDays));
+  const safeHorizon = Math.max(1, horizonDays);
+  const horizonVolPct = Math.max(2.0, dailyVolatility * 100 * Math.sqrt(safeHorizon));
   const referencePct = crowdChangePct !== undefined ? crowdChangePct : 0;
 
   const divergenceAbs = Math.abs(myChangePct - referencePct);
   const magnitudeAbs = Math.abs(myChangePct);
-
-  const normalizedDifficulty = (divergenceAbs * 0.65 + magnitudeAbs * 0.35) / horizonVolPct;
+  const normalizedDispersion = (divergenceAbs * 0.65 + magnitudeAbs * 0.35) / horizonVolPct;
 
   const isOppositeSign =
     crowdChangePct !== undefined &&
@@ -115,19 +166,15 @@ export function calculateEloProjection(
     Math.abs(myChangePct) >= 0.5 &&
     Math.sign(myChangePct) !== Math.sign(crowdChangePct);
 
-  const contrarianBonus = isOppositeSign ? 0.08 : 0;
-  const expectedProbability = parseFloat(
-    clamp(0.58 - normalizedDifficulty * 0.22 - contrarianBonus, 0.24, 0.62).toFixed(2)
-  );
+  const expectedProbability = calculateExpectedPeerPercentile(userElo, cohortMeanElo);
+  const expectedWinLp = Math.round(K_FACTOR * (1 - expectedProbability));
+  const expectedLossLp = -Math.round(K_FACTOR * expectedProbability);
 
-  const expectedWinLp = Math.max(12, Math.round(K_FACTOR * (1 - expectedProbability)));
-  const expectedLossLp = -Math.max(8, Math.round(K_FACTOR * expectedProbability * 0.72));
-
-  let difficultyLabel = '컨센서스 동조';
-  if (isOppositeSign || normalizedDifficulty >= 0.85) {
-    difficultyLabel = '역발상 예측';
-  } else if (normalizedDifficulty >= 0.45) {
-    difficultyLabel = '컨센서스 이탈';
+  let difficultyLabel = locale === 'en' ? 'Consensus Aligned' : '컨센서스 동조';
+  if (isOppositeSign || normalizedDispersion >= 0.85) {
+    difficultyLabel = locale === 'en' ? 'Contrarian Call' : '역발상 예측';
+  } else if (normalizedDispersion >= 0.45) {
+    difficultyLabel = locale === 'en' ? 'Off-Consensus' : '컨센서스 이탈';
   }
 
   return {
@@ -139,29 +186,37 @@ export function calculateEloProjection(
 }
 
 /**
- * 100점 정량 스킬 점수(ScoreBreakdown)와 기대 확률(E)을 대조하여
- * 실제 정산 Elo 변동폭(deltaLp)을 계산합니다.
+ * 코호트 상대 백분위(p_i) 기반 제로섬 Elo 정산 엔진
+ * - peerScores가 2명 이상 존재하면 라운드 내 경쟁자 대비 순위 백분위 p_i로 정산하여 랜덤 예측의 기대 LP를 0으로 유지합니다.
+ * - 오프라인 단독 평가 시에는 랜덤 워크 기대 점수(~50점) 기준 로지스틱 성과비로 폴백합니다.
  */
 export function settleEloRating(
   score: ScoreBreakdown,
   myChangePct: number,
   crowdChangePct?: number,
   dailyVolatility: number = 0.032,
-  horizonDays: number = 20
+  horizonDays: number = 7,
+  locale: 'ko' | 'en' = 'ko',
+  cohort?: EloCohortOptions
 ): EloSettlement {
-  const projection = calculateEloProjection(myChangePct, crowdChangePct, dailyVolatility, horizonDays);
+  const projection = calculateEloProjection(
+    myChangePct,
+    crowdChangePct,
+    dailyVolatility,
+    horizonDays,
+    locale,
+    cohort?.userElo ?? DEFAULT_ELO,
+    cohort?.cohortMeanElo ?? DEFAULT_ELO
+  );
 
-  const performanceRatio = parseFloat(clamp(score.total / 100, 0, 1).toFixed(3));
+  const peerScores = cohort?.peerScores?.filter((s) => Number.isFinite(s)) ?? [];
+  const performanceRatio =
+    peerScores.length >= 2
+      ? computeCohortPercentile(score.total, peerScores)
+      : parseFloat(clamp(1 / (1 + Math.exp(-(score.total - 50) / 14)), 0, 1).toFixed(3));
+
   const rawDelta = Math.round(K_FACTOR * (performanceRatio - projection.expectedProbability));
-
-  let deltaLp = rawDelta;
-  if (score.directionHit && score.total >= 58 && deltaLp < 6) {
-    deltaLp = 6;
-  } else if (!score.directionHit && score.total < 45 && deltaLp > -6) {
-    deltaLp = -6;
-  }
-
-  deltaLp = clamp(deltaLp, -28, 36);
+  const deltaLp = clamp(rawDelta, -32, 32);
 
   return {
     deltaLp,

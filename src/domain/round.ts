@@ -4,13 +4,13 @@ import { getNextCalendarDays } from './interpolation';
 export type RoundStatus = 'OPEN' | 'LIVE' | 'RESOLVED';
 
 export interface Round {
-  id: string; // e.g. 'R2026-BTC-20D'
+  id: string; // e.g. 'R2026-W40-BTCUSDT-7D'
   ticker: string;
   year: number;
   weekNumber: number;
   baseDate: string; // 기준일
   cutoffAt: string; // 제출 마감 시각 (ISO string)
-  evalDates: string[]; // 평가 일자 배열 (20일 또는 5일)
+  evalDates: string[]; // 평가 일자 배열 (기본 7일)
   status: RoundStatus;
 }
 
@@ -31,15 +31,16 @@ export function getISOWeekNumber(date: Date): { year: number; week: number } {
 }
 
 /**
- * BTC/USDT 20일 코호트 라운드 생성 (기준일 baseDateStr로부터 연속 20일 달력일)
+ * BTC/USDT 코호트 라운드 생성 (기본 7일 연속 달력일)
  */
 export function getBtc20DRound(
   baseDateStr: string = '2026-10-02',
-  asOfDateStr: string = '2026-10-02'
+  asOfDateStr: string = '2026-10-02',
+  horizonDays: number = 7
 ): Round {
   const baseDateObj = parseDateStr(baseDateStr);
   const { year, week } = getISOWeekNumber(baseDateObj);
-  const evalDates = getNextCalendarDays(baseDateStr, 20);
+  const evalDates = getNextCalendarDays(baseDateStr, horizonDays);
   const firstEval = evalDates[0];
   const lastEval = evalDates[evalDates.length - 1];
 
@@ -56,7 +57,7 @@ export function getBtc20DRound(
 
   const paddedWeek = String(week).padStart(2, '0');
   return {
-    id: `R${year}-W${paddedWeek}-BTCUSDT-20D`,
+    id: `R${year}-W${paddedWeek}-BTCUSDT-${horizonDays}D`,
     ticker: 'BTC/USDT',
     year,
     weekNumber: week,
@@ -65,6 +66,34 @@ export function getBtc20DRound(
     evalDates,
     status,
   };
+}
+
+export const getBtc7DRound = getBtc20DRound;
+
+/**
+ * 데일리 롤링 7일 BTC 코호트 목록 생성 (최근 N일 기준일별로 매일 오픈)
+ */
+export function getDailyRollingBtcRounds(
+  latestBaseDateStr: string = '2026-10-02',
+  asOfDateStr: string = '2026-10-02',
+  count: number = 5,
+  horizonDays: number = 7
+): Round[] {
+  const anchor = parseDateStr(latestBaseDateStr);
+  const rounds: Round[] = [];
+
+  for (let offset = 0; offset < Math.max(1, count); offset++) {
+    const d = new Date(anchor);
+    d.setDate(d.getDate() - offset);
+    const baseStr = formatDateStr(d);
+    const r = getBtc20DRound(baseStr, asOfDateStr, horizonDays);
+    rounds.push({
+      ...r,
+      id: `R-${baseStr.replace(/-/g, '')}-BTCUSDT-${horizonDays}D`,
+    });
+  }
+
+  return rounds;
 }
 
 /**
