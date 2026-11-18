@@ -125,11 +125,8 @@ export function PathCanvas({
   const animLookbackRef = useRef<number>(21);
   const minLookbackDays = 7;
   const maxLookbackDays = Math.min(240, Math.max(21, historyBars.length - 1));
-  const [chartStyle, setChartStyle] = useState<'line' | 'candles'>('line');
   const [yZoom, setYZoom] = useState<number>(1);
   const yZoomRef = useRef<number>(1);
-  const [showInitialVersion, setShowInitialVersion] = useState<boolean>(true);
-  const [showConsensus, setShowConsensus] = useState<boolean>(true);
 
   const horizonDays = evalDates.length || 7;
   const sortedAnchors = useMemo(
@@ -211,12 +208,12 @@ export function PathCanvas({
       if (b) prices.push(b.high, b.low, b.close);
     });
     scaleFutureBars?.forEach(b => prices.push(b.high, b.low, b.close));
-    if (initialVersion && showInitialVersion) {
+    if (initialVersion) {
       initialVersion.prices.forEach(p => prices.push(p));
     }
-    if (isConsensusUnlocked && showConsensus) {
+    if (isConsensusUnlocked) {
       consensusBand.forEach(pt => {
-        prices.push(pt.p25, pt.p75, pt.median, pt.topForecasterMedian);
+        prices.push(pt.median);
       });
     }
     overlaidRivals.forEach(r => {
@@ -248,9 +245,7 @@ export function PathCanvas({
     actualFutureBars,
     scaleFutureBars,
     initialVersion,
-    showInitialVersion,
     isConsensusUnlocked,
-    showConsensus,
     consensusBand,
     overlaidRivals,
     yZoom,
@@ -946,7 +941,6 @@ export function PathCanvas({
       ? ((finalUserPrice - basePrice) / basePrice) * 100
       : null;
 
-  const syncedCandleWidth = Math.max(4, Math.min(12, stepPx * 0.68));
   const futureGuideDays = horizonDays <= 7 ? [2, 4, 7] : [5, 10, 15, 20];
   const expiryDateShort =
     evalDates[evalDates.length - 1]?.slice(5).replace('-', '.') || `D+${horizonDays}`;
@@ -970,48 +964,27 @@ export function PathCanvas({
   };
 
   const consensusGeom = useMemo(() => {
-    if (!isConsensusUnlocked || !showConsensus || consensusBand.length === 0) return null;
+    if (!isConsensusUnlocked || consensusBand.length === 0) return null;
     const baseY = priceToYAt(basePrice, minPrice, maxPrice).toFixed(1);
     const basePt = `${splitX.toFixed(1)},${baseY}`;
-    const top10Pts = [
-      basePt,
-      ...consensusBand.map(
-        b => `${dayToXAt(b.day, splitX, futureStepPx).toFixed(1)},${priceToYAt(b.topForecasterMedian, minPrice, maxPrice).toFixed(1)}`
-      ),
-    ].join(' ');
     const medianPts = [
       basePt,
       ...consensusBand.map(
         b => `${dayToXAt(b.day, splitX, futureStepPx).toFixed(1)},${priceToYAt(b.median, minPrice, maxPrice).toFixed(1)}`
       ),
     ].join(' ');
-    const p75Fwd = [
-      basePt,
-      ...consensusBand.map(
-        b => `${dayToXAt(b.day, splitX, futureStepPx).toFixed(1)},${priceToYAt(b.p75, minPrice, maxPrice).toFixed(1)}`
-      ),
-    ];
-    const p25Rev = [
-      ...consensusBand
-        .slice()
-        .reverse()
-        .map(
-          b => `${dayToXAt(b.day, splitX, futureStepPx).toFixed(1)},${priceToYAt(b.p25, minPrice, maxPrice).toFixed(1)}`
-        ),
-      basePt,
-    ];
-    const bandPolygon = [...p75Fwd, ...p25Rev].join(' ');
-    const lastTop10 = consensusBand[consensusBand.length - 1];
+    const lastMedian = consensusBand[consensusBand.length - 1];
+    const lastMedianY = priceToYAt(lastMedian.median, minPrice, maxPrice);
+    const lastMedianPct =
+      basePrice > 0 ? ((lastMedian.median - basePrice) / basePrice) * 100 : 0;
     return {
-      top10Pts,
       medianPts,
-      bandPolygon,
-      lastTop10X: dayToXAt(lastTop10.day, splitX, futureStepPx),
-      lastTop10Y: priceToYAt(lastTop10.topForecasterMedian, minPrice, maxPrice),
+      lastMedianX: dayToXAt(lastMedian.day, splitX, futureStepPx),
+      lastMedianY,
+      lastMedianPct,
     };
   }, [
     isConsensusUnlocked,
-    showConsensus,
     consensusBand,
     minPrice,
     maxPrice,
@@ -1020,8 +993,6 @@ export function PathCanvas({
     basePrice,
   ]);
 
-  const handleToggleConsensus = useCallback(() => setShowConsensus(p => !p), []);
-  const handleToggleInitialVersion = useCallback(() => setShowInitialVersion(p => !p), []);
   const handleZoomOutBtn = useCallback(() => {
     setLookbackDays(d => {
       const next = Math.min(maxLookbackDays, Math.max(d + 4, Math.round(d * 1.25)));
@@ -1062,20 +1033,14 @@ export function PathCanvas({
       <CanvasToolbar
         ticker={ticker}
         basePrice={basePrice}
-        horizonDays={horizonDays}
         lookbackDays={lookbackDays}
         minLookbackDays={minLookbackDays}
         maxLookbackDays={maxLookbackDays}
-        pathCompleted={pathCompleted}
         readOnly={readOnly}
         anchorsCount={sortedAnchors.length}
         selectedAnchor={activeSelectedAnchor}
-        chartStyle={chartStyle}
-        showConsensus={showConsensus}
         hasConsensusBand={consensusBand.length > 0}
         isConsensusUnlocked={isConsensusUnlocked}
-        initialVersion={initialVersion}
-        showInitialVersion={showInitialVersion}
         headerSubtitle={headerSubtitle}
         hideAssetBadge={hideAssetBadge}
         blindMode={blindMode}
@@ -1085,9 +1050,6 @@ export function PathCanvas({
         snapState={snapState}
         hoveredPastBar={hoveredPastBar}
         hoveredPastOffset={hoveredPastOffset}
-        onToggleConsensus={handleToggleConsensus}
-        onToggleInitialVersion={handleToggleInitialVersion}
-        onChangeChartStyle={setChartStyle}
         onZoomOut={handleZoomOutBtn}
         onZoomIn={handleZoomInBtn}
         onResetZoom={handleResetZoomBtn}
@@ -1338,50 +1300,19 @@ export function PathCanvas({
           )}
 
           {/* 1. Past Price Series */}
-          {chartStyle === 'line' ? (
-            <g clipPath="url(#op-plot-clip)">
-              {historyAreaPoints && (
-                <polygon points={historyAreaPoints} fill="url(#op-hist-grad)" />
-              )}
-              <polyline
-                fill="none"
-                stroke="var(--op-ink)"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={historyPolylinePoints}
-              />
-            </g>
-          ) : (
-            <g clipPath="url(#op-plot-clip)">
-              {pastBars.map((bar, idx) => {
-                const x = historyIdxToX(idx);
-                const isUp = bar.close >= bar.open;
-                const color = isUp ? 'var(--op-bull)' : 'var(--op-bear)';
-                const topY = priceToY(Math.max(bar.open, bar.close));
-                const botY = priceToY(Math.min(bar.open, bar.close));
-                return (
-                  <g key={bar.date}>
-                    <line
-                      x1={x}
-                      y1={priceToY(bar.high)}
-                      x2={x}
-                      y2={priceToY(bar.low)}
-                      stroke={color}
-                      strokeWidth="0.9"
-                    />
-                    <rect
-                      x={x - syncedCandleWidth / 2}
-                      y={topY}
-                      width={syncedCandleWidth}
-                      height={Math.max(1.5, botY - topY)}
-                      fill={color}
-                    />
-                  </g>
-                );
-              })}
-            </g>
-          )}
+          <g clipPath="url(#op-plot-clip)">
+            {historyAreaPoints && (
+              <polygon points={historyAreaPoints} fill="url(#op-hist-grad)" />
+            )}
+            <polyline
+              fill="none"
+              stroke="var(--op-ink)"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              points={historyPolylinePoints}
+            />
+          </g>
 
           {/* Conditional Magnetic Snap Level Line */}
           {snapState && (
@@ -1431,31 +1362,20 @@ export function PathCanvas({
             </g>
           )}
 
-          {/* In-Chart Unlocked Crowd & Top-Tier Consensus Overlay */}
+          {/* In-Chart Unlocked Crowd Path (Median Trajectory) */}
           {consensusGeom && (
             <g pointerEvents="none">
-              <polygon
-                points={consensusGeom.bandPolygon}
-                fill="var(--op-smart)"
-                fillOpacity="0.10"
-              />
-              <polyline
-                fill="none"
-                stroke="var(--op-crowd)"
-                strokeWidth="1.5"
-                strokeDasharray="4 3"
-                points={consensusGeom.medianPts}
-              />
               <polyline
                 fill="none"
                 stroke="var(--op-smart)"
                 strokeWidth="2"
+                strokeDasharray="5 3"
                 strokeLinejoin="round"
-                points={consensusGeom.top10Pts}
+                points={consensusGeom.medianPts}
               />
               <circle
-                cx={consensusGeom.lastTop10X}
-                cy={consensusGeom.lastTop10Y}
+                cx={consensusGeom.lastMedianX}
+                cy={consensusGeom.lastMedianY}
                 r="3.2"
                 fill="var(--op-smart)"
               />
@@ -1491,7 +1411,7 @@ export function PathCanvas({
           })}
 
           {/* Initial Version (v1) Comparison Line */}
-          {initialVersion && showInitialVersion && initialVersion.prices.length > 0 && (
+          {initialVersion && initialVersion.prices.length > 0 && (
             <polyline
               pointerEvents="none"
               fill="none"
@@ -1510,65 +1430,34 @@ export function PathCanvas({
           {/* Settled Future Actual Market Bars */}
           {settledFutureItems.length > 0 && (
             <g pointerEvents="none">
-              {chartStyle === 'line' ? (
-                <>
-                  {actualFutureAreaPoints && (
-                    <polygon
-                      points={actualFutureAreaPoints}
-                      fill="var(--op-bull)"
-                      fillOpacity="0.06"
-                    />
-                  )}
-                  <polyline
-                    fill="none"
-                    stroke="var(--op-bull)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    points={actualFuturePolyline}
-                  />
-                  {(() => {
-                    const lastItem = settledFutureItems[settledFutureItems.length - 1];
-                    return (
-                      <circle
-                        cx={lastItem.x}
-                        cy={lastItem.y}
-                        r="3.5"
-                        fill="var(--op-bull)"
-                        stroke="var(--op-canvas)"
-                        strokeWidth="1.5"
-                      />
-                    );
-                  })()}
-                </>
-              ) : (
-                settledFutureItems.map(item => {
-                  const { bar, x } = item;
-                  const isUp = bar.close >= bar.open;
-                  const color = isUp ? 'var(--op-bull)' : 'var(--op-bear)';
-                  const topY = priceToY(Math.max(bar.open, bar.close));
-                  const botY = priceToY(Math.min(bar.open, bar.close));
-                  return (
-                    <g key={`future_candle_${item.day}`}>
-                      <line
-                        x1={x}
-                        y1={priceToY(bar.high)}
-                        x2={x}
-                        y2={priceToY(bar.low)}
-                        stroke={color}
-                        strokeWidth="1"
-                      />
-                      <rect
-                        x={x - syncedCandleWidth / 2}
-                        y={topY}
-                        width={syncedCandleWidth}
-                        height={Math.max(1.8, botY - topY)}
-                        fill={color}
-                      />
-                    </g>
-                  );
-                })
+              {actualFutureAreaPoints && (
+                <polygon
+                  points={actualFutureAreaPoints}
+                  fill="var(--op-bull)"
+                  fillOpacity="0.06"
+                />
               )}
+              <polyline
+                fill="none"
+                stroke="var(--op-bull)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={actualFuturePolyline}
+              />
+              {(() => {
+                const lastItem = settledFutureItems[settledFutureItems.length - 1];
+                return (
+                  <circle
+                    cx={lastItem.x}
+                    cy={lastItem.y}
+                    r="3.5"
+                    fill="var(--op-bull)"
+                    stroke="var(--op-canvas)"
+                    strokeWidth="1.5"
+                  />
+                );
+              })()}
 
               {settledFutureItems.length < horizonDays && (() => {
                 const latest = settledFutureItems[settledFutureItems.length - 1];
@@ -1623,10 +1512,7 @@ export function PathCanvas({
               pointerEvents="none"
               fill="none"
               stroke="var(--op-orange)"
-              strokeWidth={settledFutureItems.length > 0 && chartStyle === 'candles' ? '1.8' : '2.2'}
-              strokeDasharray={
-                settledFutureItems.length > 0 && chartStyle === 'candles' ? '4 2' : undefined
-              }
+              strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
               points={userPolylineStr}
@@ -1807,6 +1693,39 @@ export function PathCanvas({
               </text>
             </g>
           )}
+
+          {/* Right Axis Crowd Path Tag */}
+          {consensusGeom && (() => {
+            const occupiedYs: number[] = [priceToY(basePrice) - 9];
+            if (finalUserPrice !== null) {
+              occupiedYs.push(priceToY(finalUserPrice) - 10);
+            }
+            if (settledFutureItems.length > 0) {
+              occupiedYs.push(settledFutureItems[settledFutureItems.length - 1].y - 10);
+            }
+            let crowdTagY = Math.max(plotTop + 2, Math.min(plotBottom - 22, consensusGeom.lastMedianY - 10));
+            for (const oy of occupiedYs) {
+              if (Math.abs(crowdTagY - oy) < 22) {
+                crowdTagY = crowdTagY >= oy ? Math.min(plotBottom - 22, oy + 22) : Math.max(plotTop + 2, oy - 22);
+              }
+            }
+            return (
+              <g transform={`translate(${plotRight + 6}, ${crowdTagY})`}>
+                <rect x="0" y="0" width="92" height="20" rx="2" fill="var(--op-smart)" />
+                <text
+                  x="46"
+                  y="13.5"
+                  textAnchor="middle"
+                  fill="var(--op-on-orange)"
+                  fontSize="9.5"
+                  fontWeight="700"
+                  fontFamily="var(--font-mono)"
+                >
+                  {t('집단', 'Crowd')} {formatPct(consensusGeom.lastMedianPct)}
+                </text>
+              </g>
+            );
+          })()}
 
           {/* Right Axis Settled Actual Tag */}
           {settledFutureItems.length > 0 && (() => {

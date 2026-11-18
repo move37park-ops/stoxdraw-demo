@@ -1,97 +1,54 @@
-import { memo, useState, useRef, useLayoutEffect, type KeyboardEvent } from 'react';
-import { OverviewReport } from './OverviewReport';
-import { DeepReport } from './DeepReport';
+import { memo } from 'react';
+import { Lock } from 'lucide-react';
 import { ParticipantsTable } from './ParticipantsTable';
+import { BTC_DAILY_VOLATILITY } from '../../data/btcMarket';
 import { useI18n } from '../../lib/i18nCore';
 import type { DailyConsensusBandPoint } from '../../domain/crowd';
 import type { Forecast, MarketBar } from '../../domain/types';
 import type { OverlayRival } from './PathCanvas';
 
 interface BottomTabsProps {
-  basePrice: number;
-  baseDate: string;
-  expiryDate: string;
-  historyBars: MarketBar[];
+  basePrice?: number;
+  baseDate?: string;
+  expiryDate?: string;
+  historyBars?: MarketBar[];
+  roundStatus?: 'OPEN' | 'LIVE' | 'RESOLVED';
   isConsensusUnlocked: boolean;
   myForecast: Forecast | null;
-  userPrices: number[];
+  userPrices?: number[];
   forecasts: Forecast[];
-  consensusBand: DailyConsensusBandPoint[];
+  consensusBand?: DailyConsensusBandPoint[];
   overlaidRivals: OverlayRival[];
+  settledCloses?: number[];
+  realizedDailyVol?: number;
+  settledCount?: number;
+  actualLatestPrice?: number | null;
+  actualLatestChangePct?: number | null;
+  avgRoundScore?: number | null;
+  leaderHandle?: string | null;
   onToggleOverlay: (forecast: Forecast, handle: string, elo: number) => void;
   onRemoveOverlay: (forecastId: string) => void;
   onNavigateProfile: (handle: string) => void;
   onNavigateDetail: (forecastId: string) => void;
-  onSelectTargetPrice: (price: number) => void;
+  onSelectTargetPrice?: (price: number) => void;
 }
 
-type BottomTabId = 'report' | 'participants';
+const EMPTY_CLOSES: number[] = [];
 
 export const BottomTabs = memo(function BottomTabs({
-  basePrice,
-  baseDate,
-  expiryDate,
-  historyBars,
+  roundStatus = 'OPEN',
   isConsensusUnlocked,
   myForecast,
-  userPrices,
   forecasts,
-  consensusBand,
   overlaidRivals,
+  settledCloses = EMPTY_CLOSES,
+  realizedDailyVol = BTC_DAILY_VOLATILITY,
   onToggleOverlay,
   onRemoveOverlay,
   onNavigateProfile,
   onNavigateDetail,
-  onSelectTargetPrice,
 }: BottomTabsProps) {
-  const { locale, t } = useI18n();
-  const [activeTab, setActiveTab] = useState<BottomTabId>('report');
-  const tabBarRef = useRef<HTMLDivElement>(null);
-  const reportTabRef = useRef<HTMLButtonElement>(null);
-  const participantsTabRef = useRef<HTMLButtonElement>(null);
-  const [tabRect, setTabRect] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-    ready: boolean;
-  }>({ left: 0, top: 0, width: 0, height: 0, ready: false });
-
-  useLayoutEffect(() => {
-    const syncTabRect = () => {
-      const el = activeTab === 'report' ? reportTabRef.current : participantsTabRef.current;
-      if (!el) return;
-      setTabRect({
-        left: el.offsetLeft,
-        top: el.offsetTop,
-        width: el.offsetWidth,
-        height: el.offsetHeight,
-        ready: el.offsetWidth > 0,
-      });
-    };
-
-    syncTabRect();
-    const bar = tabBarRef.current;
-    let observer: ResizeObserver | null = null;
-    if (bar && typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(syncTabRect);
-      observer.observe(bar);
-    }
-    window.addEventListener('resize', syncTabRect);
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener('resize', syncTabRect);
-    };
-  }, [activeTab, forecasts.length, locale, isConsensusUnlocked]);
-
-  const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, current: BottomTabId) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-      e.preventDefault();
-      const next: BottomTabId = current === 'report' ? 'participants' : 'report';
-      setActiveTab(next);
-      (next === 'report' ? reportTabRef.current : participantsTabRef.current)?.focus();
-    }
-  };
+  const { t } = useI18n();
 
   return (
     <section
@@ -101,135 +58,90 @@ export const BottomTabs = memo(function BottomTabs({
         borderTop: '1px solid var(--op-line)',
       }}
     >
-      {/* Clean 2-Tab Bar with Flat Pill & Sliding Orange Underline */}
+      {/* Single Compact Header Bar Above Participant Table */}
       <div
-        className="px-4 sm:px-6 flex items-center justify-between gap-4 overflow-x-auto no-scrollbar"
+        className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3"
         style={{
           backgroundColor: 'var(--op-canvas)',
           borderBottom: '1px solid var(--op-line)',
         }}
       >
-        <div
-          ref={tabBarRef}
-          role="tablist"
-          aria-label={t('집단 전망 및 참여자', 'Crowd forecast and participants')}
-          className="relative flex items-center gap-1"
-        >
-          <span
-            aria-hidden="true"
-            className="op-sliding-glow"
-            style={{
-              transform: `translate3d(${tabRect.left}px, ${tabRect.top + 6}px, 0)`,
-              width: `${tabRect.width}px`,
-              height: `${Math.max(0, tabRect.height - 12)}px`,
-              opacity: tabRect.ready ? 1 : 0,
-            }}
-          />
-          <span
-            aria-hidden="true"
-            className="op-sliding-underline"
-            style={{
-              transform: `translate3d(${tabRect.left}px, 0, 0)`,
-              width: `${tabRect.width}px`,
-              opacity: tabRect.ready ? 1 : 0,
-            }}
-          />
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 className="text-[14px] font-semibold" style={{ color: 'var(--op-ink)' }}>
+            {t(`참여자 예측 현황 (${forecasts.length}명)`, `Participants (${forecasts.length})`)}
+          </h2>
 
-          <button
-            ref={reportTabRef}
-            id="bottom-tab-report"
-            role="tab"
-            aria-selected={activeTab === 'report'}
-            aria-controls="bottom-tabpanel-report"
-            type="button"
-            data-active={activeTab === 'report'}
-            onClick={() => setActiveTab('report')}
-            onKeyDown={e => handleTabKeyDown(e, 'report')}
-            className="op-tab relative z-10 whitespace-nowrap"
-          >
-            <span>
-              {isConsensusUnlocked
-                ? t('집단 전망 리포트', 'Consensus Report')
-                : t('시장 개요', 'Market Overview')}
-            </span>
-          </button>
-
-          <button
-            ref={participantsTabRef}
-            id="bottom-tab-participants"
-            role="tab"
-            aria-selected={activeTab === 'participants'}
-            aria-controls="bottom-tabpanel-participants"
-            type="button"
-            data-active={activeTab === 'participants'}
-            onClick={() => setActiveTab('participants')}
-            onKeyDown={e => handleTabKeyDown(e, 'participants')}
-            className="op-tab relative z-10 whitespace-nowrap"
-          >
-            <span>{t('참여자 현황', 'Participants')}</span>
-          </button>
+          {overlaidRivals.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {overlaidRivals.map(r => (
+                <span
+                  key={r.forecast.id}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] op-mono text-[11px]"
+                  style={{
+                    backgroundColor: 'var(--op-panel)',
+                    border: '1px solid var(--op-line-strong)',
+                    color: 'var(--op-ink)',
+                  }}
+                >
+                  <span
+                    className="w-2 h-2 rounded-[1px]"
+                    style={{ backgroundColor: r.colorVar }}
+                    aria-hidden="true"
+                  />
+                  @{r.authorHandle}
+                  <button
+                    type="button"
+                    onClick={() => onRemoveOverlay(r.forecast.id)}
+                    className="ml-0.5 hover:opacity-75 cursor-pointer"
+                    aria-label={t(
+                      `${r.authorHandle} 경로 겹쳐 보기 해제`,
+                      `Remove ${r.authorHandle} overlay`
+                    )}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <span
-          className="text-[12px] hidden sm:inline whitespace-nowrap"
-          style={{ color: isConsensusUnlocked ? 'var(--op-bull)' : 'var(--op-ink-3)' }}
+          className="text-[12px] inline-flex items-center gap-1.5"
+          style={{
+            color:
+              roundStatus === 'OPEN' && !isConsensusUnlocked
+                ? 'var(--op-ink-3)'
+                : 'var(--op-ink-2)',
+          }}
         >
-          {isConsensusUnlocked
-            ? t(
-                '제출 완료 · 집단 전망 리포트 및 참여자 예측 경로 공개',
-                'Submitted · Crowd insights & peer forecast paths unlocked'
-              )
-            : t(
-                '블라인드 모드 · 예측 제출 후 다른 참여자 전망과 분포 리포트가 공개됩니다',
-                'Blind Mode · Submit your forecast to reveal crowd distribution & peer paths'
-              )}
+          {roundStatus === 'OPEN' && !isConsensusUnlocked ? (
+            <>
+              <Lock size={11} aria-hidden="true" />
+              {t('블라인드 모드 · 내 예측 제출 후 공개', 'Blind Mode · Unlocks after submission')}
+            </>
+          ) : (
+            t('차트에 최대 3명까지 경로 겹쳐 보기 가능', 'Overlay up to 3 paths on the chart')
+          )}
         </span>
       </div>
 
-      {/* Tab Body */}
-      <div
-        key={activeTab}
-        role="tabpanel"
-        id={activeTab === 'report' ? 'bottom-tabpanel-report' : 'bottom-tabpanel-participants'}
-        aria-labelledby={activeTab === 'report' ? 'bottom-tab-report' : 'bottom-tab-participants'}
-        className="op-view-enter"
-      >
-        {activeTab === 'report' &&
-          (isConsensusUnlocked ? (
-            <DeepReport
-              basePrice={basePrice}
-              userPrices={userPrices}
-              myForecast={myForecast}
-              forecasts={forecasts}
-              consensusBand={consensusBand}
-              overlaidRivals={overlaidRivals}
-              isSubmitted={isConsensusUnlocked}
-              onRemoveOverlay={onRemoveOverlay}
-              onSelectTargetPrice={onSelectTargetPrice}
-            />
-          ) : (
-            <OverviewReport
-              basePrice={basePrice}
-              baseDate={baseDate}
-              expiryDate={expiryDate}
-              historyBars={historyBars}
-            />
-          ))}
-
-        {activeTab === 'participants' && (
-          <ParticipantsTable
-            forecasts={forecasts}
-            isConsensusUnlocked={isConsensusUnlocked}
-            myForecastId={myForecast?.id}
-            overlaidRivals={overlaidRivals}
-            onToggleOverlay={(fc, handle, elo) => {
-              if (!isConsensusUnlocked) return;
-              onToggleOverlay(fc, handle, elo);
-            }}
-            onNavigateProfile={onNavigateProfile}
-            onNavigateDetail={onNavigateDetail}
-          />
-        )}
+      <div className="p-4 sm:p-6" style={{ backgroundColor: 'var(--op-canvas)' }}>
+        <ParticipantsTable
+          forecasts={forecasts}
+          isConsensusUnlocked={isConsensusUnlocked}
+          roundStatus={roundStatus}
+          settledCloses={settledCloses}
+          realizedDailyVol={realizedDailyVol}
+          myForecastId={myForecast?.id}
+          overlaidRivals={overlaidRivals}
+          onToggleOverlay={(fc, handle, elo) => {
+            if (!isConsensusUnlocked) return;
+            onToggleOverlay(fc, handle, elo);
+          }}
+          onNavigateProfile={onNavigateProfile}
+          onNavigateDetail={onNavigateDetail}
+        />
       </div>
     </section>
   );

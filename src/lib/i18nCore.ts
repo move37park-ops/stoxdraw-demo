@@ -604,6 +604,16 @@ const DATA_KO_TO_EN: Record<string, string> = {
     'Technical bounce at D+2 (+1.9%) capped by overhead supply, retesting the lower range (-2.8%) late week.',
   '단기 지지선 이탈 후 반등 실패를 예상하는 역발상 숏 관점 (-4.1%).':
     'Contrarian bearish view (-4.1%) expecting a short-term support breakdown and failed bounce.',
+  '현물 수급 흐름을 반영해 중반 숨고르기 이후 만기 수렴 시나리오.':
+    'Spot flow convergence path factoring in a mid-week pause before expiry settlement.',
+  '펀딩비 중립화 구간 내 스윙 변곡점과 후반 추세 전개 예측.':
+    'Swing inflections and late-week trend continuation amid funding rate normalization.',
+  '단기 지지 확인 시 계단식 반등을 노린 매수 우위 궤적.':
+    'Bullish stepped rebound trajectory contingent on short-term support defense.',
+  '상단 매물대 저항과 박스권 재테스트 가능성을 반영한 보수적 경로.':
+    'Conservative path pricing in overhead supply resistance and range retests.',
+  '단기 이격 과열 해소에 베팅한 역발상 추세 전환 시나리오.':
+    'Contrarian reversal setup betting on mean reversion of stretched short-term spreads.',
   'D+2 소폭 조정(-1.3%) 후 D+5 약보합 반등(+0.4%), 이후 하방 채널 이탈(-4.6%) 궤적 정밀 적중.':
     'Mild D+2 pullback (-1.3%), muted D+5 bounce (+0.4%), followed by a clean channel breakdown (-4.6%).',
   '주중 저항 확인 후 후반 하방 조정 파동(-4.3%) 적중.':
@@ -777,6 +787,14 @@ export function localizeDataText(raw: string | null | undefined, locale: Locale)
     if (koScenario) {
       const [, ticker, days, price, pct] = koScenario;
       return `${ticker} ${days}D forecast path targeting ${price} (${pct})`;
+    }
+
+    const koRollingQuant = trimmed.match(
+      /^D\+2 \(([^)]+)\) 변곡점 통과 후 D\+7 (상승 안착|하방 조정) 궤적\.$/
+    );
+    if (koRollingQuant) {
+      const [, pct, dir] = koRollingQuant;
+      return `Passing D+2 (${pct}) inflection before ${dir === '상승 안착' ? 'bullish D+7 hold' : 'downside D+7 pullback'}.`;
     }
 
     // Dynamic revision prefix: "[v2 수정] ..."

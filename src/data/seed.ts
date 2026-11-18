@@ -387,6 +387,127 @@ export function generateSeedForecasts(): Forecast[] {
     })
   );
 
+  // =========================================================================
+  // 3. 일간 롤링 BTC/USDT 7D 코호트 (2026-09-19 ~ 2026-10-01)
+  //    Tracking (1/7 ~ 6/7) 및 Evaluated (7/7) 라운드 연속 탐색 지원
+  // =========================================================================
+  const barByDate = new Map(bars.map(b => [b.date, b]));
+  const rollingAnchorDate = new Date(Date.UTC(2026, 8, 19)); // 2026-09-19
+  const rollingEndDate = new Date(Date.UTC(2026, 9, 1));    // 2026-10-01
+
+  const clampPct = (v: number) => parseFloat(Math.max(-0.14, Math.min(0.14, v)).toFixed(4));
+
+  let dayCursor = new Date(rollingAnchorDate);
+  let dayIdx = 0;
+  while (dayCursor <= rollingEndDate) {
+    const yyyy = dayCursor.getUTCFullYear();
+    const mm = String(dayCursor.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(dayCursor.getUTCDate()).padStart(2, '0');
+    const cohortBaseDate = `${yyyy}-${mm}-${dd}`;
+    const cohortBasePrice = getCurrentBtcPrice(cohortBaseDate);
+    const cohortEvalDates = getNextCalendarDays(cohortBaseDate, 7);
+    const dateCompact = cohortBaseDate.replace(/-/g, '');
+    const cohortRoundId = `R-${dateCompact}-BTCUSDT-7D`;
+
+    const actualRet = (d: number): number => {
+      const targetBar = barByDate.get(cohortEvalDates[d - 1] ?? '');
+      if (!targetBar || cohortBasePrice <= 0) return 0;
+      return (targetBar.close - cohortBasePrice) / cohortBasePrice;
+    };
+
+    const r2 = actualRet(2);
+    const r4 = actualRet(4);
+    const r5 = actualRet(5);
+    const r7 = actualRet(7);
+    const osc = ((dayIdx % 3) - 1) * 0.004;
+
+    const cohortSpecs: {
+      authorId: string;
+      hour: string;
+      anchorsPct: { day: number; pct: number }[];
+      comment: string;
+    }[] = [
+      {
+        authorId: 'u_quant',
+        hour: '08:15:00Z',
+        anchorsPct: [
+          { day: 2, pct: clampPct(r2 * 0.92 + 0.002) },
+          { day: 4, pct: clampPct(r4 * 0.88 - 0.003) },
+          { day: 7, pct: clampPct(r7 * 0.94 + osc * 0.4) },
+        ],
+        comment: `D+2 (${r2 >= 0 ? '+' : ''}${(r2 * 92).toFixed(1)}%) 변곡점 통과 후 D+7 ${r7 >= 0 ? '상승 안착' : '하방 조정'} 궤적.`,
+      },
+      {
+        authorId: 'u_alpha',
+        hour: '09:30:00Z',
+        anchorsPct: [
+          { day: 2, pct: clampPct(r2 * 0.82 - 0.004) },
+          { day: 5, pct: clampPct(r5 * 0.86 + 0.005) },
+          { day: 7, pct: clampPct(r7 * 0.85 + 0.006) },
+        ],
+        comment: '현물 수급 흐름을 반영해 중반 숨고르기 이후 만기 수렴 시나리오.',
+      },
+      {
+        authorId: 'u_satoshi',
+        hour: '11:10:00Z',
+        anchorsPct: [
+          { day: 3, pct: clampPct((r2 + r4) * 0.45 + 0.007) },
+          { day: 5, pct: clampPct(r5 * 0.78 - 0.006) },
+          { day: 7, pct: clampPct(r7 * 0.76 - 0.005) },
+        ],
+        comment: '펀딩비 중립화 구간 내 스윙 변곡점과 후반 추세 전개 예측.',
+      },
+      {
+        authorId: 'u_bull',
+        hour: '12:45:00Z',
+        anchorsPct: [
+          { day: 2, pct: clampPct(r2 * 0.5 + 0.008) },
+          { day: 5, pct: clampPct(Math.max(r5 * 0.7, 0.012)) },
+          { day: 7, pct: clampPct(r7 >= -0.01 ? Math.max(r7 * 0.8, 0.018) : r7 * 0.4) },
+        ],
+        comment: '단기 지지 확인 시 계단식 반등을 노린 매수 우위 궤적.',
+      },
+      {
+        authorId: 'u_macro',
+        hour: '14:20:00Z',
+        anchorsPct: [
+          { day: 3, pct: clampPct(r2 * 0.4 - 0.009) },
+          { day: 7, pct: clampPct(r7 * 0.45 - 0.012 + osc) },
+        ],
+        comment: '상단 매물대 저항과 박스권 재테스트 가능성을 반영한 보수적 경로.',
+      },
+      {
+        authorId: 'u_rookie',
+        hour: '16:05:00Z',
+        anchorsPct: [
+          { day: 2, pct: clampPct(-r2 * 0.6 + (dayIdx % 2 === 0 ? 0.014 : -0.014)) },
+          { day: 5, pct: clampPct(-r5 * 0.5) },
+          { day: 7, pct: clampPct(-r7 * 0.65 + (dayIdx % 2 === 0 ? 0.01 : -0.015)) },
+        ],
+        comment: '단기 이격 과열 해소에 베팅한 역발상 추세 전환 시나리오.',
+      },
+    ];
+
+    for (const spec of cohortSpecs) {
+      forecasts.push(
+        makeSeedForecast({
+          id: `fc_btc_${dateCompact}_${spec.authorId}`,
+          authorId: spec.authorId,
+          baseDate: cohortBaseDate,
+          basePrice: cohortBasePrice,
+          evalDates: cohortEvalDates,
+          lockedAt: `${cohortBaseDate}T${spec.hour}`,
+          comment: spec.comment,
+          anchorsPct: spec.anchorsPct,
+          roundId: cohortRoundId,
+        })
+      );
+    }
+
+    dayCursor.setUTCDate(dayCursor.getUTCDate() + 1);
+    dayIdx += 1;
+  }
+
   return forecasts;
 }
 

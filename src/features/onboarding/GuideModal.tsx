@@ -142,7 +142,7 @@ function StepVisualUnlock({ t }: { t: (ko: string, en: string) => string }) {
           </text>
           <line x1="232" y1="172.5" x2="246" y2="172.5" stroke="var(--op-smart)" strokeWidth="2.4" />
           <text x="250" y="176" fill="var(--op-smart)" fontSize="10" fontFamily="var(--font-mono)">
-            {t('상위 예측자', 'Top Forecasters')}
+            {t('집단 경로', 'Crowd Path')}
           </text>
         </g>
       }
@@ -307,10 +307,10 @@ function GuideModalDialog({ onClose }: { onClose: () => void }) {
     },
     {
       num: '02',
-      title: t('내 예측을 제출하면 다른 전망이 공개됩니다', 'Submit your forecast to unlock crowd insights'),
+      title: t('내 예측을 제출하면 집단 전망이 공개됩니다', 'Submit your forecast to unlock the Crowd Path'),
       desc: t(
-        '제출 전에는 다른 참여자의 예측 경로가 비공개로 유지됩니다. 예측을 제출하면 참여자 중앙값과 상위 예측자 경로를 비교할 수 있습니다.',
-        'Peer forecasts stay hidden beforehand. Submit your forecast to compare against the crowd median and top forecasters.'
+        '제출 전에는 다른 참여자의 예측 경로가 비공개로 유지됩니다. 예측을 제출하면 차트의 집단 중앙 경로(Crowd Path)와 상승·하락 비중, 참여자별 경로 겹쳐 보기가 열립니다.',
+        'Peer forecasts stay hidden beforehand. Submit your forecast to reveal the Crowd Path, Bullish/Bearish split, and peer path overlays.'
       ),
       visual: <StepVisualUnlock t={t} />,
     },

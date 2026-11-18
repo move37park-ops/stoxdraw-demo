@@ -29,6 +29,22 @@ describe('Round Engine (Daily Rolling & Weekly Cohorts)', () => {
     expect(rounds[0].evalDates).toHaveLength(7);
   });
 
+  it('classifies 15 consecutive daily BTC rounds across Open, Tracking (LIVE), and Evaluated (RESOLVED)', () => {
+    const rounds = getDailyRollingBtcRounds('2026-10-02', '2026-10-02', 15, 7);
+    expect(rounds).toHaveLength(15);
+    expect(rounds[0]).toMatchObject({ baseDate: '2026-10-02', status: 'OPEN' });
+    // 1..6 days ago: Tracking (LIVE)
+    for (let i = 1; i <= 6; i++) {
+      expect(rounds[i].status).toBe('LIVE');
+    }
+    // 7..14 days ago (2026-09-25 down to 2026-09-18): Evaluated (RESOLVED)
+    expect(rounds[7]).toMatchObject({ baseDate: '2026-09-25', status: 'RESOLVED' });
+    for (let i = 7; i < rounds.length; i++) {
+      expect(rounds[i].status).toBe('RESOLVED');
+    }
+    expect(rounds[rounds.length - 1].baseDate).toBe('2026-09-18');
+  });
+
   it('calculates countdown remaining accurately', () => {
     const fixedNow = 1700000000000;
     const futureCutoff = new Date(fixedNow + 3600 * 1000 * 4 + 120 * 1000).toISOString();

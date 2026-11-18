@@ -42,15 +42,14 @@ Orange Paths follows a **DeepBook Flush Hairline** surface system paired with an
 
 ## 4. Layout & Staged Lean Information Architecture
 
-- **Navigation (`TopNav`)**: `h-12` desktop top bar + dedicated 4-column mobile sub-navigation (`< md`: `/`, `/practice`, `/community`, `/me`) so links never clip at `390px`.
+- **Navigation (`TopNav`)**: `h-12` desktop top bar (`예측하기`, `연습하기`, `리더보드`, `프로필`, language toggle, theme toggle, summary guide `?`, connect account) + dedicated 4-column mobile sub-navigation (`< md`: `/`, `/practice`, `/leaderboard`, `/me`) so links never clip at `390px`.
 - **Workbench (`/`)**:
-  - Single compact market instrument bar (`BTC/USDT`, `7D`, spot quote + 24h delta, expiry date, lock countdown, active traders count).
-  - `12`-column CSS grid (`lg:grid-cols-12`): `8` columns `PathCanvas` (zoomable 7D–240D history + 7D drawing region) and `4` columns `TicketPanel`.
-  - **Empty Canvas Onboarding**: Before the first anchor exists, a single-line overlay prompt on the chart invites direct drawing or applying a one-click pullback-bounce sample trajectory (`onApplySample`).
-  - **Progressive Disclosure in `TicketPanel`**: Expected `D+7` price/return summary, shape badge, projected Elo band, and optional thesis memo (`maxLength=140`) stay collapsed behind a 1-line progress indicator until `pathCompleted || isSubmitted`, after which the 2-step irreversible lock confirmation activates.
+  - Single compact header bar (`BTC/USDT`, spot/base quote + 15-day rolling daily round navigator `← Prev | Range · Status | Next → | Today` covering `OPEN`, `TRACKING 1/7..6/7`, and `EVALUATED 7/7`).
+  - `12`-column CSS grid (`lg:grid-cols-12`): `8` columns `PathCanvas` (zoomable 7D–240D history, scalable Y-axis + 7D drawing region) and `4` columns `TicketPanel`.
+  - **Empty Canvas Onboarding**: Before the first anchor exists, an overlay prompt on the chart invites direct drawing or applying a one-click sample forecast path.
+  - **Streamlined `TicketPanel`**: `OPEN` rounds show the `D+7` target price/return readout, 3 preset chips (`Dip & Rally`, `Pullback Breakout`, `Peak & Pullback`), optional 1-line memo (`maxLength=140`), and 1-click lock (`Lock Your Forecast`); after lock, transitions directly to `My Forecast vs. Crowd Path` comparison and Share/Details actions; `TRACKING`/`EVALUATED` rounds show actual close vs Crowd Path, interim/final score, round leader overlay toggle, and return to today CTA.
 - **Blind Contribution Gate (`BottomTabs`)**:
-  - **Pre-Lock**: Shows `OverviewReport` (7D realized volatility band + round status) and masked `ParticipantsTable` (targets, patterns, memos, and overlays hidden).
-  - **Post-Lock**: Unlocks `DeepReport` (consolidated into 3 blocks: Consensus vs Top-Tier comparison + `D+7` target ladder + divergence/conviction diagnosis) and full `ParticipantsTable` overlay toggles.
+  - Hosts the unified `ParticipantsTable`: pre-lock rows mask peer targets and memos behind Blind Mode, while post-lock and closed rounds unlock score-sorted metrics, detail links, and up to 3 concurrent rival path overlays on `PathCanvas`.
 
 ---
 

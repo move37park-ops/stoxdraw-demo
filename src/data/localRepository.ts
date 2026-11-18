@@ -103,6 +103,16 @@ class LocalRepository implements Repository {
     }
     if (!safeHasKey(KEYS.FORECASTS)) {
       this.writeCached(KEYS.FORECASTS, generateSeedForecasts());
+    } else {
+      const existing = safeReadJson<Forecast[] | null>(KEYS.FORECASTS, null);
+      if (Array.isArray(existing) && existing.length > 0) {
+        const existingIds = new Set(existing.map(f => f.id));
+        const seedForecasts = generateSeedForecasts();
+        const missing = seedForecasts.filter(sf => !existingIds.has(sf.id));
+        if (missing.length > 0) {
+          this.writeCached(KEYS.FORECASTS, [...existing, ...missing]);
+        }
+      }
     }
     if (!safeHasKey(KEYS.COMMENTS)) {
       this.writeCached(KEYS.COMMENTS, SEED_COMMENTS);

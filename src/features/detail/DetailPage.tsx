@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ThumbsUp,
   Share2,
   ArrowLeft,
   ShieldCheck,
@@ -46,7 +45,6 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
 
   const [repoTick, setRepoTick] = useState(0);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [, setLikeTick] = useState(0);
 
   useEffect(() => {
     const unsub = repository.subscribe(() => setRepoTick(c => c + 1));
@@ -67,45 +65,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
     }
   }, [rawId, rawTicker]);
 
-  // 해당 예측 라운드의 주요 마일스톤 스텝 구성 (7일 또는 레거시 20일 자동 대응)
-  const roundTimeSteps = useMemo(() => {
-    if (!rawForecast) return [];
-    const evals = rawForecast.evalDates || [];
-    if (evals.length <= 7) {
-      return [
-        { code: 'D0', date: rawForecast.baseDate },
-        { code: 'D+2', date: evals[1] || rawForecast.baseDate },
-        { code: 'D+4', date: evals[3] || rawForecast.baseDate },
-        { code: `D+${evals.length || 7}`, date: evals[evals.length - 1] || rawForecast.baseDate },
-      ];
-    }
-    return [
-      { code: 'D0', date: rawForecast.baseDate },
-      { code: 'D+5', date: evals[4] || rawForecast.baseDate },
-      { code: 'D+10', date: evals[9] || rawForecast.baseDate },
-      { code: `D+${evals.length}`, date: evals[evals.length - 1] || rawForecast.baseDate },
-    ];
-  }, [rawForecast]);
-
-  const [manualViewSelection, setManualViewSelection] = useState<{
-    forecastId?: string;
-    baseDate: string;
-    date: string;
-  } | null>(null);
-
-  const viewDateStr = useMemo(() => {
-    if (!rawForecast) return currentDateStr;
-    if (
-      manualViewSelection &&
-      manualViewSelection.forecastId === rawForecast.id &&
-      manualViewSelection.baseDate === currentDateStr
-    ) {
-      return manualViewSelection.date;
-    }
-    const lastEval = rawForecast.evalDates?.[rawForecast.evalDates.length - 1];
-    if (currentDateStr > rawForecast.baseDate) return currentDateStr;
-    return lastEval || currentDateStr;
-  }, [rawForecast, currentDateStr, manualViewSelection]);
+  const viewDateStr = currentDateStr;
 
   const stockBars = useMemo(
     () => (rawForecast ? getStockHistory(rawForecast.ticker) : []),
@@ -179,8 +139,6 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
     : `guest_${forecast.anonId.replace(/^anon[_-]?/i, '').slice(0, 4) || 'user'}`;
   const authorElo = author?.elo ?? rawForecast?.sharedAuthorElo ?? DEFAULT_ELO;
 
-  const isLiked = repository.isLiked(forecast.id);
-  const likesCount = repository.getLikesCount(forecast.id);
   const status = deriveForecastStatus(forecast, viewDateStr);
   const visibleBars = stockBars.filter(b => b.date <= viewDateStr);
 
@@ -353,53 +311,6 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center gap-1 mr-1">
-            {roundTimeSteps.map(s => {
-              const isSelected = s.date === viewDateStr;
-              return (
-                <button
-                  key={s.code}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() =>
-                    setManualViewSelection({
-                      forecastId: forecast.id,
-                      baseDate: currentDateStr,
-                      date: s.date,
-                    })
-                  }
-                  className="v-btn-secondary h-7 px-2 text-[11px] rounded-[2px]"
-                  style={{
-                    backgroundColor: isSelected
-                      ? 'var(--v-primary)'
-                      : 'var(--op-canvas)',
-                    color: isSelected
-                      ? 'var(--v-on-primary)'
-                      : 'var(--v-ink)',
-                  }}
-                >
-                  {s.code}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            aria-pressed={isLiked}
-            onClick={() => {
-              repository.toggleLike(forecast.id);
-              setLikeTick(c => c + 1);
-            }}
-            className="v-btn-secondary h-8 px-3 text-xs rounded-[2px]"
-            style={{
-              color: isLiked ? 'var(--v-link)' : 'var(--v-ink)',
-            }}
-          >
-            <ThumbsUp size={12} />
-            {t(`추천 (${likesCount})`, `Like (${likesCount})`)}
-          </button>
-
           <button
             type="button"
             onClick={() => setIsShareOpen(true)}

@@ -14,7 +14,7 @@ import type { Forecast, User } from '../domain/types';
 
 interface AppShellProps {
   currentDateStr: string;
-  onDateChange: (newDate: string) => void;
+  onDateChange?: (newDate: string) => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
 }
@@ -23,7 +23,6 @@ const GUIDE_SEEN_KEY = 'op_guide_seen';
 
 export function AppShell({
   currentDateStr,
-  onDateChange,
   theme = 'dark',
   onToggleTheme = () => {},
 }: AppShellProps) {
@@ -138,10 +137,7 @@ export function AppShell({
         </Suspense>
       </main>
 
-      <Footer
-        currentDateStr={currentDateStr}
-        onDateChange={onDateChange}
-      />
+      <Footer />
 
       <GuideModal isOpen={isGuideOpen} onClose={handleCloseGuide} />
     </div>

@@ -20,7 +20,7 @@ export function DocsPage() {
     { id: 'drawing', num: '02', label: t('차트 그리기 및 조작법', 'Chart Drawing & Controls') },
     { id: 'scoring', num: '03', label: t('100점 정량 평가 공식', '100-Point Evaluation Engine') },
     { id: 'elo', num: '04', label: t('평판 점수(LP) 및 등급', 'Reputation LP & Tiers') },
-    { id: 'report', num: '05', label: t('집단 전망 지표 및 운영 원칙', 'Crowd Insights & Principles') },
+    { id: 'report', num: '05', label: t('집단 전망 비교 및 운영 원칙', 'Crowd Comparison & Principles') },
     { id: 'faq', num: '06', label: t('자주 묻는 질문 (FAQ)', 'FAQ') },
   ];
 
@@ -108,27 +108,42 @@ export function DocsPage() {
     {
       key: t('차트 클릭', 'Click Chart'),
       scope: t('D0 오른쪽 미래 영역', 'Right of D0 future zone'),
-      desc: t(`원하는 날짜와 가격에 예측 지점을 추가합니다 (최대 ${MAX_ANCHORS}개). D+7 종료 지점까지 연결되면 제출 버튼이 활성화됩니다.`, `Adds an anchor point at the selected day and price (max ${MAX_ANCHORS}). Reaching D+7 enables submission.`),
+      desc: t(
+        `원하는 날짜와 가격에 예측 지점을 추가합니다 (최대 ${MAX_ANCHORS}개). 주요 가격대에서는 자석 스냅(Snap)이 작동하며, D+7 종료 지점까지 연결되면 제출 버튼이 활성화됩니다.`,
+        `Adds an anchor point at the chosen day and price (max ${MAX_ANCHORS}). Snap alignment assists key levels, and reaching D+7 enables submission.`
+      ),
     },
     {
-      key: t('지점 드래그', 'Drag Anchor'),
-      scope: t('이미 찍은 주황색 지점', 'Existing orange anchors'),
-      desc: t('가격과 날짜를 원하는 위치로 실시간 이동합니다. 같은 날짜로 겹치면 해당 일자 값이 최신 위치로 갱신됩니다.', 'Repositions anchor day and price smoothly. Overlapping the same day replaces that day cleanly.'),
+      key: t('지점 드래그 · 삭제', 'Drag & Delete'),
+      scope: t('주황색 예측 지점 · 상단 툴바', 'Orange anchors · Canvas toolbar'),
+      desc: t(
+        '지점을 드래그해 날짜와 가격을 실시간 이동하고, 선택 상태에서 상단 D+N 삭제 · 지우기 버튼이나 방향키 · Delete · Backspace로 미세 조정 및 삭제할 수 있습니다.',
+        'Drag points across days and prices, or select an anchor to fine-tune with arrow keys and remove via toolbar buttons or Delete/Backspace.'
+      ),
     },
     {
-      key: t('스크롤 / 툴바', 'Scroll / Toolbar'),
-      scope: t('차트 영역 및 우측 가격축', 'Canvas plot and Y-axis'),
-      desc: t('차트 위에서 마우스 휠로 표시 기간(7D~240D)을 즉시 조절하고, 우측 가격축을 스크롤·드래그해 세로 변동폭 배율을 조절할 수 있습니다.', 'Scroll directly on the chart to zoom historical lookback (7D–240D), or scroll and drag the right price axis to adjust vertical scaling.'),
+      key: t('기간 줌 · 가격축 배율', 'Time Zoom & Y-Scale'),
+      scope: t('차트 영역 · 우측 가격축', 'Plot area · Right Y-axis'),
+      desc: t(
+        '마우스 휠 또는 상단 "- / 21D / + / 초기화" 버튼으로 과거 표시 기간(7D~240D)을 조절하고, 우측 가격축을 스크롤·드래그(더블클릭 초기화)해 세로 배율을 조절할 수 있습니다.',
+        'Use the mouse wheel or top "- / 21D / + / Reset" buttons to adjust lookback (7D–240D), and scroll/drag/double-click the right price axis to scale vertical amplitude.'
+      ),
     },
     {
-      key: t('선 / 캔들 차트', 'Line / Candles'),
-      scope: t('차트 상단 툴바', 'Chart top toolbar'),
-      desc: t('과거 일봉을 종가 선 차트 또는 OHLC 캔들 차트로 전환해 추세와 변동폭을 함께 확인할 수 있습니다.', 'Toggles past market bars between close line chart and OHLC candlestick chart.'),
+      key: t('빠른 예시 프리셋', 'Quick Presets'),
+      scope: t('우측 제출 패널', 'Right TicketPanel'),
+      desc: t(
+        '하락 후 반등, 눌림 후 돌파, 고점 후 하락 3가지 대표 경로를 불러온 뒤 원하는 지점만 수정해 빠르게 예측을 제출할 수 있습니다.',
+        'Load one of 3 canonical paths (Dip & Rally, Pullback Breakout, Peak & Pullback) and adjust anchor points before submitting.'
+      ),
     },
     {
-      key: t('예측 경로 예시', 'Preset Paths'),
-      scope: t('우측 제출 패널', 'Right submission panel'),
-      desc: t('하락 후 반등, 꾸준한 상승 등 대표 흐름을 먼저 불러온 뒤 예측 지점만 미세 조정해 제출할 수 있습니다.', 'Loads canonical forecast curves such as Dip & Rally so you can tweak points directly.'),
+      key: t('일간 라운드 이동 · 겹쳐 보기', 'Round Nav & Overlay'),
+      scope: t('상단 날짜 바 · 하단 참여자 표', 'Header nav · Participants table'),
+      desc: t(
+        '상단 날짜 이동 바(← 이전 / 다음 → / Today)로 최근 15개 일간 라운드의 진행 및 확정 결과를 조회하고, 하단 참여자 표에서 최대 3명의 경로를 차트에 겹쳐 비교할 수 있습니다.',
+        'Browse recent 15 rolling daily rounds in the header bar (← Prev / Next → / Today) and overlay up to 3 peer paths on the chart from the participants table.'
+      ),
     },
   ];
 
@@ -136,29 +151,29 @@ export function DocsPage() {
     {
       q: t('이미 예측을 제출했는데 예측 경로를 수정할 수 있나요?', 'Can I edit my forecast path after submitting?'),
       a: t(
-        '아니요. 집단 전망 범위와 상위 예측자 경로가 즉시 공개되므로 후행 편승(따라 그리기)을 막기 위해 라운드당 1회 제출 후 수정 불가 원칙을 적용합니다. 매일 새로운 7일 예측 라운드가 열리므로 새 전망은 다음 라운드에서 제출하실 수 있습니다.',
-        'No. Because crowd insights and top forecaster paths unlock immediately upon submission, each round permits one locked submission to prevent hindsight copying. Fresh 7-day rounds open daily.'
+        '아니요. 제출 즉시 집단 중앙 경로(Crowd Path)와 참여자 예측이 공개되므로 후행 편승(따라 그리기)을 막기 위해 라운드당 1회 제출 후 수정 불가 원칙을 적용합니다. 매일 새로운 7일 예측 라운드가 열리므로 새 전망은 다음 라운드에서 제출하실 수 있습니다.',
+        'No. Because the Crowd Path and peer forecasts unlock immediately upon submission, each round permits one locked submission to prevent hindsight copying. Fresh 7-day rounds open daily.'
       ),
     },
     {
       q: t('왜 제출 전에는 다른 참여자의 예측을 볼 수 없나요?', 'Why are other participants hidden before I submit?'),
       a: t(
-        '군집 편향(먼저 공개된 다수 의견이나 상위 예측자 경로를 그대로 따라 그리는 현상)을 막기 위한 블라인드 규칙입니다. 내 예측 경로를 1회 제출하면 즉시 참여자 분포와 상위 예측자 경로가 열립니다.',
-        'Blind Mode prevents herding bias before forming your own forecast. Submitting your forecast immediately reveals crowd distribution and top forecaster paths.'
+        '군집 편향(먼저 공개된 다수 의견이나 다른 참여자의 경로를 그대로 따라 그리는 현상)을 막기 위한 블라인드 규칙입니다. 내 예측 경로를 1회 제출하면 즉시 집단 중앙 경로(Crowd Path), 상승·하락 비중, 참여자별 경로 겹쳐 보기가 열립니다.',
+        'Blind Mode prevents herding bias before forming your own forecast. Submitting your forecast immediately reveals the Crowd Path, Bullish/Bearish split, and peer path overlays.'
       ),
     },
     {
-      q: t('우측 하단 "시뮬레이션 시점" 버튼은 어떤 기능인가요?', 'What does the bottom-right "Preview Timeline" bar do?'),
+      q: t('7일을 기다리지 않고 채점이나 과거 라운드 결과를 확인하려면 어떻게 하나요?', 'How can I test scoring or inspect settled results without waiting 7 days?'),
       a: t(
-        '실제로 7일을 기다리지 않고도 시간이 흐른 상태를 즉시 검증해 보는 시뮬레이션 제어기입니다. 오늘 · 2일 뒤 · 4일 뒤 · 예측 종료를 선택하면 실제 BTC 종가가 차트에 순차 반영되고 일별 예측 점수와 LP 변동 결과를 바로 확인할 수 있습니다.',
-        'It simulates progression from Today through +2D, +4D, and +7D End without waiting a full week, plotting realized BTC closes step by step alongside live scores and reputation LP deltas.'
+        '상단 날짜 이동 바에서 과거 일자(← 이전)를 선택하면 추적 중인 라운드(TRACKING 1/7~6/7)와 최종 평가 완료 라운드(EVALUATED 7/7)의 실제 BTC 종가 대비 점수와 LP 변동을 바로 확인할 수 있습니다. 또한 상단 메뉴 "연습하기(/practice)"에서는 날짜와 가격을 가린 무작위 과거 7일 구간으로 즉시 블라인드 연습 및 100점 채점을 반복해 볼 수 있습니다.',
+        'Select earlier daily rounds in the header navigator (← Prev) to inspect TRACKING (1/7–6/7) and EVALUATED (7/7) rounds with real BTC closes and LP settlements. You can also visit Practice (/practice) for instant blind 7-day historical replay scoring.'
       ),
     },
     {
       q: t('로그인하지 않아도 예측과 점수 확인이 가능한가요?', 'Do I need an account to draw and test my score?'),
       a: t(
-        '아니요. 게스트(guest_xxxx) 상태로도 예측 경로 그리기, 제출, 집단 전망 열람 및 점수 계산을 모두 체험할 수 있으며, 상단 연결 버튼으로 계정을 연동하면 현재 브라우저 기록이 계정에 연결됩니다.',
-        'No. Guest sessions can draw paths, submit forecasts, unlock reports, and view scores immediately. Connecting an account links your browser history to your handle.'
+        '아니요. 게스트(guest_xxxx) 상태로도 예측 경로 그리기, 제출, 집단 중앙 경로 열람, 일간 라운드 결과 확인, 블라인드 연습을 모두 체험할 수 있으며, 상단 연결 버튼으로 계정을 연동하면 현재 브라우저 기록이 계정에 연결됩니다.',
+        'No. Guest sessions can draw paths, submit forecasts, unlock Crowd Path comparisons, inspect round results, and run blind practice immediately. Connecting an account links your browser history to your handle.'
       ),
     },
   ];
@@ -285,8 +300,8 @@ export function DocsPage() {
 
             <p className="text-[13.5px] leading-relaxed" style={{ color: 'var(--op-ink-2)' }}>
               {t(
-                'Orange Paths는 7일 뒤 가격이 오를지 내릴지만 고르는 이진 선택이 아니라, 오늘(D0)부터 예측 종료일(D+7)까지 가격이 어떤 경로(눌림, 돌파, 횡보, 반전)로 움직일지 차트에 직접 그리는 7일 가격 예측 플랫폼입니다.',
-                'Instead of binary up/down bets, Orange Paths lets you draw your expected 7-day forecast path from D0 to D+7—capturing interim pullbacks, breakouts, and terminal levels.'
+                'Orange Paths는 7일 뒤 상승·하락만 고르는 이진 선택이 아니라, 오늘(D0)부터 예측 종료일(D+7)까지의 가격 흐름을 차트에 직접 그리는 실전 7일 예측(/)과 과거 구간 블라인드 연습(/practice)을 제공합니다.',
+                'Instead of binary up/down bets, Orange Paths provides both Live 7-Day Forecasting (/)—drawing expected pullbacks, breakouts, and D+7 targets on the chart—and Blind Historical Practice (/practice).'
               )}
             </p>
 
@@ -294,26 +309,26 @@ export function DocsPage() {
               {[
                 {
                   phase: 'OPEN',
-                  title: t('1. 예측 경로 그리기 및 제출', '1. Draw & Blind Submit'),
+                  title: t('1. 예측 경로 그리기 및 블라인드 제출', '1. Draw & Blind Submit'),
                   desc: t(
-                    'D0 오른쪽 미래 영역에 최대 5개 예측 지점을 추가해 D+7 종료 지점까지 연결하고 제출합니다. 제출 전에는 다른 참여자의 예측이 가려집니다.',
-                    'Add up to 5 anchor points in the future zone to reach D+7 and submit. Peer paths stay hidden until submission.'
+                    'D0 오른쪽 미래 영역에 최대 5개 예측 지점을 추가해 D+7 종료 지점까지 연결하고 제출합니다. 제출 전에는 타 참여자 경로가 비공개로 유지됩니다.',
+                    'Add up to 5 anchor points in the future zone to reach D+7 and submit. Peer forecasts remain hidden until submission.'
                   ),
                 },
                 {
-                  phase: 'LIVE',
-                  title: t('2. 집단 비교 및 일별 확인', '2. Compare & Track'),
+                  phase: 'COMPARE · TRACKING',
+                  title: t('2. 집단 전망 비교 및 일별 추적 (1/7~6/7)', '2. Compare & Daily Tracking'),
                   desc: t(
-                    '제출 즉시 참여자 중앙값과 상위 예측자(1,500 LP 이상 또는 상위 25%) 경로가 열리며, 매일 실제 BTC 종가가 확정될 때마다 현재 예측 점수가 갱신됩니다.',
-                    'Crowd median and Top Forecaster (1,500+ LP or top 25%) paths unlock upon submission, and interim scores update with each realized daily BTC close.'
+                    '제출 즉시 차트의 집단 중앙 경로(Crowd Path), 상승·하락 비중, 참여자 목록(최대 3명 차트 겹쳐 보기)이 열리며, 매일 BTC 종가가 확정될 때마다 중간 점수와 현재 1위가 갱신됩니다.',
+                    'Unlocks the in-chart Crowd Path, Bullish/Bearish split, and peer path overlays (up to 3) right after submission; interim scores and round leader update daily with BTC closes.'
                   ),
                 },
                 {
-                  phase: 'RESOLVED',
-                  title: t('3. D+7 예측 평가 및 LP 반영', '3. D+7 Evaluation & LP'),
+                  phase: 'EVALUATED 7/7',
+                  title: t('3. D+7 최종 평가 및 LP 정산', '3. D+7 Evaluation & LP'),
                   desc: t(
-                    '7일 종가가 모두 확정되면 예측 점수(0~100점)와 예측 등급(S~F)이 확정되고, 동일 라운드 상대 순위에 따라 평판 점수(LP)가 반영됩니다.',
-                    'After all 7 daily closes settle, your 0–100 Forecast Score, S–F Forecast Grade, and round-relative LP adjustment finalize.'
+                    '7일 종가가 모두 확정되면 100점 정량 예측 점수(경로 50 · 흐름 25 · 가격·방향 25)와 등급(S~F)이 확정되고, 라운드 상대 순위에 따라 -32 LP ~ +32 LP가 반영됩니다.',
+                    'After all 7 daily closes settle, your 0–100 Forecast Score (50 path · 25 shape · 25 price/dir), S–F Grade, and -32 to +32 LP delta finalize.'
                   ),
                 },
               ].map(card => (
@@ -627,38 +642,38 @@ export function DocsPage() {
                 05
               </span>
               <h2 className="text-[16px] font-semibold" style={{ color: 'var(--op-ink)' }}>
-                {t('집단 전망 지표 및 운영 원칙', 'Crowd Insights & Principles')}
+                {t('집단 전망 비교 및 운영 원칙', 'Crowd Comparison & Principles')}
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
                 {
-                  title: t('상위 예측자 중앙 경로 (Top Forecasters Median)', 'Top Forecasters Median'),
+                  title: t('블라인드 제출 원칙 (Blind Mode before Submit)', 'Blind Mode Before Submission'),
                   desc: t(
-                    '평판 1,500 LP 이상(또는 해당 라운드 상위 25%) 참여자의 일별 예측 중앙값을 파란색 점선으로 표시해 전체 참여자 중앙값과의 차이를 보여줍니다.',
-                    'Displays the daily median path of top forecasters (1,500+ LP or top 25%, blue dashed line) to compare against overall crowd median.'
+                    '현재 라운드에 내 예측 경로를 제출하기 전까지는 다른 참여자의 목표가, 수익률, 한 줄 메모, 차트 경로가 가려져 군집 편향 없이 독립적인 전망을 세울 수 있습니다.',
+                    'Peer D+7 targets, memos, and chart paths stay masked until you lock your own forecast in an open round, protecting independent judgment.'
                   ),
                 },
                 {
-                  title: t('예측 분포 범위 (P25–P75 / P15–P85)', 'Forecast Distribution (P25–P75 / P15–P85)'),
+                  title: t('집단 중앙 경로 및 상승·하락 비중 (Crowd Path & Split)', 'Crowd Path & Bullish/Bearish Split'),
                   desc: t(
-                    '전체 제출 경로의 일별 가격 분포 분위수를 기반으로 참여자 예측의 중앙 50%(P25–P75)와 중앙 70%(P15–P85) 범위를 시각화합니다.',
-                    'Visualizes the central 50% (P25–P75) and central 70% (P15–P85) quantile ranges across all submitted paths.'
+                    '제출 즉시 차트 위에 참여자들의 일별 중앙값 경로(Crowd Path)가 파란색 점선으로 표시되고, 우측 비교 패널에 전체 상승 전망 vs 하락 전망 비율이 공개됩니다.',
+                    'Submitting unlocks the Crowd Path (blue dashed daily median trajectory) directly on the chart alongside overall Bullish vs. Bearish shares.'
                   ),
                 },
                 {
-                  title: t('예측 분포 상·하단 및 하락 구간', 'Quantile Boundaries & Key Pullback Zone'),
+                  title: t('참여자 예측 비교 및 최대 3명 겹쳐 보기', 'Participants Table & Rival Overlays (Up to 3)'),
                   desc: t(
-                    '참여자들의 예상 경로에서 나타나는 분포 경계(P15·P85)와 주요 하락·반등 예상 구간을 정리해 비교 기준으로 제공합니다.',
-                    'Summarizes distribution bounds (P15 and P85) and collective interim pullback windows across submitted forecasts.'
+                    '하단 참여자 예측 현황 표에서 점수·수익률·예측자 등급을 확인하고, 관심 있는 참여자 최대 3명의 경로를 내 예측 차트 위에 겹쳐 비교할 수 있습니다.',
+                    'Inspect scores, returns, and forecaster tiers in the Participants table, and overlay up to 3 peer forecast paths simultaneously on your chart.'
                   ),
                 },
                 {
-                  title: t('예상 변동폭 비율 · 제출 시점 해시 기록', 'Path Range Ratio · Submission Hash Log'),
+                  title: t('검증 해시 기록 및 공유 카드 (Hash & Share Card)', 'Verification Hash & Share Card'),
                   desc: t(
-                    '내 예측 경로 내 목표 대비 최저점 비율을 산출하며, 제출 시점의 예측 데이터와 해시값을 함께 기록해 이후 변경 여부를 대조할 수 있습니다.',
-                    'Computes drawn upside-to-drawdown ratio and records a timestamped verification hash alongside your submitted forecast data.'
+                    '제출 시점의 예측 데이터와 함께 검증용 해시값이 기록되며, 공유 카드 이미지 생성 및 URL 페이로드(/f/:id?p=...)를 통해 내 예측 경로와 성적을 바로 공유할 수 있습니다.',
+                    'Each locked forecast records a verification hash and provides a Share Card PNG plus serverless URL payload (/f/:id?p=...) to share and clone paths.'
                   ),
                 },
               ].map(item => (

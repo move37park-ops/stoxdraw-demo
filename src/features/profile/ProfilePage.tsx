@@ -259,54 +259,6 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
               {localizeDataText(user.bio, locale)}
             </p>
           </div>
-
-          {/* Elo Tier Progress Bar with 5-Tier Milestones */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between v-caption-mono">
-              <span style={{ color: 'var(--v-ink)' }}>
-                {t(`다음 등급까지 진행률 (${tierInfo.progressPct}%)`, `Tier Progress (${tierInfo.progressPct}%)`)}
-              </span>
-              <span style={{ color: tierInfo.accentHex }}>
-                {tierInfo.nextTierElo
-                  ? t(`다음 등급까지 필요한 ${tierInfo.nextTierElo - liveElo} LP`, `${tierInfo.nextTierElo - liveElo} LP to next tier`)
-                  : t('최고 등급 달성', 'Max Diamond Tier Reached')}
-              </span>
-            </div>
-            <div
-              className="w-full h-2 rounded-[2px] overflow-hidden"
-              style={{ backgroundColor: 'var(--op-raised)' }}
-            >
-              <div
-                className="h-full rounded-[2px] transition-all duration-300"
-                style={{
-                  width: `${Math.max(6, tierInfo.progressPct)}%`,
-                  backgroundColor: tierInfo.accentHex,
-                }}
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 v-caption-mono text-xs pt-0.5">
-              {[
-                { label: t('브론즈', 'Bronze'), lp: 600 },
-                { label: t('실버', 'Silver'), lp: 1200 },
-                { label: t('골드', 'Gold'), lp: 1400 },
-                { label: t('플래티넘', 'Platinum'), lp: 1600 },
-                { label: t('다이아', 'Diamond'), lp: 1800 },
-              ].map(m => {
-                const reached = liveElo >= m.lp;
-                return (
-                  <span
-                    key={m.lp}
-                    style={{
-                      color: reached ? 'var(--v-ink)' : 'var(--v-mute)',
-                      fontWeight: reached ? 600 : 400,
-                    }}
-                  >
-                    {m.label} ({m.lp})
-                  </span>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* Right 5 Cols: Compact Unified 3-Metric Box */}

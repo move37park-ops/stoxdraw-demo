@@ -1,12 +1,7 @@
-import { useState, useRef, useLayoutEffect } from 'react';
-import { Lock, Share2, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
+import { Share2, ShieldCheck, ArrowRight, Eye, CheckCircle2 } from 'lucide-react';
 import { formatPct } from '../../domain/format';
-import {
-  normalizeAnchors,
-  MAX_ANCHORS,
-  type TrajectoryPresetId,
-} from '../../domain/interpolation';
-import { analyzeUserPath } from '../../domain/report';
+import { type TrajectoryPresetId } from '../../domain/interpolation';
 import { useI18n } from '../../lib/i18nCore';
 import type {
   AnchorPoint,
@@ -16,20 +11,39 @@ import type {
   ScoreBreakdown,
 } from '../../domain/types';
 
+export interface RoundLeaderEntry {
+  forecast: Forecast;
+  handle: string;
+  elo: number;
+  score: number;
+  changePct: number;
+}
+
 interface TicketPanelProps {
+  baseDate?: string;
   basePrice: number;
   evalDates: string[];
-  anchors: AnchorPoint[];
+  anchors?: AnchorPoint[];
   interpolatedPrices: number[];
   pathCompleted: boolean;
   isSubmitted: boolean;
   isRoundOpen?: boolean;
   roundStatus?: 'OPEN' | 'LIVE' | 'RESOLVED';
   myForecast: Forecast | null;
-  eloProjection: EloProjection;
+  eloProjection?: EloProjection;
   liveTrackingScore: ScoreBreakdown | null;
   liveTrackingSettlement: EloSettlement | null;
   settledCount: number;
+  participantsCount?: number;
+  crowdMedianPrice?: number;
+  crowdChangePct?: number;
+  bullishSharePct?: number;
+  avgRoundScore?: number | null;
+  leaderEntry?: RoundLeaderEntry | null;
+  isLeaderOverlaid?: boolean;
+  onToggleLeaderOverlay?: () => void;
+  actualLatestPrice?: number | null;
+  actualLatestChangePct?: number | null;
   commentText: string;
   onChangeComment: (next: string) => void;
   onSubmit: () => void;
@@ -48,24 +62,32 @@ const SCENARIO_TABS: { id: TrajectoryPresetId; ko: string; en: string }[] = [
 ];
 
 export function TicketPanel({
+  baseDate,
   basePrice,
   evalDates,
-  anchors,
   interpolatedPrices,
   pathCompleted,
   isSubmitted,
   isRoundOpen = true,
   roundStatus = 'OPEN',
   myForecast,
-  eloProjection,
   liveTrackingScore,
   liveTrackingSettlement,
   settledCount,
+  participantsCount = 0,
+  crowdMedianPrice,
+  crowdChangePct = 0,
+  bullishSharePct = 50,
+  avgRoundScore = null,
+  leaderEntry = null,
+  isLeaderOverlaid = false,
+  onToggleLeaderOverlay,
+  actualLatestPrice = null,
+  actualLatestChangePct = null,
   commentText,
   onChangeComment,
   onSubmit,
   onResetToToday,
-  onOpenGuide: _onOpenGuide,
   onOpenShare,
   onViewDetail,
   onApplyPreset,
@@ -74,55 +96,8 @@ export function TicketPanel({
   const { locale, t } = useI18n();
   const [localSelectedPreset, setLocalSelectedPreset] = useState<TrajectoryPresetId | null>(null);
   const selectedPreset = activePreset !== undefined ? activePreset : localSelectedPreset;
-  const [isConfirmingSubmit, setIsConfirmingSubmit] = useState(false);
-  const showConfirmSubmit =
-    isConfirmingSubmit && pathCompleted && isRoundOpen && !isSubmitted;
-  const scenarioWrapRef = useRef<HTMLDivElement>(null);
-  const scenarioBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [scenarioGlow, setScenarioGlow] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-    ready: boolean;
-  }>({ left: 0, top: 0, width: 0, height: 0, ready: false });
 
-  const activeScenarioIdx =
-    pathCompleted && selectedPreset
-      ? SCENARIO_TABS.findIndex(item => item.id === selectedPreset)
-      : -1;
-
-  useLayoutEffect(() => {
-    const syncGlow = () => {
-      const btn = activeScenarioIdx >= 0 ? scenarioBtnRefs.current[activeScenarioIdx] : null;
-      if (!btn) {
-        setScenarioGlow(prev => (prev.ready ? { ...prev, ready: false } : prev));
-        return;
-      }
-      setScenarioGlow({
-        left: btn.offsetLeft,
-        top: btn.offsetTop,
-        width: btn.offsetWidth,
-        height: btn.offsetHeight,
-        ready: btn.offsetWidth > 0,
-      });
-    };
-
-    syncGlow();
-    const wrap = scenarioWrapRef.current;
-    let observer: ResizeObserver | null = null;
-    if (wrap && typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(syncGlow);
-      observer.observe(wrap);
-    }
-    window.addEventListener('resize', syncGlow);
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener('resize', syncGlow);
-    };
-  }, [activeScenarioIdx, locale]);
   const horizonDays = evalDates.length || 7;
-  const sortedAnchors = normalizeAnchors(anchors, horizonDays, MAX_ANCHORS);
 
   const finalTargetPrice =
     pathCompleted && interpolatedPrices.length > 0
@@ -136,88 +111,440 @@ export function TicketPanel({
   const expiryShort =
     evalDates[evalDates.length - 1]?.slice(5).replace('-', '.') || `D+${horizonDays}`;
 
-  const pathAnalysis =
-    pathCompleted && interpolatedPrices.length > 0
-      ? analyzeUserPath(basePrice, interpolatedPrices, locale)
-      : null;
+  const effectiveCrowdMedian = crowdMedianPrice ?? basePrice;
+  const bearishSharePct = Math.max(0, 100 - bullishSharePct);
+  const remainingDays = Math.max(0, horizonDays - settledCount);
 
-  const troughPoint = (() => {
-    if (!pathCompleted || interpolatedPrices.length === 0) return null;
-    let minPrice = interpolatedPrices[0];
-    let minDay = 1;
-    interpolatedPrices.forEach((p, idx) => {
-      if (p < minPrice) {
-        minPrice = p;
-        minDay = idx + 1;
-      }
-    });
-    return { price: minPrice, day: minDay };
-  })();
+  // =========================================================================
+  // STATE 3 & 4: PAST CLOSED ROUNDS (TRACKING 1/7~6/7 or EVALUATED 7/7)
+  // =========================================================================
+  if (!isRoundOpen) {
+    const isResolved = roundStatus === 'RESOLVED';
 
-  const isLockedReadOnly = isSubmitted || !isRoundOpen;
+    return (
+      <div
+        className="h-full flex flex-col justify-between p-4 gap-4"
+        style={{ backgroundColor: 'var(--op-panel)' }}
+      >
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="op-mono text-[10.5px] font-semibold px-2 py-0.5 rounded-[2px]"
+                style={{
+                  backgroundColor: isResolved
+                    ? 'rgba(0, 229, 153, 0.12)'
+                    : 'rgba(50, 145, 255, 0.14)',
+                  color: isResolved ? 'var(--op-bull)' : 'var(--op-smart)',
+                  border: `1px solid ${isResolved ? 'rgba(0, 229, 153, 0.32)' : 'rgba(50, 145, 255, 0.35)'}`,
+                }}
+              >
+                {isResolved
+                  ? t('EVALUATED · 7/7 확정', 'EVALUATED · 7/7 FINAL')
+                  : t(`TRACKING · ${settledCount}/${horizonDays}일`, `TRACKING · ${settledCount}/${horizonDays}D`)}
+              </span>
+              {baseDate && (
+                <span className="op-mono text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
+                  {baseDate.slice(5).replace('-', '.')} → {expiryShort}
+                </span>
+              )}
+            </div>
 
-  const handleSelectScenario = (presetId: TrajectoryPresetId) => {
-    if (isLockedReadOnly) return;
-    setLocalSelectedPreset(presetId);
-    onApplyPreset?.(presetId);
-  };
+            <h2
+              className="text-[15.5px] font-semibold tracking-[-0.015em] pt-0.5"
+              style={{ color: 'var(--op-ink)' }}
+            >
+              {isResolved
+                ? t('7일 예측 라운드 최종 결과', '7-Day Round Final Results')
+                : t('집단 예측 실시간 추적', 'How is the crowd tracking?')}
+            </h2>
+          </div>
 
-  const showExpandedDetails = pathCompleted || isSubmitted;
+          {/* 2-Col Comparison: Actual Price vs Crowd Path */}
+          <div className="grid grid-cols-2 gap-2">
+            <div
+              className="p-2.5 rounded-[2px] space-y-0.5"
+              style={{
+                backgroundColor: 'var(--op-canvas)',
+                border: '1px solid var(--op-line-strong)',
+              }}
+            >
+              <div className="op-mono text-[10.5px]" style={{ color: 'var(--op-ink-3)' }}>
+                {isResolved
+                  ? t('실제 7일 종가', 'Actual Close')
+                  : t(`실제 가격 (D+${settledCount})`, `Actual (D+${settledCount})`)}
+              </div>
+              <div className="op-mono text-[14.5px] font-semibold" style={{ color: 'var(--op-ink)' }}>
+                {actualLatestPrice !== null
+                  ? `$${Math.round(actualLatestPrice).toLocaleString('en-US')}`
+                  : '-'}
+              </div>
+              <div
+                className="op-mono text-[12px] font-semibold"
+                style={{
+                  color:
+                    (actualLatestChangePct ?? 0) >= 0 ? 'var(--op-bull)' : 'var(--op-bear)',
+                }}
+              >
+                {actualLatestChangePct !== null ? formatPct(actualLatestChangePct) : '-'}
+              </div>
+            </div>
 
-  return (
-    <div
-      className="h-full flex flex-col justify-between p-3.5 gap-3"
-      style={{ backgroundColor: 'var(--op-panel)' }}
-    >
-      <div className="space-y-3">
-        {/* 1. DeepBook Top 3-Button Rectangular Scenario Selector with Sliding Orange Glow */}
-        {onApplyPreset && (
+            <div
+              className="p-2.5 rounded-[2px] space-y-0.5"
+              style={{
+                backgroundColor: 'var(--op-canvas)',
+                border: '1px solid var(--op-line-strong)',
+              }}
+            >
+              <div className="op-mono text-[10.5px]" style={{ color: 'var(--op-smart)' }}>
+                {t(`집단 경로 D+${horizonDays}`, `Crowd Path D+${horizonDays}`)}
+              </div>
+              <div className="op-mono text-[14.5px] font-semibold" style={{ color: 'var(--op-ink)' }}>
+                ${Math.round(effectiveCrowdMedian).toLocaleString('en-US')}
+              </div>
+              <div
+                className="op-mono text-[12px] font-semibold"
+                style={{
+                  color: crowdChangePct >= 0 ? 'var(--op-bull)' : 'var(--op-bear)',
+                }}
+              >
+                {formatPct(crowdChangePct)}
+              </div>
+            </div>
+          </div>
+
+          {/* 4-Row Live / Final Score Box */}
           <div
-            ref={scenarioWrapRef}
-            className="relative grid grid-cols-3 gap-1 p-1 rounded-[2px] overflow-hidden"
+            className="rounded-[2px] divide-y divide-[var(--op-line)] text-[12px]"
             style={{
               backgroundColor: 'var(--op-canvas)',
               border: '1px solid var(--op-line-strong)',
-              opacity: isLockedReadOnly ? 0.65 : 1,
             }}
-            role="group"
-            aria-label={t('예측 경로 예시 선택', 'Select forecast path preset')}
           >
-            <span
-              aria-hidden="true"
-              className="op-sliding-glow"
+            <div className="px-3 py-2 flex items-center justify-between gap-2">
+              <span style={{ color: 'var(--op-ink-3)' }}>
+                {t('예측 참여자', 'Participants')}
+              </span>
+              <span className="op-mono font-medium" style={{ color: 'var(--op-ink)' }}>
+                {t(`${participantsCount}명`, `${participantsCount}`)}
+              </span>
+            </div>
+
+            <div className="px-3 py-2 flex items-center justify-between gap-2">
+              <span style={{ color: 'var(--op-ink-3)' }}>
+                {isResolved
+                  ? t('평균 최종 점수', 'Avg Final Score')
+                  : t('평균 중간 점수', 'Avg Interim Score')}
+              </span>
+              <span className="op-mono font-semibold" style={{ color: 'var(--op-ink)' }}>
+                {avgRoundScore !== null
+                  ? t(`${avgRoundScore.toFixed(1)}점`, `${avgRoundScore.toFixed(1)} pts`)
+                  : '-'}
+              </span>
+            </div>
+
+            <div className="px-3 py-2 flex items-center justify-between gap-2">
+              <span style={{ color: 'var(--op-ink-3)' }}>
+                {t('평가 진행 일수', 'Days Evaluated')}
+              </span>
+              <span className="op-mono" style={{ color: 'var(--op-ink)' }}>
+                {settledCount} / {horizonDays}
+                {!isResolved && (
+                  <span className="ml-1.5 text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
+                    ({t(`${remainingDays}일 남음`, `${remainingDays}D left`)})
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {leaderEntry && (
+              <div className="px-3 py-2 flex items-center justify-between gap-2">
+                <span style={{ color: 'var(--op-ink-3)' }}>
+                  {isResolved
+                    ? t('최종 1위', 'Round Winner')
+                    : t('현재 1위', 'Current Leader')}
+                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="op-mono font-semibold truncate" style={{ color: 'var(--op-ink)' }}>
+                    @{leaderEntry.handle}
+                  </span>
+                  <span className="op-mono text-[11.5px]" style={{ color: 'var(--op-bull)' }}>
+                    {leaderEntry.score.toFixed(1)}
+                  </span>
+                  {onToggleLeaderOverlay && (
+                    <button
+                      type="button"
+                      onClick={onToggleLeaderOverlay}
+                      aria-pressed={isLeaderOverlaid}
+                      className="px-1.5 py-0.5 rounded-[2px] text-[10.5px] font-medium cursor-pointer transition-colors"
+                      style={{
+                        backgroundColor: isLeaderOverlaid
+                          ? 'var(--op-orange)'
+                          : 'var(--op-panel)',
+                        border: '1px solid var(--op-line-strong)',
+                        color: isLeaderOverlaid ? 'var(--op-on-orange)' : 'var(--op-ink-2)',
+                      }}
+                    >
+                      <Eye size={10} className="inline mr-1" aria-hidden="true" />
+                      {isLeaderOverlaid ? t('표시 중', 'Shown') : t('경로 보기', 'Show')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {myForecast && liveTrackingScore && (
+            <div
+              className="px-3 py-2 rounded-[2px] flex items-center justify-between op-mono text-[11.5px]"
               style={{
-                transform: `translate3d(${scenarioGlow.left}px, ${scenarioGlow.top}px, 0)`,
-                width: `${scenarioGlow.width}px`,
-                height: `${scenarioGlow.height}px`,
-                opacity: scenarioGlow.ready ? 1 : 0,
+                backgroundColor: 'rgba(0, 229, 153, 0.08)',
+                border: '1px solid rgba(0, 229, 153, 0.35)',
               }}
-            />
-            {SCENARIO_TABS.map((item, idx) => {
-              const isActive = activeScenarioIdx === idx;
-              return (
-                <button
-                  key={item.id}
-                  ref={el => {
-                    scenarioBtnRefs.current[idx] = el;
-                  }}
-                  type="button"
-                  aria-pressed={isActive}
-                  disabled={isLockedReadOnly}
-                  onClick={() => handleSelectScenario(item.id)}
-                  className="relative z-10 h-8 px-1.5 text-[11.5px] font-medium transition-colors rounded-[6px] truncate disabled:cursor-not-allowed"
-                  style={{
-                    color: isActive ? 'var(--op-orange)' : 'var(--op-ink-2)',
-                  }}
-                >
-                  {locale === 'en' ? item.en : item.ko}
-                </button>
-              );
-            })}
+            >
+              <span style={{ color: 'var(--op-ink)' }}>
+                {isResolved
+                  ? t('내 최종 점수', 'My Final Score')
+                  : t('내 중간 점수', 'My Interim Score')}
+              </span>
+              <span className="font-semibold" style={{ color: 'var(--op-bull)' }}>
+                {t(
+                  `${liveTrackingScore.grade}등급 · ${liveTrackingScore.total}점`,
+                  `Grade ${liveTrackingScore.grade} · ${liveTrackingScore.total} pts`
+                )}
+                {isResolved && liveTrackingSettlement && (
+                  <span
+                    className="ml-1.5"
+                    style={{
+                      color:
+                        liveTrackingSettlement.deltaLp >= 0
+                          ? 'var(--op-bull)'
+                          : 'var(--op-bear)',
+                    }}
+                  >
+                    ({liveTrackingSettlement.deltaLp >= 0 ? '+' : ''}
+                    {liveTrackingSettlement.deltaLp} LP)
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--op-line)' }}>
+          {myForecast && (
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => onOpenShare(myForecast)}
+                className="op-btn-ghost h-8 text-[12px]"
+              >
+                <Share2 size={12} aria-hidden="true" />
+                {t('공유 카드', 'Share Card')}
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewDetail(myForecast.id)}
+                className="op-btn-ghost h-8 text-[12px]"
+              >
+                <ShieldCheck size={12} aria-hidden="true" />
+                {t('예측 상세', 'Details')}
+              </button>
+            </div>
+          )}
+
+          {onResetToToday && (
+            <button
+              type="button"
+              onClick={onResetToToday}
+              className="op-btn-primary w-full h-10 text-[13px]"
+            >
+              <span>{t('오늘 라운드로 이동', 'Go to Today’s Round')}</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // STATE 2: TODAY'S OPEN ROUND — POST-SUBMISSION (COMPARE)
+  // =========================================================================
+  if (isSubmitted) {
+    return (
+      <div
+        className="h-full flex flex-col justify-between p-4 gap-4"
+        style={{ backgroundColor: 'var(--op-panel)' }}
+      >
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="op-mono text-[10.5px] font-semibold px-2 py-0.5 rounded-[2px] inline-flex items-center gap-1"
+                style={{
+                  backgroundColor: 'rgba(0, 229, 153, 0.12)',
+                  color: 'var(--op-bull)',
+                  border: '1px solid rgba(0, 229, 153, 0.32)',
+                }}
+              >
+                <CheckCircle2 size={11} aria-hidden="true" />
+                {t('COMPARE · 제출 완료', 'COMPARE · SUBMITTED')}
+              </span>
+              <span className="op-mono text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
+                {expiryShort}
+              </span>
+            </div>
+
+            <h2
+              className="text-[15.5px] font-semibold tracking-[-0.015em] pt-0.5"
+              style={{ color: 'var(--op-ink)' }}
+            >
+              {t('내 예측 vs 집단 전망', 'Your Forecast vs. The Crowd')}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div
+              className="p-3 rounded-[2px] space-y-0.5"
+              style={{
+                backgroundColor: 'var(--op-canvas)',
+                border: '1px solid var(--op-orange)',
+              }}
+            >
+              <div className="op-mono text-[10.5px]" style={{ color: 'var(--op-orange)' }}>
+                {t('내 D+7 예측', 'My Forecast')}
+              </div>
+              <div className="op-mono text-[16px] font-semibold" style={{ color: 'var(--op-ink)' }}>
+                {finalTargetPrice !== null
+                  ? `$${Math.round(finalTargetPrice).toLocaleString('en-US')}`
+                  : '-'}
+              </div>
+              <div
+                className="op-mono text-[12.5px] font-semibold"
+                style={{
+                  color: (finalChangePct ?? 0) >= 0 ? 'var(--op-bull)' : 'var(--op-bear)',
+                }}
+              >
+                {finalChangePct !== null ? formatPct(finalChangePct) : '-'}
+              </div>
+            </div>
+
+            <div
+              className="p-3 rounded-[2px] space-y-0.5"
+              style={{
+                backgroundColor: 'var(--op-canvas)',
+                border: '1px solid var(--op-line-strong)',
+              }}
+            >
+              <div className="op-mono text-[10.5px]" style={{ color: 'var(--op-smart)' }}>
+                {t('집단 중앙 경로', 'Crowd Path')}
+              </div>
+              <div className="op-mono text-[16px] font-semibold" style={{ color: 'var(--op-ink)' }}>
+                ${Math.round(effectiveCrowdMedian).toLocaleString('en-US')}
+              </div>
+              <div
+                className="op-mono text-[12.5px] font-semibold"
+                style={{
+                  color: crowdChangePct >= 0 ? 'var(--op-bull)' : 'var(--op-bear)',
+                }}
+              >
+                {formatPct(crowdChangePct)}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="p-3 rounded-[2px] space-y-1.5"
+            style={{
+              backgroundColor: 'var(--op-canvas)',
+              border: '1px solid var(--op-line-strong)',
+            }}
+          >
+            <div className="flex items-center justify-between text-[11.5px] op-mono">
+              <span style={{ color: 'var(--op-bull)' }}>
+                {t(`상승 전망 ${bullishSharePct}%`, `Bullish ${bullishSharePct}%`)}
+              </span>
+              <span style={{ color: 'var(--op-bear)' }}>
+                {t(`하락 전망 ${bearishSharePct}%`, `Bearish ${bearishSharePct}%`)}
+              </span>
+            </div>
+            <div
+              className="h-2 w-full rounded-[2px] overflow-hidden flex gap-0.5"
+              style={{ backgroundColor: 'var(--op-panel)' }}
+            >
+              <div
+                className="h-full"
+                style={{ width: `${bullishSharePct}%`, backgroundColor: 'var(--op-bull)' }}
+              />
+              <div
+                className="h-full"
+                style={{ width: `${bearishSharePct}%`, backgroundColor: 'var(--op-bear)' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {myForecast && (
+          <div className="grid grid-cols-2 gap-1.5 pt-2" style={{ borderTop: '1px solid var(--op-line)' }}>
+            <button
+              type="button"
+              onClick={() => onOpenShare(myForecast)}
+              className="op-btn-primary h-9 text-[12.5px]"
+            >
+              <Share2 size={12} aria-hidden="true" />
+              {t('공유 카드', 'Share Card')}
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewDetail(myForecast.id)}
+              className="op-btn-ghost h-9 text-[12.5px]"
+            >
+              <ShieldCheck size={12} aria-hidden="true" />
+              {t('예측 상세', 'View Details')}
+            </button>
           </div>
         )}
+      </div>
+    );
+  }
 
-        {/* 2. Expiry & Target Price Sharp Readout */}
+  // =========================================================================
+  // STATE 1: TODAY'S OPEN ROUND — PRE-SUBMISSION (DRAW)
+  // =========================================================================
+  return (
+    <div
+      className="h-full flex flex-col justify-between p-4 gap-4"
+      style={{ backgroundColor: 'var(--op-panel)' }}
+    >
+      <div className="space-y-3.5">
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="op-mono text-[10.5px] font-semibold px-2 py-0.5 rounded-[2px]"
+              style={{
+                backgroundColor: 'var(--op-orange-soft)',
+                color: 'var(--op-orange)',
+                border: '1px solid rgba(255, 85, 0, 0.35)',
+              }}
+            >
+              {t('OPEN · 오늘 라운드', 'OPEN · TODAY')}
+            </span>
+            <span className="op-mono text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
+              {t(`참여자 ${participantsCount}명`, `${participantsCount} entered`)}
+            </span>
+          </div>
+
+          <h2
+            className="text-[15.5px] font-semibold tracking-[-0.015em] pt-0.5"
+            style={{ color: 'var(--op-ink)' }}
+          >
+            {t('향후 7일, 비트코인은 어디로 향할까요?', 'Where will Bitcoin go in 7 days?')}
+          </h2>
+        </div>
+
+        {/* D+7 Target Readout */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-[11.5px] op-mono">
             <span style={{ color: 'var(--op-ink-3)' }}>
@@ -226,7 +553,6 @@ export function TicketPanel({
             <span style={{ color: 'var(--op-ink-3)' }}>{expiryShort}</span>
           </div>
 
-          {/* 3. Target Price Sharp Input-Like Readout */}
           <div
             className="px-3 py-2.5 rounded-[2px] flex items-center justify-between gap-2"
             style={{
@@ -259,236 +585,87 @@ export function TicketPanel({
                   $ -
                 </span>
                 <span className="text-[11.5px] text-right" style={{ color: 'var(--op-ink-3)' }}>
-                  {sortedAnchors.length === 0
-                    ? t('차트 클릭 또는 상단 예시 선택', 'Click chart or pick a preset')
-                    : t(`D+${horizonDays} 종료 지점까지 연결`, `Connect to D+${horizonDays} end point`)}
+                  {t(`차트 우측 영역을 클릭해 D+${horizonDays}까지 연결하세요`, `Click right zone to draw to D+${horizonDays}`)}
                 </span>
               </>
             )}
           </div>
         </div>
 
-        {/* Pre-completion Lean Guidance / Post-completion Progressive Disclosure */}
-        {!showExpandedDetails ? (
-          <div
-            className="px-3 py-2.5 rounded-[2px] text-[12px] leading-relaxed"
-            style={{
-              backgroundColor: 'var(--op-canvas)',
-              border: '1px dashed var(--op-line-strong)',
-              color: 'var(--op-ink-3)',
-            }}
-          >
-            {t(
-              `D+${horizonDays} 종료 지점까지 예측 경로를 완성하면 예상 가격 흐름, 최저 가격, 예상 변동폭과 예상 LP가 계산됩니다.`,
-              `Complete your path to D+${horizonDays} to compute price pattern, forecast low, and expected LP change.`
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3 op-view-enter">
-            {/* 4. Compact 1-Line Thesis Memo */}
-            <input
-              id="thesis-input"
-              type="text"
-              maxLength={140}
-              disabled={isLockedReadOnly}
-              aria-label={t('예측 메모 (선택)', 'Forecast thesis memo (optional)')}
-              value={commentText}
-              onChange={e => onChangeComment(e.target.value)}
-              placeholder={t(
-                '메모 (선택, 140자) — 예: D+3 지지 후 반등',
-                'Memo (optional, max 140) — e.g. D+3 support bounce'
-              )}
-              className="op-input h-8 text-[12px] disabled:opacity-65 disabled:cursor-not-allowed"
-            />
-
-            {/* 5. DeepBook Boxed Key-Value Metrics Table (3 Rows) */}
+        {/* Quick Preset Chips */}
+        {onApplyPreset && (
+          <div className="space-y-1">
+            <span className="op-mono text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
+              {t('빠른 예시', 'Presets')}
+            </span>
             <div
-              className="rounded-[2px] divide-y divide-[var(--op-line)] text-[12px]"
-              style={{
-                backgroundColor: 'var(--op-canvas)',
-                border: '1px solid var(--op-line-strong)',
-              }}
+              className="grid grid-cols-3 gap-1.5"
+              role="group"
+              aria-label={t('예측 경로 예시 선택', 'Select forecast path preset')}
             >
-              <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <span style={{ color: 'var(--op-ink-3)' }}>{t('예상 가격 흐름', 'Forecast Pattern')}</span>
-                <span className="font-medium" style={{ color: 'var(--op-ink)' }}>
-                  {pathAnalysis ? pathAnalysis.scenarioLabel : '-'}
-                </span>
-              </div>
-              <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <span style={{ color: 'var(--op-ink-3)' }}>{t('예상 최저 가격', 'Forecast Low')}</span>
-                <span className="op-mono" style={{ color: 'var(--op-ink-2)' }}>
-                  {troughPoint
-                    ? `$${Math.round(troughPoint.price).toLocaleString('en-US')} (D+${troughPoint.day})`
-                    : '-'}
-                </span>
-              </div>
-              <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <span style={{ color: 'var(--op-ink-3)' }}>{t('목표/저점 비 · 예상 LP', 'Path Ratio · Est. LP')}</span>
-                <span className="op-mono" style={{ color: 'var(--op-ink)' }}>
-                  {pathAnalysis
-                    ? `1 : ${pathAnalysis.riskRewardRatio.toFixed(1)} · +${eloProjection.expectedWinLp}/${eloProjection.expectedLossLp} LP`
-                    : '-'}
-                </span>
-              </div>
+              {SCENARIO_TABS.map(item => {
+                const isActive = pathCompleted && selectedPreset === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => {
+                      setLocalSelectedPreset(item.id);
+                      onApplyPreset(item.id);
+                    }}
+                    className="h-7 px-1.5 rounded-[2px] text-[11.5px] font-medium transition-colors truncate cursor-pointer"
+                    style={{
+                      backgroundColor: isActive ? 'var(--op-orange-soft)' : 'var(--op-canvas)',
+                      border: isActive
+                        ? '1px solid var(--op-orange)'
+                        : '1px solid var(--op-line)',
+                      color: isActive ? 'var(--op-orange)' : 'var(--op-ink-2)',
+                    }}
+                  >
+                    {locale === 'en' ? item.en : item.ko}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* 6. Live Tracking Score Strip (Only during future time-travel preview) */}
-        {liveTrackingScore && (
-          <div
-            className="px-3 py-2 rounded-[2px] flex items-center justify-between op-mono text-[11.5px]"
-            style={{
-              backgroundColor: 'var(--op-raised)',
-              border: '1px solid var(--op-line-strong)',
-            }}
-          >
-            <span style={{ color: 'var(--op-ink-2)' }}>
-              {t(`현재 예측 점수 (${settledCount}/${horizonDays}일)`, `Current Score (${settledCount}/${horizonDays}D)`)}
-            </span>
-            <span style={{ color: 'var(--op-bull)' }}>
-              {t(
-                `${liveTrackingScore.grade}등급 · ${liveTrackingScore.total}점`,
-                `Grade ${liveTrackingScore.grade} · ${liveTrackingScore.total} pts`
-              )}
-              {liveTrackingSettlement && (
-                <span
-                  className="ml-1.5"
-                  style={{
-                    color:
-                      liveTrackingSettlement.deltaLp >= 0
-                        ? 'var(--op-bull)'
-                        : 'var(--op-bear)',
-                  }}
-                >
-                  ({liveTrackingSettlement.deltaLp >= 0 ? '+' : ''}
-                  {liveTrackingSettlement.deltaLp} LP)
-                </span>
-              )}
-            </span>
-          </div>
-        )}
+        {/* 1-Line Optional Memo */}
+        <input
+          id="thesis-input"
+          type="text"
+          maxLength={140}
+          aria-label={t('한 줄 메모 (선택)', 'Memo (optional)')}
+          value={commentText}
+          onChange={e => onChangeComment(e.target.value)}
+          placeholder={t(
+            '한 줄 메모 (선택, 140자)',
+            'One-line memo (optional, max 140)'
+          )}
+          className="op-input h-9 text-[12px]"
+        />
       </div>
 
-      {/* 7. Bottom CTA & Post-Submit Receipt */}
-      <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--op-line)' }}>
-        {!isSubmitted && !isRoundOpen ? (
-          <div className="space-y-1.5">
-            <div
-              className="px-3 py-2 rounded-[2px] text-[11.5px] leading-relaxed"
-              style={{
-                backgroundColor: 'var(--op-canvas)',
-                border: '1px solid var(--op-line-strong)',
-                color: 'var(--op-ink-2)',
-              }}
-            >
-              {t(
-                `현재 라운드는 ${roundStatus === 'RESOLVED' ? '평가 완료' : '진행 중'} 상태이므로 신규 제출할 수 없습니다.`,
-                `Round is ${roundStatus}; new forecast submissions are closed.`
-              )}
-            </div>
-            {onResetToToday && (
-              <button
-                type="button"
-                onClick={onResetToToday}
-                className="op-btn-primary w-full h-10 text-[13px]"
-              >
-                {t('진행 중인 라운드(오늘)로 돌아가기', 'Return to Live Round (Today)')}
-              </button>
-            )}
-          </div>
-        ) : isSubmitted ? (
-          <div
-            className="w-full px-3 py-2.5 rounded-[2px] flex items-center justify-between gap-2 text-[12px]"
-            style={{
-              backgroundColor: 'rgba(0, 229, 153, 0.08)',
-              border: '1px solid rgba(0, 229, 153, 0.35)',
-              color: 'var(--op-bull)',
-            }}
-          >
-            <span className="inline-flex items-center gap-1.5 font-semibold">
-              <Lock size={13} />
-              {t('제출 후 수정 불가', 'Locked Forecast')}
+      {/* Bottom 1-Click Submission CTA */}
+      <div className="pt-2" style={{ borderTop: '1px solid var(--op-line)' }}>
+        <button
+          type="button"
+          disabled={!pathCompleted}
+          onClick={onSubmit}
+          className="op-btn-primary w-full h-10 text-[13px]"
+        >
+          {!pathCompleted ? (
+            <span>
+              {t(`D+${horizonDays}까지 경로를 완성하세요`, `Draw to D+${horizonDays} to Submit`)}
             </span>
-            <span className="op-mono text-[10.5px]" style={{ color: 'var(--op-ink-3)' }}>
-              {t('라운드당 1회 제출', 'One Submission per Round')}
-            </span>
-          </div>
-        ) : showConfirmSubmit ? (
-          <div
-            className="p-2.5 rounded-[2px] space-y-2"
-            style={{
-              backgroundColor: 'var(--op-canvas)',
-              border: '1px solid var(--op-orange)',
-            }}
-          >
-            <p className="text-[11.5px] leading-relaxed" style={{ color: 'var(--op-ink-2)' }}>
-              {t(
-                '제출 후에는 예측 경로를 수정하거나 취소할 수 없으며 집단 전망 리포트가 즉시 공개됩니다. 확정하시겠습니까?',
-                'Once submitted, your forecast path cannot be edited and crowd insights unlock immediately. Confirm submission?'
-              )}
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setIsConfirmingSubmit(false)}
-                className="op-btn-ghost h-8 text-[12px]"
-              >
-                {t('취소', 'Cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsConfirmingSubmit(false);
-                  onSubmit();
-                }}
-                className="op-btn-primary h-8 text-[12px]"
-              >
-                <Lock size={12} />
-                {t('예측 확정하기', 'Confirm Submission')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            disabled={!pathCompleted}
-            onClick={() => setIsConfirmingSubmit(true)}
-            className="op-btn-primary w-full h-10 text-[13px]"
-          >
-            {!pathCompleted ? (
-              <span>
-                {t(`${horizonDays}일 예측 경로를 완성해 주세요`, `Complete ${horizonDays}-day path to submit`)}
-              </span>
-            ) : (
-              <span>
-                {t(`${horizonDays}일 예측 제출하기`, `Submit ${horizonDays}-Day Forecast`)}
-              </span>
-            )}
-          </button>
-        )}
-
-        {myForecast && (
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              onClick={() => onOpenShare(myForecast)}
-              className="op-btn-ghost h-8 text-[12px]"
-            >
-              <Share2 size={12} />
-              {t('공유 카드', 'Share Card')}
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewDetail(myForecast.id)}
-              className="op-btn-ghost h-8 text-[12px]"
-            >
-              <ShieldCheck size={12} />
-              {t('예측 상세', 'View Details')}
-            </button>
-          </div>
-        )}
+          ) : (
+            <>
+              <span>{t('7일 예측 제출하기', 'Lock Your Forecast')}</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

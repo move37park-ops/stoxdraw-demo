@@ -76,9 +76,9 @@ export function TopNav({
 
   const isPredictActive = location.pathname === '/';
   const isPracticeActive = location.pathname.startsWith('/practice');
-  const isCommunityActive =
-    location.pathname.startsWith('/community') ||
-    location.pathname.startsWith('/leaderboard');
+  const isLeaderboardActive =
+    location.pathname.startsWith('/leaderboard') ||
+    location.pathname.startsWith('/community');
   const isMeActive =
     location.pathname.startsWith('/me') ||
     location.pathname.startsWith('/u/') ||
@@ -87,8 +87,8 @@ export function TopNav({
   const navItems = [
     { to: '/', label: t('예측하기', 'Predict'), isActive: isPredictActive },
     { to: '/practice', label: t('연습하기', 'Practice'), isActive: isPracticeActive },
-    { to: '/community', label: t('커뮤니티', 'Community'), isActive: isCommunityActive },
-    { to: '/me', label: t('내 기록', 'My Record'), isActive: isMeActive },
+    { to: '/leaderboard', label: t('리더보드', 'Leaderboard'), isActive: isLeaderboardActive },
+    { to: '/me', label: t('프로필', 'Profile'), isActive: isMeActive },
   ];
 
   const activeNavIdx = navItems.findIndex(item => item.isActive);

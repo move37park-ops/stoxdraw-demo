@@ -1,26 +1,20 @@
-import { memo, useRef, useLayoutEffect, useState } from 'react';
-import { RotateCcw, Layers, Minus, Plus, Trash2, Eraser } from 'lucide-react';
+import { memo } from 'react';
+import { RotateCcw, Minus, Plus, Trash2, Eraser } from 'lucide-react';
 import { formatPct } from '../../domain/format';
 import { useI18n } from '../../lib/i18nCore';
-import type { AnchorPoint, ForecastVersion, MarketBar } from '../../domain/types';
+import type { AnchorPoint, MarketBar } from '../../domain/types';
 
 interface CanvasToolbarProps {
   ticker: string;
   basePrice: number;
-  horizonDays: number;
   lookbackDays: number;
   minLookbackDays: number;
   maxLookbackDays: number;
-  pathCompleted: boolean;
   readOnly: boolean;
   anchorsCount: number;
   selectedAnchor: AnchorPoint | null;
-  chartStyle: 'line' | 'candles';
-  showConsensus: boolean;
   hasConsensusBand: boolean;
   isConsensusUnlocked: boolean;
-  initialVersion: ForecastVersion | null;
-  showInitialVersion: boolean;
   headerSubtitle?: string;
   hideAssetBadge?: boolean;
   blindMode?: boolean;
@@ -30,9 +24,6 @@ interface CanvasToolbarProps {
   snapState: { label: string; price: number } | null;
   hoveredPastBar: MarketBar | null;
   hoveredPastOffset?: number | null;
-  onToggleConsensus: () => void;
-  onToggleInitialVersion: () => void;
-  onChangeChartStyle: (style: 'line' | 'candles') => void;
   onZoomOut: () => void;
   onZoomIn: () => void;
   onResetZoom: () => void;
@@ -43,20 +34,14 @@ interface CanvasToolbarProps {
 export const CanvasToolbar = memo(function CanvasToolbar({
   ticker,
   basePrice,
-  horizonDays,
   lookbackDays,
   minLookbackDays,
   maxLookbackDays,
-  pathCompleted,
   readOnly,
   anchorsCount,
   selectedAnchor,
-  chartStyle,
-  showConsensus,
   hasConsensusBand,
   isConsensusUnlocked,
-  initialVersion,
-  showInitialVersion,
   headerSubtitle,
   hideAssetBadge = false,
   blindMode = false,
@@ -66,9 +51,6 @@ export const CanvasToolbar = memo(function CanvasToolbar({
   snapState,
   hoveredPastBar,
   hoveredPastOffset = null,
-  onToggleConsensus,
-  onToggleInitialVersion,
-  onChangeChartStyle,
   onZoomOut,
   onZoomIn,
   onResetZoom,
@@ -76,41 +58,8 @@ export const CanvasToolbar = memo(function CanvasToolbar({
   onClearAnchors,
 }: CanvasToolbarProps) {
   const { t } = useI18n();
-  const styleSegRef = useRef<HTMLDivElement | null>(null);
-  const styleBtnRefs = useRef<Record<'line' | 'candles', HTMLButtonElement | null>>({
-    line: null,
-    candles: null,
-  });
-  const [styleGlow, setStyleGlow] = useState({
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0,
-    ready: false,
-  });
 
-  useLayoutEffect(() => {
-    const updateGlow = () => {
-      const btn = styleBtnRefs.current[chartStyle];
-      const wrap = styleSegRef.current;
-      if (!btn || !wrap) return;
-      setStyleGlow({
-        left: btn.offsetLeft,
-        top: btn.offsetTop,
-        width: btn.offsetWidth,
-        height: btn.offsetHeight,
-        ready: true,
-      });
-    };
-    updateGlow();
-    const wrap = styleSegRef.current;
-    if (!wrap || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(updateGlow);
-    ro.observe(wrap);
-    return () => ro.disconnect();
-  }, [chartStyle]);
-
-  const formatBarLevel = (val: number) => {
+  const formatBarClose = (val: number) => {
     if (blindMode) {
       const pct = basePrice > 0 ? ((val - basePrice) / basePrice) * 100 : 0;
       return formatPct(pct);
@@ -126,7 +75,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
         borderBottom: '1px solid var(--op-line)',
       }}
     >
-      {/* Left: Asset Quote (when standalone) + Live Hover OHLC/Forecast Readout */}
+      {/* Left: Standalone Quote + Hover Readout or 3-Line Legend / Concise Guide */}
       <div className="flex items-center gap-2 min-w-0">
         {!hideAssetBadge && (
           blindMode ? (
@@ -202,13 +151,13 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                   borderRadius: '2px',
                 }}
               >
-                {t('자석 맞춤', 'Snap')} · {snapState.label}
+                {t('자석', 'Snap')} · {snapState.label}
               </span>
             )}
           </span>
         ) : hoveredPastBar ? (
           <span
-            className={`inline-flex items-center gap-2 op-mono text-[11.5px] truncate ${
+            className={`inline-flex items-center gap-2 op-mono text-[12px] truncate ${
               hideAssetBadge ? '' : 'pl-2 border-l border-[var(--op-line)]'
             }`}
           >
@@ -219,17 +168,27 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                   : 'D0'
                 : hoveredPastBar.date.slice(5)}
             </span>
-            <span style={{ color: 'var(--op-ink-2)' }}>
-              {t('시', 'O')} {formatBarLevel(hoveredPastBar.open)}
-            </span>
-            <span style={{ color: 'var(--op-bull)' }}>
-              {t('고', 'H')} {formatBarLevel(hoveredPastBar.high)}
-            </span>
-            <span style={{ color: 'var(--op-bear)' }}>
-              {t('저', 'L')} {formatBarLevel(hoveredPastBar.low)}
-            </span>
             <span style={{ color: 'var(--op-ink)' }}>
-              {t('종', 'C')} {formatBarLevel(hoveredPastBar.close)}
+              {formatBarClose(hoveredPastBar.close)}
+            </span>
+          </span>
+        ) : isConsensusUnlocked && hasConsensusBand ? (
+          <span
+            className={`inline-flex items-center gap-3 op-mono text-[11px] truncate ${
+              hideAssetBadge ? '' : 'pl-2.5 border-l border-[var(--op-line)]'
+            }`}
+          >
+            <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--op-orange)' }}>
+              <span className="inline-block w-3 h-[2px]" style={{ backgroundColor: 'var(--op-orange)' }} />
+              {t('내 예측', 'My Forecast')}
+            </span>
+            <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--op-smart)' }}>
+              <span className="inline-block w-3 border-t-2 border-dashed" style={{ borderColor: 'var(--op-smart)' }} />
+              {t('집단 경로', 'Crowd Path')}
+            </span>
+            <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--op-bull)' }}>
+              <span className="inline-block w-3 h-[2px]" style={{ backgroundColor: 'var(--op-bull)' }} />
+              {t('실제 가격', 'Actual')}
             </span>
           </span>
         ) : headerSubtitle ? (
@@ -241,50 +200,19 @@ export const CanvasToolbar = memo(function CanvasToolbar({
           >
             {headerSubtitle}
           </span>
-        ) : isConsensusUnlocked && showConsensus && hasConsensusBand ? (
+        ) : !readOnly ? (
           <span
-            className={`hidden sm:inline-flex items-center gap-3 op-mono text-[11px] truncate ${
-              hideAssetBadge ? '' : 'pl-2.5 border-l border-[var(--op-line)]'
-            }`}
-          >
-            <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--op-smart)' }}>
-              <span
-                className="inline-block w-3 h-[2px]"
-                style={{ backgroundColor: 'var(--op-smart)' }}
-              />
-              {t('상위 예측자', 'Top Forecasters')}
-            </span>
-            <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--op-ink-2)' }}>
-              <span
-                className="inline-block w-3 border-t border-dashed"
-                style={{ borderColor: 'var(--op-crowd)' }}
-              />
-              {t('참여자 중앙값', 'Crowd Median')}
-            </span>
-          </span>
-        ) : !readOnly && anchorsCount > 0 && !pathCompleted ? (
-          <span
-            className={`text-[11.5px] op-mono hidden sm:inline truncate font-medium ${
+            className={`text-[11.5px] hidden sm:inline truncate ${
               hideAssetBadge ? '' : 'pl-2 border-l border-[var(--op-line)]'
             }`}
-            style={{ color: 'var(--op-orange)' }}
-          >
-            {t(
-              `D+${horizonDays} 종료 지점까지 연결`,
-              `Finish at D+${horizonDays}`
-            )}
-          </span>
-        ) : hideAssetBadge ? (
-          <span
-            className="op-mono text-[11px] hidden sm:inline truncate"
             style={{ color: 'var(--op-ink-3)' }}
           >
-            {t('1D · 스크롤 확대/축소', '1D · Scroll to zoom')}
+            {t('D0 우측 영역을 클릭해 최대 5개 예측 지점을 연결하세요', 'Click right of D0 to plot up to 5 forecast points')}
           </span>
         ) : null}
       </div>
 
-      {/* Right: Touch/Key Point Delete, Path Clear, Consensus, Line/Candle, Time Zoom */}
+      {/* Right: Anchor Delete, Clear, and Time Zoom (- / 21D / + / Reset) */}
       <div className="flex flex-wrap items-center gap-1.5 flex-shrink-0">
         {!readOnly && selectedAnchor && (
           <button
@@ -292,7 +220,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             onClick={onDeleteSelectedAnchor}
             className="op-btn-ghost h-7 px-2 text-[11.5px]"
             style={{ borderColor: 'var(--op-bear)', color: 'var(--op-bear)' }}
-            title={t(`선택한 D+${selectedAnchor.day} 지점 삭제 (Delete 키)`, `Delete D+${selectedAnchor.day} anchor point (Delete key)`)}
+            title={t(`선택한 D+${selectedAnchor.day} 지점 삭제`, `Delete D+${selectedAnchor.day} point`)}
           >
             <Trash2 size={11} aria-hidden="true" />
             <span>{t(`D+${selectedAnchor.day} 삭제`, `Del D+${selectedAnchor.day}`)}</span>
@@ -312,84 +240,6 @@ export const CanvasToolbar = memo(function CanvasToolbar({
           </button>
         )}
 
-        {isConsensusUnlocked && hasConsensusBand && (
-          <button
-            type="button"
-            aria-pressed={showConsensus}
-            onClick={onToggleConsensus}
-            className="op-btn-ghost h-7 px-2 text-[11.5px]"
-            style={{
-              borderColor: showConsensus ? 'var(--op-smart)' : 'var(--op-line)',
-              color: showConsensus ? 'var(--op-smart)' : 'var(--op-ink-3)',
-            }}
-          >
-            {t('상위 예측자·중앙값', 'Top / Median')}
-          </button>
-        )}
-
-        {initialVersion && (
-          <button
-            type="button"
-            aria-pressed={showInitialVersion}
-            onClick={onToggleInitialVersion}
-            className="op-btn-ghost h-7 px-2 text-[11.5px]"
-            style={{ opacity: showInitialVersion ? 1 : 0.45 }}
-          >
-            <Layers size={11} aria-hidden="true" />
-            {t('최초 제출본', 'Original Forecast')}
-          </button>
-        )}
-
-        {/* Line / Candle Toggle */}
-        <div ref={styleSegRef} className="op-seg relative overflow-hidden">
-          {styleGlow.ready && (
-            <span
-              aria-hidden="true"
-              className="op-sliding-glow"
-              style={{
-                transform: `translate3d(${styleGlow.left}px, ${styleGlow.top}px, 0)`,
-                width: `${styleGlow.width}px`,
-                height: `${styleGlow.height}px`,
-              }}
-            />
-          )}
-          <button
-            ref={el => {
-              styleBtnRefs.current.line = el;
-            }}
-            type="button"
-            aria-pressed={chartStyle === 'line'}
-            data-active={chartStyle === 'line'}
-            onClick={() => onChangeChartStyle('line')}
-            className="op-seg-btn relative z-10"
-            style={{
-              backgroundColor: 'transparent',
-              borderColor: 'transparent',
-              color: chartStyle === 'line' ? 'var(--op-orange)' : 'var(--op-ink-3)',
-            }}
-          >
-            {t('선 차트', 'Line')}
-          </button>
-          <button
-            ref={el => {
-              styleBtnRefs.current.candles = el;
-            }}
-            type="button"
-            aria-pressed={chartStyle === 'candles'}
-            data-active={chartStyle === 'candles'}
-            onClick={() => onChangeChartStyle('candles')}
-            className="op-seg-btn relative z-10"
-            style={{
-              backgroundColor: 'transparent',
-              borderColor: 'transparent',
-              color: chartStyle === 'candles' ? 'var(--op-orange)' : 'var(--op-ink-3)',
-            }}
-          >
-            {t('캔들 차트', 'Candles')}
-          </button>
-        </div>
-
-        {/* Time Axis Zoom (- / + / Reset Zoom Only) */}
         <div
           className="op-seg"
           role="group"
@@ -400,7 +250,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             disabled={lookbackDays >= maxLookbackDays}
             onClick={onZoomOut}
             className="op-seg-btn px-1.5 disabled:opacity-40"
-            title={t('표시 기간 늘리기 (마우스 휠 다운)', 'Zoom out · Widen range (Scroll down)')}
+            title={t('표시 기간 늘리기', 'Zoom out')}
             aria-label={t('표시 기간 늘리기', 'Zoom out')}
           >
             <Minus size={12} />
@@ -408,7 +258,6 @@ export const CanvasToolbar = memo(function CanvasToolbar({
           <span
             className="px-1.5 inline-flex items-center op-mono text-[11px] border-x border-[var(--op-line)] select-none"
             style={{ color: 'var(--op-ink-2)' }}
-            title={t('차트 위 휠: 표시 기간(7D~240D) 조절 · 가격축 휠/드래그: 세로 배율', 'Scroll chart: time range (7D–240D) · Scroll or drag price axis: Y scale')}
           >
             {lookbackDays}D
           </span>
@@ -417,7 +266,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             disabled={lookbackDays <= minLookbackDays}
             onClick={onZoomIn}
             className="op-seg-btn px-1.5 disabled:opacity-40"
-            title={t('표시 기간 줄이기 (마우스 휠 업)', 'Zoom in · Narrow range (Scroll up)')}
+            title={t('표시 기간 줄이기', 'Zoom in')}
             aria-label={t('표시 기간 줄이기', 'Zoom in')}
           >
             <Plus size={12} />
@@ -426,7 +275,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             type="button"
             onClick={onResetZoom}
             className="op-seg-btn px-1.5"
-            title={t('확대·축소 초기화 (21D · 그린 경로 유지)', 'Reset zoom only (21D · keeps path)')}
+            title={t('줌 초기화 (21D)', 'Reset zoom (21D)')}
             aria-label={t('확대·축소 초기화', 'Reset zoom')}
           >
             <RotateCcw size={12} />

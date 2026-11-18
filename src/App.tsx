@@ -9,6 +9,9 @@ import { PredictPage } from './features/predict/PredictPage';
 const CommunityPage = lazy(() =>
   import('./features/community/CommunityPage').then(m => ({ default: m.CommunityPage }))
 );
+const LeaderboardPage = lazy(() =>
+  import('./features/leaderboard/LeaderboardPage').then(m => ({ default: m.LeaderboardPage }))
+);
 const DetailPage = lazy(() =>
   import('./features/detail/DetailPage').then(m => ({ default: m.DetailPage }))
 );
@@ -74,8 +77,8 @@ function RouteTracker() {
 }
 
 export function App() {
-  // Unified Demo Time-Warp state for Live 7D tracking (defaults to D-0 Lock: 2026-10-02)
-  const [currentDateStr, setCurrentDateStr] = useState<string>('2026-10-02');
+  // System date anchored to today's Open round ('2026-10-02'); users navigate past cohorts directly via Top Daily Round Nav
+  const [currentDateStr] = useState<string>('2026-10-02');
   const [themeOverride, setThemeOverride] = useState<'dark' | 'light' | null>(readStoredThemeOverride);
   const [systemTheme, setSystemTheme] = useState<'dark' | 'light'>(getSystemTheme);
 
@@ -159,7 +162,6 @@ export function App() {
             element={
               <AppShell
                 currentDateStr={currentDateStr}
-                onDateChange={setCurrentDateStr}
                 theme={theme}
                 onToggleTheme={toggleTheme}
               />
@@ -168,12 +170,7 @@ export function App() {
             {/* Root = Live 7D Chart Drawing & Consensus Studio */}
             <Route
               index
-              element={
-                <PredictPage
-                  currentDateStr={currentDateStr}
-                  onDateChange={setCurrentDateStr}
-                />
-              }
+              element={<PredictPage currentDateStr={currentDateStr} />}
             />
             <Route
               path="community"
@@ -181,7 +178,7 @@ export function App() {
             />
             <Route
               path="leaderboard"
-              element={<CommunityPage currentDateStr={currentDateStr} />}
+              element={<LeaderboardPage currentDateStr={currentDateStr} />}
             />
             <Route path="docs" element={<DocsPage />} />
             <Route path="guide" element={<Navigate to="/docs" replace />} />
@@ -195,12 +192,7 @@ export function App() {
             />
             <Route
               path="f/:id"
-              element={
-                <DetailPage
-                  currentDateStr={currentDateStr}
-                  onDateChange={setCurrentDateStr}
-                />
-              }
+              element={<DetailPage currentDateStr={currentDateStr} />}
             />
 
             {/* Legacy route redirects */}

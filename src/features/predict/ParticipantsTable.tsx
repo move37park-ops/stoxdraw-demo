@@ -1,156 +1,163 @@
-import { ArrowUpRight, Lock } from 'lucide-react';
+import { useMemo } from 'react';
+import { Lock } from 'lucide-react';
 import { repository } from '../../data/localRepository';
+import { BTC_DAILY_VOLATILITY } from '../../data/btcMarket';
 import { DEFAULT_ELO, getEloTierInfo } from '../../domain/elo';
 import { formatPct } from '../../domain/format';
-import { classifyScenario } from '../../domain/report';
-import { localizeDataText, useI18n } from '../../lib/i18nCore';
-import type { Forecast, User } from '../../domain/types';
+import { calculateForecastScore } from '../../domain/scoring';
+import { ForecastSparkline } from '../../components/ForecastSparkline';
+import { useI18n } from '../../lib/i18nCore';
+import type { Forecast, ScoreBreakdown, User } from '../../domain/types';
 import type { OverlayRival } from './PathCanvas';
 
 interface ParticipantsTableProps {
   forecasts: Forecast[];
   isConsensusUnlocked: boolean;
+  roundStatus?: 'OPEN' | 'LIVE' | 'RESOLVED';
+  settledCloses?: number[];
+  realizedDailyVol?: number;
   myForecastId?: string;
   overlaidRivals: OverlayRival[];
   onToggleOverlay: (forecast: Forecast, handle: string, elo: number) => void;
   onNavigateProfile: (handle: string) => void;
-  onNavigateDetail: (forecastId: string) => void;
+  onNavigateDetail?: (forecastId: string) => void;
 }
 
-const SCENARIO_LABELS: Record<string, { ko: string; en: string }> = {
-  RALLY: { ko: '꾸준한 상승', en: 'Steady Rally' },
-  DIP_RALLY: { ko: '하락 후 반등', en: 'Dip & Rally' },
-  RALLY_FADE: { ko: '반등 후 하락', en: 'Rally & Fade' },
-  SLIDE: { ko: '꾸준한 하락', en: 'Steady Slide' },
-};
+const EMPTY_CLOSES: number[] = [];
 
 export function ParticipantsTable({
   forecasts,
   isConsensusUnlocked,
+  roundStatus = 'OPEN',
+  settledCloses = EMPTY_CLOSES,
+  realizedDailyVol = BTC_DAILY_VOLATILITY,
   myForecastId,
   overlaidRivals,
   onToggleOverlay,
   onNavigateProfile,
-  onNavigateDetail,
 }: ParticipantsTableProps) {
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
 
-  const userById = new Map<string, User>(
-    repository.listAllUsers().map(u => [u.id, u])
+  const userById = useMemo(
+    () => new Map<string, User>(repository.listAllUsers().map(u => [u.id, u])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [forecasts]
   );
 
-  let validTargetCount = 0;
-  let targetPriceSum = 0;
-  let targetPctSum = 0;
+  const hasTrackingCloses =
+    (roundStatus === 'LIVE' || roundStatus === 'RESOLVED') && settledCloses.length > 0;
 
-  for (const fc of forecasts) {
-    const path = fc.path || [];
-    const endPrice = path.length > 0 ? path[path.length - 1].price : fc.basePrice;
-    if (fc.basePrice > 0 && Number.isFinite(endPrice)) {
-      validTargetCount += 1;
-      targetPriceSum += endPrice;
-      targetPctSum += ((endPrice - fc.basePrice) / fc.basePrice) * 100;
+  const rankedRows = useMemo(() => {
+    const mapped = forecasts.map(fc => {
+      const author = fc.authorId ? userById.get(fc.authorId) ?? null : null;
+      const handle = author
+        ? author.handle
+        : `guest_${fc.anonId.replace(/^anon[_-]?/i, '').slice(-4) || 'user'}`;
+      const elo = author?.elo ?? DEFAULT_ELO;
+      const tier = getEloTierInfo(elo);
+      const path = fc.path || [];
+      const endP = path.length > 0 ? path[path.length - 1].price : fc.basePrice;
+      const pct = fc.basePrice > 0 ? ((endP - fc.basePrice) / fc.basePrice) * 100 : 0;
+      const isMyRow = myForecastId === fc.id;
+
+      let score: ScoreBreakdown | null = null;
+      if (hasTrackingCloses && path.length > 0) {
+        score = calculateForecastScore(
+          path.map(pt => pt.price),
+          settledCloses,
+          fc.basePrice,
+          realizedDailyVol
+        );
+      }
+
+      return {
+        fc,
+        handle,
+        elo,
+        tier,
+        endP,
+        pct,
+        isMyRow,
+        score,
+      };
+    });
+
+    if (hasTrackingCloses) {
+      mapped.sort(
+        (a, b) =>
+          (b.score?.total ?? -1) - (a.score?.total ?? -1) ||
+          b.elo - a.elo
+      );
+    } else {
+      mapped.sort(
+        (a, b) =>
+          Number(b.isMyRow) - Number(a.isMyRow) ||
+          b.elo - a.elo
+      );
     }
-  }
 
-  const avgTargetPrice = validTargetCount > 0 ? targetPriceSum / validTargetCount : 0;
-  const avgTargetPct = validTargetCount > 0 ? targetPctSum / validTargetCount : 0;
+    return mapped;
+  }, [forecasts, userById, hasTrackingCloses, settledCloses, realizedDailyVol, myForecastId]);
 
   return (
-    <div className="p-4 sm:p-6 space-y-3" style={{ backgroundColor: 'var(--op-canvas)' }}>
-      {/* Single Compact Summary Strip */}
-      <div
-        className="px-4 py-2.5 rounded-[2px] flex flex-wrap items-center justify-between gap-3 op-mono text-[12px]"
-        style={{
-          backgroundColor: 'var(--op-panel)',
-          border: '1px solid var(--op-line-strong)',
-        }}
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <span style={{ color: 'var(--op-ink-2)' }}>
-            {t(`총 ${forecasts.length}명 제출`, `${forecasts.length} Submitted`)}
-          </span>
-          <span style={{ color: 'var(--op-line-strong)' }}>·</span>
-          {isConsensusUnlocked ? (
-            <span style={{ color: 'var(--op-ink)' }}>
-              {t('참여자 평균 목표가', 'Mean Target')}{' '}
-              <strong>{validTargetCount > 0 ? `$${Math.round(avgTargetPrice).toLocaleString('en-US')}` : '-'}</strong>
-              {validTargetCount > 0 && (
-                <span className="ml-1" style={{ color: avgTargetPct >= 0 ? 'var(--op-bull)' : 'var(--op-bear)' }}>
-                  ({formatPct(avgTargetPct)})
-                </span>
-              )}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1" style={{ color: 'var(--op-orange)' }}>
-              <Lock size={11} aria-hidden="true" />
-              {t('예측 제출 후 목표가·예측 경로 공개', 'Targets hidden until submission')}
-            </span>
-          )}
-        </div>
-
-        <span style={{ color: isConsensusUnlocked ? 'var(--op-smart)' : 'var(--op-ink-3)' }}>
-          {t('경로 겹쳐 보기', 'Overlays')}: {isConsensusUnlocked ? `${overlaidRivals.length}/3` : t('비공개', 'Locked')}
-        </span>
-      </div>
-
-      {/* Participant Table */}
-      <div
-        className="overflow-x-auto rounded-[2px]"
-        style={{
-          backgroundColor: 'var(--op-canvas)',
-          border: '1px solid var(--op-line-strong)',
-        }}
-      >
-        <table className="op-table">
-          <thead>
+    <div
+      className="overflow-x-auto rounded-[2px]"
+      style={{
+        backgroundColor: 'var(--op-canvas)',
+        border: '1px solid var(--op-line-strong)',
+      }}
+    >
+      <table className="op-table">
+        <thead>
+          <tr>
+            <th className="w-14">{t('순위', 'Rank')}</th>
+            <th>{t('참여자', 'Forecaster')}</th>
+            <th>{t('7일 예측 경로', '7D Path')}</th>
+            <th className="op-num">{t('D+7 목표가', '7D Target')}</th>
+            <th className="op-num">{t('점수 · 비교', 'Score · Compare')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rankedRows.length === 0 ? (
             <tr>
-              <th>{t('참여자', 'Forecaster')}</th>
-              <th>{t('예측자 등급 · LP', 'Tier · LP')}</th>
-              <th>{t('예측 패턴', 'Pattern')}</th>
-              <th className="op-num">{t('7일 목표가', '7D Target')}</th>
-              <th>{t('예측 메모', 'Memo')}</th>
-              <th className="op-num">{t('경로 겹쳐 보기', 'Overlay')}</th>
+              <td
+                colSpan={5}
+                className="py-10 text-center text-[13px]"
+                style={{ color: 'var(--op-ink-3)' }}
+              >
+                {t('해당 라운드에 제출된 예측이 없습니다.', 'No forecasts submitted in this round yet.')}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {forecasts.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="py-10 text-center text-[13px]"
-                  style={{ color: 'var(--op-ink-3)' }}
-                >
-                  {t('현재 라운드에 제출된 예측이 없습니다.', 'No forecasts submitted in this round yet.')}
-                </td>
-              </tr>
-            ) : (
-              forecasts.map(fc => {
-                const author = fc.authorId ? userById.get(fc.authorId) ?? null : null;
-                const handle = author
-                  ? author.handle
-                  : `guest_${fc.anonId.replace(/^anon[_-]?/i, '').slice(-4) || 'user'}`;
-                const elo = author?.elo ?? DEFAULT_ELO;
-                const tier = getEloTierInfo(elo);
-                const path = fc.path || [];
-                const endP = path.length > 0 ? path[path.length - 1].price : fc.basePrice;
-                const pct = fc.basePrice > 0 ? ((endP - fc.basePrice) / fc.basePrice) * 100 : 0;
-                const pcts =
-                  fc.pathPct && fc.pathPct.length > 0
-                    ? fc.pathPct
-                    : path.map(pt => (fc.basePrice > 0 ? (pt.price - fc.basePrice) / fc.basePrice : 0));
-                const scenario = classifyScenario(pcts);
-                const isOverlaid = overlaidRivals.some(r => r.forecast.id === fc.id);
-                const isMyRow = myForecastId === fc.id;
+          ) : (
+            rankedRows.map((row, idx) => {
+              const { fc, handle, elo, tier, endP, pct, isMyRow, score } = row;
+              const rivalOverlay = overlaidRivals.find(r => r.forecast.id === fc.id);
+              const isOverlaid = Boolean(rivalOverlay);
+              const canReveal = isConsensusUnlocked || isMyRow;
 
-                return (
-                  <tr
-                    key={fc.id}
-                    style={{
-                      backgroundColor: isOverlaid ? 'var(--op-raised)' : undefined,
-                    }}
-                  >
-                    <td className="whitespace-nowrap">
+              return (
+                <tr
+                  key={fc.id}
+                  style={{
+                    backgroundColor: isOverlaid
+                      ? 'var(--op-raised)'
+                      : isMyRow
+                      ? 'rgba(255, 85, 0, 0.04)'
+                      : undefined,
+                  }}
+                >
+                  <td className="op-mono whitespace-nowrap font-semibold">
+                    <span
+                      style={{
+                        color: idx === 0 && hasTrackingCloses ? 'var(--op-orange)' : 'var(--op-ink-2)',
+                      }}
+                    >
+                      #{idx + 1}
+                    </span>
+                  </td>
+
+                  <td className="whitespace-nowrap">
+                    <div className="inline-flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => onNavigateProfile(handle)}
@@ -162,120 +169,114 @@ export function ParticipantsTable({
                           <span className="op-badge op-badge-orange">{t('나', 'ME')}</span>
                         )}
                       </button>
-                    </td>
-
-                    <td className="whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 text-[12.5px]">
+                      <span
+                        className="inline-flex items-center gap-1 op-mono text-[11px]"
+                        style={{ color: 'var(--op-ink-3)' }}
+                      >
                         <span
-                          className="w-2 h-2 rounded-[2px]"
+                          className="w-1.5 h-1.5 rounded-[1px]"
                           style={{ backgroundColor: tier.accentHex }}
                           aria-hidden="true"
                         />
-                        <span className="font-semibold" style={{ color: tier.accentHex }}>
-                          {locale === 'en' ? tier.title : tier.krTitle}
-                        </span>
-                        <span className="op-mono text-[12px]" style={{ color: 'var(--op-ink-3)' }}>
-                          {elo} LP
-                        </span>
+                        {elo} LP
                       </span>
-                    </td>
+                    </div>
+                  </td>
 
-                    <td className="whitespace-nowrap">
-                      {isConsensusUnlocked || isMyRow ? (
-                        <span className="op-badge">
-                          {SCENARIO_LABELS[scenario]
-                            ? locale === 'en'
-                              ? SCENARIO_LABELS[scenario].en
-                              : SCENARIO_LABELS[scenario].ko
-                            : scenario}
-                        </span>
-                      ) : (
-                        <span className="op-badge" style={{ color: 'var(--op-ink-3)' }}>
-                          <Lock size={10} aria-hidden="true" />
-                          {t('비공개', 'Hidden')}
-                        </span>
-                      )}
-                    </td>
+                  <td className="whitespace-nowrap">
+                    {canReveal ? (
+                      <ForecastSparkline
+                        forecast={fc}
+                        isActiveLayer={isOverlaid || isMyRow}
+                        layerColor={isMyRow ? 'var(--op-orange)' : rivalOverlay?.colorVar}
+                        width={96}
+                        height={24}
+                        pastDays={7}
+                      />
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-1 text-[11px] op-mono"
+                        style={{ color: 'var(--op-ink-3)' }}
+                      >
+                        <Lock size={10} aria-hidden="true" />
+                        {t('비공개', 'Blind')}
+                      </span>
+                    )}
+                  </td>
 
-                    <td className="op-num whitespace-nowrap">
-                      {isConsensusUnlocked || isMyRow ? (
-                        <>
-                          <span style={{ color: 'var(--op-ink)' }}>
-                            ${Math.round(endP).toLocaleString('en-US')}
-                          </span>
+                  <td className="op-num whitespace-nowrap">
+                    {canReveal ? (
+                      <>
+                        <span style={{ color: 'var(--op-ink)' }}>
+                          ${Math.round(endP).toLocaleString('en-US')}
+                        </span>
+                        <span
+                          className="ml-1.5 text-[12px]"
+                          style={{ color: pct >= 0 ? 'var(--op-bull)' : 'var(--op-bear)' }}
+                        >
+                          ({formatPct(pct)})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="op-mono text-[12px]" style={{ color: 'var(--op-ink-3)' }}>
+                        {t('비공개', 'Locked')}
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="op-num whitespace-nowrap">
+                    {canReveal ? (
+                      <div className="inline-flex items-center justify-end gap-2">
+                        {hasTrackingCloses && score && (
                           <span
-                            className="ml-1.5 text-[12px]"
-                            style={{ color: pct >= 0 ? 'var(--op-bull)' : 'var(--op-bear)' }}
+                            className="op-mono text-[12px] font-semibold"
+                            style={{
+                              color: score.total >= 75 ? 'var(--op-bull)' : 'var(--op-ink)',
+                            }}
                           >
-                            ({formatPct(pct)})
+                            {score.total.toFixed(1)}
+                            {t('점', ' pts')}
                           </span>
-                        </>
-                      ) : (
-                        <span className="op-mono text-[12px]" style={{ color: 'var(--op-ink-3)' }}>
-                          {t('비공개', 'Locked')}
-                        </span>
-                      )}
-                    </td>
-
-                    <td>
-                      {isConsensusUnlocked || isMyRow ? (
-                        <span className="line-clamp-1 text-[12.5px]" style={{ color: 'var(--op-ink-2)' }}>
-                          {fc.comment ? localizeDataText(fc.comment, locale) : '-'}
-                        </span>
-                      ) : (
-                        <span className="text-[12px]" style={{ color: 'var(--op-ink-3)' }}>
-                          -
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="op-num whitespace-nowrap">
-                      {isConsensusUnlocked || isMyRow ? (
-                        <div className="inline-flex items-center justify-end gap-1.5">
-                          {!isMyRow && (
-                            <button
-                              type="button"
-                              aria-pressed={isOverlaid}
-                              onClick={() => onToggleOverlay(fc, handle, elo)}
-                              className="h-7 px-2.5 rounded-[2px] text-[12px] font-medium transition-colors cursor-pointer"
-                              style={
-                                isOverlaid
-                                  ? {
-                                      backgroundColor: 'var(--op-orange)',
-                                      color: 'var(--op-on-orange)',
-                                    }
-                                  : {
-                                      backgroundColor: 'transparent',
-                                      color: 'var(--op-ink-2)',
-                                      border: '1px solid var(--op-line-strong)',
-                                    }
-                              }
-                            >
-                              {isOverlaid ? t('비교 중', 'Overlaid') : t('경로 겹쳐 보기', 'Overlay Path')}
-                            </button>
-                          )}
+                        )}
+                        {!isMyRow && (
                           <button
                             type="button"
-                            onClick={() => onNavigateDetail(fc.id)}
-                            className="op-btn-ghost h-7 px-2.5 text-[12px] rounded-[2px]"
+                            aria-pressed={isOverlaid}
+                            onClick={() => onToggleOverlay(fc, handle, elo)}
+                            className="h-7 px-2.5 rounded-[2px] text-[12px] font-medium transition-colors cursor-pointer"
+                            style={
+                              isOverlaid
+                                ? {
+                                    backgroundColor: 'var(--op-orange)',
+                                    color: 'var(--op-on-orange)',
+                                  }
+                                : {
+                                    backgroundColor: 'transparent',
+                                    color: 'var(--op-ink-2)',
+                                    border: '1px solid var(--op-line-strong)',
+                                  }
+                            }
                           >
-                            {t('예측 상세', 'Details')} <ArrowUpRight size={12} />
+                            {isOverlaid ? t('비교 중', 'Overlaid') : t('차트 겹쳐 보기', 'Overlay')}
                           </button>
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11.5px] op-mono" style={{ color: 'var(--op-ink-3)' }}>
-                          <Lock size={11} aria-hidden="true" />
-                          {t('비공개', 'Locked')}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-1 text-[11.5px] op-mono"
+                        style={{ color: 'var(--op-ink-3)' }}
+                      >
+                        <Lock size={11} aria-hidden="true" />
+                        {t('비공개', 'Locked')}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
