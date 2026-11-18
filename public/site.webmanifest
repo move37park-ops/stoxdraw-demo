@@ -1,0 +1,26 @@
+{
+  "name": "Orange Paths — 비트코인 7일 가격 예측",
+  "short_name": "Orange Paths",
+  "description": "차트 위에 나만의 7일 비트코인 예측 경로를 그려 제출하고, 집단 전망 분포와 정량 예측 평가로 실력을 검증하세요.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

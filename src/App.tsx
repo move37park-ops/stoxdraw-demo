@@ -1,7 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { I18nProvider } from './lib/i18n';
+import { useI18n } from './lib/i18nCore';
+import { trackPageView } from './lib/analytics';
 import { PredictPage } from './features/predict/PredictPage';
 
 const CommunityPage = lazy(() =>
@@ -35,6 +37,40 @@ function getSystemTheme(): 'dark' | 'light' {
     return 'dark';
   }
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function getRouteTitle(pathname: string, t: (ko: string, en: string) => string): string {
+  if (pathname === '/practice') {
+    return t('블라인드 연습 — Orange Paths', 'Blind Practice — Orange Paths');
+  }
+  if (pathname === '/community' || pathname === '/leaderboard') {
+    return t('커뮤니티 · 평판 랭킹 — Orange Paths', 'Community & Rankings — Orange Paths');
+  }
+  if (pathname === '/docs') {
+    return t('예측 평가 · 등급 규칙 — Orange Paths', 'Scoring & Reputation Rules — Orange Paths');
+  }
+  if (pathname === '/me' || pathname.startsWith('/u/')) {
+    return t('내 기록 · 예측자 프로필 — Orange Paths', 'Forecaster Profile — Orange Paths');
+  }
+  if (pathname.startsWith('/f/')) {
+    return t('예측 상세 리포트 — Orange Paths', 'Forecast Detail — Orange Paths');
+  }
+  return t('Orange Paths — 비트코인 7일 가격 예측', 'Orange Paths — 7-Day Bitcoin Forecast Path');
+}
+
+function RouteTracker() {
+  const location = useLocation();
+  const { t } = useI18n();
+
+  useEffect(() => {
+    document.title = getRouteTitle(location.pathname, t);
+  }, [location.pathname, t]);
+
+  useEffect(() => {
+    trackPageView(`${location.pathname}${location.search}`, getRouteTitle(location.pathname, t));
+  }, [location.pathname, location.search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
 }
 
 export function App() {
@@ -107,6 +143,7 @@ export function App() {
   return (
     <I18nProvider>
       <BrowserRouter>
+        <RouteTracker />
         <Suspense
           fallback={
             <div

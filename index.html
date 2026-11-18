@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta name="color-scheme" content="light dark" />
@@ -17,13 +20,76 @@
     <meta name="theme-color" content="#050505" />
     <title>Orange Paths — 비트코인 7일 가격 예측</title>
     <meta name="description" content="차트에 나만의 7일 비트코인 예측 경로를 그려 제출하고, 집단 전망 분포와 정량 예측 평가로 실력을 검증하세요." />
+    <meta name="keywords" content="비트코인 예측, BTC 전망, 비트코인 차트, 7일 가격 예측, 집단 전망, 크립토 분석, Orange Paths" />
+    <meta name="author" content="Orange Paths" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://stoxdraw-demo.vercel.app/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Orange Paths" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:url" content="https://stoxdraw-demo.vercel.app/" />
     <meta property="og:title" content="Orange Paths — 비트코인 7일 가격 예측" />
     <meta property="og:description" content="차트에 나만의 7일 비트코인 예측 경로를 그려 제출하고, 집단 전망 분포와 정량 예측 평가로 실력을 검증하세요." />
+    <meta property="og:image" content="https://stoxdraw-demo.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="Orange Paths — 비트코인 7일 가격 예측 워크벤치" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Orange Paths — 비트코인 7일 가격 예측" />
     <meta name="twitter:description" content="차트에 나만의 7일 비트코인 예측 경로를 그려 제출하고, 집단 전망 분포와 정량 예측 평가로 실력을 검증하세요." />
+    <meta name="twitter:image" content="https://stoxdraw-demo.vercel.app/og-image.png" />
+    <meta name="twitter:image:alt" content="Orange Paths — 비트코인 7일 가격 예측 워크벤치" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Orange Paths",
+        "url": "https://stoxdraw-demo.vercel.app/",
+        "description": "차트에 나만의 7일 비트코인 예측 경로를 그려 제출하고, 집단 전망 분포와 정량 예측 평가로 실력을 검증하는 예측 워크벤치입니다.",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["ko", "en"],
+        "image": "https://stoxdraw-demo.vercel.app/og-image.png"
+      }
+    </script>
+    <!-- Google Analytics 4 (GA4) & Microsoft Clarity -->
+    <script>
+      (function () {
+        var defaultGaId = 'G-8X9Z2K4M1P';
+        var gaId = defaultGaId;
+        var clarityId = '';
+        try {
+          gaId = localStorage.getItem('op_ga_id') || defaultGaId;
+          clarityId = localStorage.getItem('op_clarity_id') || '';
+        } catch {}
+
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () {
+          window.dataLayer.push(arguments);
+        };
+        window.gtag('js', new Date());
+        if (gaId) {
+          var gaScript = document.createElement('script');
+          gaScript.async = true;
+          gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaId);
+          document.head.appendChild(gaScript);
+          window.gtag('config', gaId, { send_page_view: false });
+        }
+
+        window.clarity =
+          window.clarity ||
+          function () {
+            (window.clarity.q = window.clarity.q || []).push(arguments);
+          };
+        if (clarityId) {
+          var clScript = document.createElement('script');
+          clScript.async = true;
+          clScript.src = 'https://www.clarity.ms/tag/' + encodeURIComponent(clarityId);
+          document.head.appendChild(clScript);
+        }
+      })();
+    </script>
     <link rel="preload" href="/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin />
     <link
       rel="stylesheet"
