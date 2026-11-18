@@ -19,7 +19,7 @@ interface ParticipantsTableProps {
 
 const SCENARIO_LABELS: Record<string, { ko: string; en: string }> = {
   RALLY: { ko: '꾸준한 상승', en: 'Steady Rally' },
-  DIP_RALLY: { ko: '조정 후 반등', en: 'Dip & Rally' },
+  DIP_RALLY: { ko: '하락 후 반등', en: 'Dip & Rally' },
   RALLY_FADE: { ko: '반등 후 하락', en: 'Rally & Fade' },
   SLIDE: { ko: '꾸준한 하락', en: 'Steady Slide' },
 };
@@ -73,7 +73,7 @@ export function ParticipantsTable({
           <span style={{ color: 'var(--op-line-strong)' }}>·</span>
           {isConsensusUnlocked ? (
             <span style={{ color: 'var(--op-ink)' }}>
-              {t('평균 목표가', 'Mean Target')}{' '}
+              {t('참여자 평균 목표가', 'Mean Target')}{' '}
               <strong>{validTargetCount > 0 ? `$${Math.round(avgTargetPrice).toLocaleString('en-US')}` : '-'}</strong>
               {validTargetCount > 0 && (
                 <span className="ml-1" style={{ color: avgTargetPct >= 0 ? 'var(--op-bull)' : 'var(--op-bear)' }}>
@@ -84,13 +84,13 @@ export function ParticipantsTable({
           ) : (
             <span className="inline-flex items-center gap-1" style={{ color: 'var(--op-orange)' }}>
               <Lock size={11} aria-hidden="true" />
-              {t('제출 후 목표가·경로 공개', 'Targets hidden until submission')}
+              {t('예측 제출 후 목표가·예측 경로 공개', 'Targets hidden until submission')}
             </span>
           )}
         </div>
 
         <span style={{ color: isConsensusUnlocked ? 'var(--op-smart)' : 'var(--op-ink-3)' }}>
-          {t('차트 비교', 'Overlays')}: {isConsensusUnlocked ? `${overlaidRivals.length}/3` : t('잠금', 'Locked')}
+          {t('경로 겹쳐 보기', 'Overlays')}: {isConsensusUnlocked ? `${overlaidRivals.length}/3` : t('비공개', 'Locked')}
         </span>
       </div>
 
@@ -106,11 +106,11 @@ export function ParticipantsTable({
           <thead>
             <tr>
               <th>{t('참여자', 'Forecaster')}</th>
-              <th>{t('등급 · 점수', 'Tier · LP')}</th>
-              <th>{t('경로 유형', 'Pattern')}</th>
+              <th>{t('예측자 등급 · LP', 'Tier · LP')}</th>
+              <th>{t('예측 패턴', 'Pattern')}</th>
               <th className="op-num">{t('7일 목표가', '7D Target')}</th>
               <th>{t('예측 메모', 'Memo')}</th>
-              <th className="op-num">{t('차트 비교', 'Overlay')}</th>
+              <th className="op-num">{t('경로 겹쳐 보기', 'Overlay')}</th>
             </tr>
           </thead>
           <tbody>
@@ -121,7 +121,7 @@ export function ParticipantsTable({
                   className="py-10 text-center text-[13px]"
                   style={{ color: 'var(--op-ink-3)' }}
                 >
-                  {t('현재 라운드에 등록된 참여자가 없습니다.', 'No forecasters submitted in this round yet.')}
+                  {t('현재 라운드에 제출된 예측이 없습니다.', 'No forecasts submitted in this round yet.')}
                 </td>
               </tr>
             ) : (
@@ -251,7 +251,7 @@ export function ParticipantsTable({
                                     }
                               }
                             >
-                              {isOverlaid ? t('비교 중', 'Overlaid') : t('차트 비교', 'Overlay')}
+                              {isOverlaid ? t('비교 중', 'Overlaid') : t('경로 겹쳐 보기', 'Overlay Path')}
                             </button>
                           )}
                           <button
@@ -259,13 +259,13 @@ export function ParticipantsTable({
                             onClick={() => onNavigateDetail(fc.id)}
                             className="op-btn-ghost h-7 px-2.5 text-[12px] rounded-[2px]"
                           >
-                            {t('상세', 'Details')} <ArrowUpRight size={12} />
+                            {t('예측 상세', 'Details')} <ArrowUpRight size={12} />
                           </button>
                         </div>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11.5px] op-mono" style={{ color: 'var(--op-ink-3)' }}>
                           <Lock size={11} aria-hidden="true" />
-                          {t('잠금', 'Locked')}
+                          {t('비공개', 'Locked')}
                         </span>
                       )}
                     </td>

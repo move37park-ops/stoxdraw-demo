@@ -82,7 +82,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           }}
         >
           <h2 id="connect-modal-title" className="text-[13.5px] font-medium" style={{ color: 'var(--op-ink)' }}>
-            {t('예측자 프로필 연결', 'Connect Forecaster Profile')}
+            {t('프로필 연결', 'Connect Profile')}
           </h2>
           <button
             type="button"
@@ -98,8 +98,8 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
         <div className="p-5 space-y-4">
           <p className="text-[13px] leading-relaxed" style={{ color: 'var(--op-ink-2)' }}>
             {t(
-              '이 브라우저의 제출 기록과 LP를 계정에 연결합니다.',
-              'Link submissions and LP saved in this browser to your account.'
+              '이 브라우저의 예측 기록과 평판 점수(LP)를 계정에 연결합니다.',
+              'Link forecast history and LP saved in this browser to your account.'
             )}
           </p>
 

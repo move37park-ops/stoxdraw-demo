@@ -112,7 +112,7 @@ export const BottomTabs = memo(function BottomTabs({
         <div
           ref={tabBarRef}
           role="tablist"
-          aria-label={t('시장 분석 및 참여자 탭', 'Market intelligence and participants tabs')}
+          aria-label={t('집단 전망 및 참여자', 'Crowd forecast and participants')}
           className="relative flex items-center gap-1"
         >
           <span
@@ -149,8 +149,8 @@ export const BottomTabs = memo(function BottomTabs({
           >
             <span>
               {isConsensusUnlocked
-                ? t('집단 분석 리포트', 'Consensus Report')
-                : t('시장 변동성 개요', 'Market Overview')}
+                ? t('집단 전망 리포트', 'Consensus Report')
+                : t('시장 개요', 'Market Overview')}
             </span>
           </button>
 
@@ -176,12 +176,12 @@ export const BottomTabs = memo(function BottomTabs({
         >
           {isConsensusUnlocked
             ? t(
-                '제출 완료 · 집단 리포트 및 참여자 궤적 잠금 해제됨',
-                'Locked In · Consensus report & peer paths unlocked'
+                '제출 완료 · 집단 전망 리포트 및 참여자 예측 경로 공개',
+                'Submitted · Crowd insights & peer forecast paths unlocked'
               )
             : t(
-                '블라인드 모드 · 경로 제출 후 타인 예측과 분포 리포트가 열립니다',
-                'Blind Mode · Submit your path to reveal crowd bands & peer calls'
+                '블라인드 모드 · 예측 제출 후 다른 참여자 전망과 분포 리포트가 공개됩니다',
+                'Blind Mode · Submit your forecast to reveal crowd distribution & peer paths'
               )}
         </span>
       </div>

@@ -329,7 +329,7 @@ export function getBtcLandmarks(basePrice: number, locale: 'ko' | 'en' = 'ko'): 
   return [
     {
       id: 'lm_resistance',
-      label: isEn ? 'Resistance Wall (Orderbook)' : '상단 매물대 저항 (Orderbook Wall)',
+      label: isEn ? 'Resistance Wall (Orderbook)' : '상단 매물대 저항선 (Orderbook Wall)',
       shortLabel: isEn ? 'Resistance' : '상단 저항선',
       category: 'resistance',
       price: roundPrice(basePrice * 1.085),
@@ -338,8 +338,8 @@ export function getBtcLandmarks(basePrice: number, locale: 'ko' | 'en' = 'ko'): 
     },
     {
       id: 'lm_consensus',
-      label: isEn ? 'Top 1% Forecaster Target' : '상위 1% 고수 평균 목표선 (Top Tier)',
-      shortLabel: isEn ? 'Top-Tier Avg' : '고수 평균선',
+      label: isEn ? 'Top Forecasters Target (1,500+ LP / Top 25%)' : '상위 예측자 중앙 경로 (1,500 LP 이상 / 상위 25%)',
+      shortLabel: isEn ? 'Top Forecasters' : '상위 예측자',
       category: 'consensus',
       price: roundPrice(basePrice * 1.052),
       changePct: 5.2,
@@ -818,9 +818,9 @@ export function createRandomReplayScenario(excludeBaseDates: string[] = []): Rep
     revealTitle: `${picked.baseBar.date} 기준 · 7일 실제 종가 $${Math.round(end7Price).toLocaleString('en-US')} (${pctStr})`,
     subtitle: `${picked.baseBar.date} 기준 · 과거 실제 일봉`,
     difficulty,
-    marketHint: `${picked.baseBar.date} 종가($${Math.round(picked.baseBar.close).toLocaleString('en-US')}) 기준 실전 캔들·거래량 구간입니다.`,
+    marketHint: `${picked.baseBar.date} 종가($${Math.round(picked.baseBar.close).toLocaleString('en-US')}) 기준 과거 일봉·거래량 구간입니다.`,
     contextCues: [],
-    revealTakeaway: `${picked.baseBar.date} 이후 7거래일간 $${Math.round(picked.baseBar.close).toLocaleString('en-US')}에서 $${Math.round(end7Price).toLocaleString('en-US')}(${pctStr})로 마감했습니다.`,
+    revealTakeaway: `${picked.baseBar.date} 이후 7일간 $${Math.round(picked.baseBar.close).toLocaleString('en-US')}에서 $${Math.round(end7Price).toLocaleString('en-US')}(${pctStr})로 변동했습니다.`,
     baseDate: picked.baseBar.date,
     basePrice: picked.baseBar.close,
     evalDates: picked.futureBars.map(b => b.date),
@@ -881,6 +881,7 @@ export async function syncReplayScenariosFromBinance(): Promise<void> {
       const raw: unknown[] = await res.json();
       if (!Array.isArray(raw) || raw.length < 265) return;
       binanceArchiveBars = parseBinanceKlines(raw);
+      notifyMarketListeners();
     })();
 
     await Promise.all([...scenarioJobs, archiveJob]);

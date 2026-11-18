@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { RotateCcw, ArrowRight, Shuffle } from 'lucide-react';
 import { PathCanvas } from '../predict/PathCanvas';
 import {
   BTC_DAILY_VOLATILITY,
-  REPLAY_SCENARIOS,
   createRandomReplayScenario,
+  hasRealArchivePool,
   subscribeBtcMarket,
   syncReplayScenariosFromBinance,
   type ReplayScenario,
@@ -28,21 +27,42 @@ const PRACTICE_HORIZON = 7;
 export function PracticePage() {
   const { locale, t } = useI18n();
   const [, setMarketTick] = useState(0);
-  const [selectedIdx, setSelectedIdx] = useState(0);
-  const [randomScenario, setRandomScenario] = useState<ReplayScenario | null>(null);
+  const [scenario, setScenario] = useState<ReplayScenario>(() => createRandomReplayScenario());
   const [seenRandomDates, setSeenRandomDates] = useState<string[]>([]);
   const [blindEnabled, setBlindEnabled] = useState(true);
   const [anchors, setAnchors] = useState<AnchorPoint[]>([]);
   const [revealedScore, setRevealedScore] = useState<ScoreBreakdown | null>(null);
 
-  useEffect(() => {
-    syncReplayScenariosFromBinance();
-    return subscribeBtcMarket(() => setMarketTick(c => c + 1));
-  }, []);
-
-  const scenario = randomScenario ?? REPLAY_SCENARIOS[selectedIdx] ?? REPLAY_SCENARIOS[0];
   const isRevealed = revealedScore !== null;
   const isChartBlind = blindEnabled && !isRevealed;
+  const canUpgradeIdleRef = useRef(true);
+  const upgradedArchiveRef = useRef(false);
+
+  useEffect(() => {
+    if (anchors.length > 0 || isRevealed) {
+      canUpgradeIdleRef.current = false;
+    }
+  }, [anchors.length, isRevealed]);
+
+  useEffect(() => {
+    if (hasRealArchivePool()) {
+      upgradedArchiveRef.current = true;
+    }
+    syncReplayScenariosFromBinance();
+    return subscribeBtcMarket(() => {
+      // Promote untouched initial draw to the 1,000D Binance pool once loaded
+      if (!upgradedArchiveRef.current && hasRealArchivePool()) {
+        upgradedArchiveRef.current = true;
+        if (canUpgradeIdleRef.current) {
+          const upgraded = createRandomReplayScenario();
+          setScenario(upgraded);
+          setSeenRandomDates([upgraded.baseDate]);
+          return;
+        }
+      }
+      setMarketTick(c => c + 1);
+    });
+  }, []);
 
   const evalDates = useMemo(
     () => scenario.evalDates.slice(0, PRACTICE_HORIZON),
@@ -71,17 +91,12 @@ export function PracticePage() {
     [scenario.historyBars]
   );
 
-  const handleSelectScenario = (idx: number) => {
-    setRandomScenario(null);
-    setSelectedIdx(idx);
-    setAnchors([]);
-    setRevealedScore(null);
-  };
-
   const handleDrawRandom = () => {
+    upgradedArchiveRef.current = hasRealArchivePool();
+    canUpgradeIdleRef.current = true;
     const next = createRandomReplayScenario([scenario.baseDate, ...seenRandomDates]);
-    setRandomScenario(next);
-    setSeenRandomDates(prev => [next.baseDate, ...prev].slice(0, 12));
+    setScenario(next);
+    setSeenRandomDates(prev => [scenario.baseDate, ...prev].slice(0, 12));
     setAnchors([]);
     setRevealedScore(null);
   };
@@ -98,14 +113,7 @@ export function PracticePage() {
     setRevealedScore(score);
   };
 
-  const handleRetryOrNext = (next: boolean) => {
-    if (next) {
-      if (randomScenario) {
-        handleDrawRandom();
-        return;
-      }
-      setSelectedIdx(prev => (prev + 1) % REPLAY_SCENARIOS.length);
-    }
+  const handleRetrySame = () => {
     setAnchors([]);
     setRevealedScore(null);
   };
@@ -147,52 +155,59 @@ export function PracticePage() {
       className="px-4 sm:px-6 pt-3 pb-6 space-y-3 op-view-enter"
       style={{ backgroundColor: 'var(--op-canvas)' }}
     >
-      {/* Compact 1-Line Workbench Bar (symmetric with /) */}
+      {/* Compact Semi-Header Workbench Bar (symmetric with /) */}
       <header
         className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 pb-2.5"
         style={{ borderBottom: '1px solid var(--op-line)' }}
       >
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <img
-              src="/btc-logo.png"
-              alt=""
-              width={20}
-              height={20}
-              className="w-5 h-5 rounded-full flex-shrink-0 object-contain"
-              aria-hidden="true"
-            />
-            <h1
-              className="text-[15.5px] font-semibold tracking-tight"
-              style={{ color: 'var(--op-ink)' }}
-            >
-              BTC/USDT
-            </h1>
-            <span
-              className="op-mono text-[10.5px] font-medium px-1.5 py-0.5 rounded-[2px]"
-              style={{
-                backgroundColor: 'var(--op-panel)',
-                border: '1px solid var(--op-line-strong)',
-                color: 'var(--op-ink-2)',
-              }}
-            >
-              {t('7D 리플레이', '7D REPLAY')}
-            </span>
+        <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <img
+                src="/btc-logo.png"
+                alt=""
+                width={20}
+                height={20}
+                className="w-5 h-5 rounded-full flex-shrink-0 object-contain"
+                aria-hidden="true"
+              />
+              <h1
+                className="text-[15.5px] font-semibold tracking-tight"
+                style={{ color: 'var(--op-ink)' }}
+              >
+                BTC/USDT
+              </h1>
+            </div>
+
+            <div className="flex items-baseline gap-2 op-mono">
+              <span
+                className={
+                  isChartBlind
+                    ? 'text-[13px] font-semibold'
+                    : 'text-[15.5px] font-semibold'
+                }
+                style={{ color: 'var(--op-ink)' }}
+              >
+                {isChartBlind
+                  ? t('과거 시점 비공개', 'Blind Chart')
+                  : `$${scenario.basePrice.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-baseline gap-2 op-mono text-[12.5px]">
-            <span className="font-semibold" style={{ color: 'var(--op-ink)' }}>
-              {isChartBlind
-                ? t('가격·시점 비공개', 'Blind Index')
-                : `$${scenario.basePrice.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`}
+          <p className="text-[12px] leading-snug" style={{ color: 'var(--op-ink-2)' }}>
+            <span className="font-medium" style={{ color: 'var(--op-ink)' }}>
+              {t('블라인드 연습', 'Blind Practice')}
             </span>
-            <span style={{ color: 'var(--op-ink-3)' }}>
-              · {isChartBlind ? (randomScenario ? t('랜덤 구간', 'Random') : `#0${selectedIdx + 1}`) : scenario.code} · σ {(metrics.realizedVol * 100).toFixed(2)}%
-            </span>
-          </div>
+            <span className="mx-1.5" style={{ color: 'var(--op-ink-3)' }}>·</span>
+            {t(
+              '과거 차트로 7일 예측을 연습하며 평판 점수(LP)와 무관하게 즉시 평가됩니다.',
+              'Practice predicting 7-day paths on hidden historical charts with instant unranked evaluation.'
+            )}
+          </p>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap op-mono text-[11.5px] flex-shrink-0">
@@ -218,64 +233,12 @@ export function PracticePage() {
             type="button"
             onClick={handleDrawRandom}
             className="op-btn-ghost h-7 px-2.5 text-[11.5px]"
-            style={{
-              borderColor: randomScenario ? 'var(--op-orange)' : 'var(--op-line-strong)',
-              color: randomScenario ? 'var(--op-orange)' : 'var(--op-ink)',
-            }}
           >
             <Shuffle size={12} />
-            <span>{t('랜덤 실전 구간', 'Random Draw')}</span>
+            <span>{t('다른 구간으로 연습', 'Try Another Scenario')}</span>
           </button>
         </div>
       </header>
-
-      {/* Balanced 6-Regime Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
-        {REPLAY_SCENARIOS.map((sc, idx) => {
-          const active = !randomScenario && idx === selectedIdx;
-          const showActualTabCopy = !blindEnabled || (active && isRevealed);
-          const tabDiff =
-            sc.difficulty === 'NORMAL'
-              ? t('보통', 'NORMAL')
-              : sc.difficulty === 'HARD'
-                ? t('어려움', 'HARD')
-                : t('전문가', 'EXPERT');
-          return (
-            <button
-              key={sc.id}
-              type="button"
-              onClick={() => handleSelectScenario(idx)}
-              className="px-2.5 py-2 rounded-[2px] text-left transition-colors cursor-pointer"
-              style={{
-                backgroundColor: active ? 'var(--op-panel)' : 'var(--op-canvas)',
-                border: active
-                  ? '1px solid var(--op-orange)'
-                  : '1px solid var(--op-line-strong)',
-              }}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span
-                  className="op-mono text-[10.5px] font-bold"
-                  style={{ color: active ? 'var(--op-orange)' : 'var(--op-ink-3)' }}
-                >
-                  {showActualTabCopy ? sc.code : `#0${idx + 1}`}
-                </span>
-                <span className="op-mono text-[10px]" style={{ color: 'var(--op-ink-3)' }}>
-                  {tabDiff}
-                </span>
-              </div>
-              <div
-                className="mt-0.5 text-[12px] font-semibold line-clamp-1"
-                style={{ color: 'var(--op-ink)' }}
-              >
-                {showActualTabCopy
-                  ? localizeDataText(sc.title, locale)
-                  : localizeDataText(sc.blindLabel, locale)}
-              </div>
-            </button>
-          );
-        })}
-      </div>
 
       {/* Main 8 + 4 Grid */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
@@ -304,7 +267,7 @@ export function PracticePage() {
             showVolume
             headerSubtitle={
               isChartBlind
-                ? t('20일선(점선) · 거래량 · 변동성 구조 기반 작도', 'MA20 (dashed) · Volume · Blind structure')
+                ? t('20일 이동평균선(점선) · 거래량 · 변동성 참고', 'MA20 (dashed) · Volume · Volatility cues')
                 : localizeDataText(scenario.subtitle, locale)
             }
           />
@@ -321,13 +284,11 @@ export function PracticePage() {
           <div className="space-y-3">
             <div>
               <div className="op-mono text-[11px]" style={{ color: 'var(--op-orange)' }}>
-                {randomScenario
-                  ? isRevealed
-                    ? `${scenario.code} · ${t('랜덤 실전', 'RANDOM')} · ${diffLabel}`
-                    : `${t('랜덤 블라인드', 'RANDOM BLIND')} · ${diffLabel}`
+                {isRevealed
+                  ? `${scenario.code} · ${t('과거 연습', 'PRACTICE')} · ${diffLabel}`
                   : isChartBlind
-                    ? `#0${selectedIdx + 1} · ${diffLabel}`
-                    : `${scenario.code} · ${diffLabel}`}
+                    ? t('블라인드 연습', 'BLIND PRACTICE')
+                    : `${scenario.code} · ${t('과거 연습', 'PRACTICE')}`}
               </div>
               <h2 className="text-[15px] font-semibold mt-0.5" style={{ color: 'var(--op-ink)' }}>
                 {isRevealed
@@ -341,8 +302,8 @@ export function PracticePage() {
                   ? localizeDataText(scenario.revealTakeaway, locale)
                   : isChartBlind
                     ? t(
-                        '날짜·가격대 비공개 상태입니다. 20일 이동평균선, 거래량, ±1σ 진폭을 보고 7일 궤적을 그려보세요.',
-                        'Dates and price levels are hidden. Draw a 7D path using MA20, volume, and the ±1σ volatility band.'
+                        '과거 시장의 미래를 맞혀보세요. 날짜와 가격을 숨긴 차트에서 20일선, 거래량, ±1σ 변동폭을 참고해 7일 예측 경로를 그려보세요.',
+                        'Predict what happened next. Dates and prices are hidden — draw a 7-day forecast path using MA20, volume, and ±1σ volatility.'
                       )
                     : localizeDataText(scenario.marketHint, locale)}
               </p>
@@ -361,7 +322,7 @@ export function PracticePage() {
                   <span style={{ color: 'var(--op-ink)' }}>{(metrics.realizedVol * 100).toFixed(2)}%</span>
                 </div>
                 <div className="px-3 py-2 flex items-center justify-between">
-                  <span style={{ color: 'var(--op-ink-3)' }}>{t('7일 기대 진폭 (±1σ)', '7D 1σ Range')}</span>
+                  <span style={{ color: 'var(--op-ink-3)' }}>{t('7일 예상 변동폭 (±1σ)', '7D 1σ Range')}</span>
                   <span style={{ color: 'var(--op-orange)' }}>±{metrics.expected7dBandPct.toFixed(1)}%</span>
                 </div>
                 <div className="px-3 py-2 flex items-center justify-between">
@@ -378,7 +339,7 @@ export function PracticePage() {
                 </div>
                 {metrics.volumeRatio !== null && (
                   <div className="px-3 py-2 flex items-center justify-between">
-                    <span style={{ color: 'var(--op-ink-3)' }}>{t('최근 3일 거래량 배수', '3D Vol vs 20D Avg')}</span>
+                    <span style={{ color: 'var(--op-ink-3)' }}>{t('최근 3일 거래량 (20일 대비)', '3D Vol vs 20D Avg')}</span>
                     <span style={{ color: metrics.volumeRatio >= 1.3 ? 'var(--op-orange)' : 'var(--op-ink-2)' }}>
                       {metrics.volumeRatio.toFixed(2)}x
                     </span>
@@ -397,7 +358,7 @@ export function PracticePage() {
                   >
                     <div>
                       <div className="text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
-                        {t('실전 100점 정밀도', '7D Accuracy Score')}
+                        {t('7일 예측 점수', 'Forecast Score')}
                       </div>
                       <div className="op-mono text-[22px] font-bold" style={{ color: 'var(--op-ink)' }}>
                         {t(`${revealedScore.total.toFixed(1)}점`, `${revealedScore.total.toFixed(1)} pts`)}{' '}
@@ -408,13 +369,13 @@ export function PracticePage() {
                     </div>
                     <div className="text-right op-mono text-[11.5px]">
                       <div style={{ color: 'var(--op-ink-2)' }}>
-                        {t('실제 7일', 'Actual')}:{' '}
+                        {t('실제 가격 경로', 'Actual')}:{' '}
                         <strong style={{ color: actualEndPct >= 0 ? 'var(--op-bull)' : 'var(--op-bear)' }}>
                           {formatPct(actualEndPct)}
                         </strong>
                       </div>
                       <div style={{ color: 'var(--op-ink-3)' }}>
-                        {t('내 예측', 'Yours')}: {predictedPct !== null ? formatPct(predictedPct) : '-'}
+                        {t('내 예측 경로', 'Yours')}: {predictedPct !== null ? formatPct(predictedPct) : '-'}
                       </div>
                     </div>
                   </div>
@@ -436,7 +397,7 @@ export function PracticePage() {
                     </div>
                     <div className="p-2">
                       <div className="text-[10.5px]" style={{ color: 'var(--op-ink-3)' }}>
-                        {t('형태 /25', 'Shape /25')}
+                        {t('흐름 /25', 'Shape /25')}
                       </div>
                       <div className="text-[13px] font-bold mt-0.5" style={{ color: 'var(--op-ink)' }}>
                         {revealedScore.directionScore}
@@ -444,7 +405,7 @@ export function PracticePage() {
                     </div>
                     <div className="p-2">
                       <div className="text-[10.5px]" style={{ color: 'var(--op-ink-3)' }}>
-                        {t('종가 /25', 'Target /25')}
+                        {t('가격·방향 /25', 'Price·Dir /25')}
                       </div>
                       <div className="text-[13px] font-bold mt-0.5" style={{ color: 'var(--op-ink)' }}>
                         {revealedScore.targetScore}
@@ -463,7 +424,7 @@ export function PracticePage() {
                     >
                       <div className="op-mono flex items-center justify-between text-[11px]">
                         <span style={{ color: 'var(--op-ink-3)' }}>
-                          {t(`실측 정체: ${scenario.baseDate}`, `Revealed: ${scenario.baseDate}`)}
+                          {t(`실제 기준일: ${scenario.baseDate}`, `Evaluated: ${scenario.baseDate}`)}
                         </span>
                         <span style={{ color: 'var(--op-ink-2)' }}>
                           {calibration.zMagnitude.toFixed(1)}σ / ±{calibration.expectedBandPct}%
@@ -480,16 +441,16 @@ export function PracticePage() {
                       >
                         {calibration.bias === 'overextended'
                           ? t(
-                              '변동성 대비 과대 목표 — 1σ 안팎 진폭 조율 필요',
-                              'Overextended vs σ — pull target amplitude closer to 1σ'
+                              '변동성 대비 과도한 목표 — ±1σ 범위 안으로 목표 폭 조정 권장',
+                              'Overextended vs σ — pull target range closer to 1σ'
                             )
                           : calibration.bias === 'flat'
                             ? t(
-                                '과도한 수평 작도 — 구조적 방향 탄력 반영 필요',
+                                '추세가 너무 완만함 — 차트 흐름에 맞춘 방향성 반영 권장',
                                 'Too flat vs regime σ — express clearer move'
                               )
                             : t(
-                                '변동성 1σ 범위 내 균형 잡힌 진폭 설정',
+                                '변동성 ±1σ 범위 안에서 균형 있게 설정된 목표',
                                 'Balanced target calibration within regime 1σ'
                               )}
                       </div>
@@ -500,7 +461,7 @@ export function PracticePage() {
             )}
           </div>
 
-          <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--op-line)' }}>
+          <div className="pt-2" style={{ borderTop: '1px solid var(--op-line)' }}>
             {!isRevealed ? (
               <button
                 type="button"
@@ -509,39 +470,29 @@ export function PracticePage() {
                 className="op-btn-primary w-full h-10 text-[13px]"
               >
                 {!pathCompleted
-                  ? t(`차트에 ${PRACTICE_HORIZON}일 경로를 완성하세요`, `Complete ${PRACTICE_HORIZON}D path to score`)
-                  : t('제출하고 실제 7일 결과 보기', 'Lock & Reveal Actual 7D')}
+                  ? t(`차트에 ${PRACTICE_HORIZON}일 예측 경로를 완성하세요`, `Complete ${PRACTICE_HORIZON}-day path to evaluate`)
+                  : t('제출하고 실제 가격 확인하기', 'Submit & Evaluate Path')}
               </button>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleRetryOrNext(false)}
+                  onClick={handleRetrySame}
                   className="op-btn-ghost h-9 text-[12px]"
                 >
                   <RotateCcw size={13} />
-                  {t('다시 그리기', 'Retry')}
+                  {t('다시 예측하기', 'Retry')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleRetryOrNext(true)}
+                  onClick={handleDrawRandom}
                   className="op-btn-primary h-9 text-[12px]"
                 >
-                  <span>
-                    {randomScenario ? t('다음 랜덤', 'Next Random') : t('다음 구간', 'Next Case')}
-                  </span>
+                  <span>{t('다음 연습', 'Next Practice')}</span>
                   <ArrowRight size={13} />
                 </button>
               </div>
             )}
-
-            <Link
-              to="/"
-              className="block text-center op-mono text-[11px] pt-0.5 transition-opacity hover:opacity-80"
-              style={{ color: 'var(--op-ink-3)' }}
-            >
-              {t('실전 오늘의 7일 예측 참여하기 →', 'Go to Live 7D Forecast →')}
-            </Link>
           </div>
         </aside>
       </section>

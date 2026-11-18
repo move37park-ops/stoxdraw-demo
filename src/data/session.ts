@@ -51,7 +51,7 @@ export function loginWithProvider(provider: 'google' | 'kakao'): User {
     avatarUrl: provider === 'google'
       ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
       : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    bio: 'BTC/USDT 7일 가격 경로 예측 및 Elo 정산 기록입니다.',
+    bio: 'BTC/USDT 7일 가격 예측 및 평판 점수(LP) 기록입니다.',
     elo: existing?.elo ?? 1200,
     forecastsCount: existing?.forecastsCount ?? 0,
     completedCount: existing?.completedCount ?? 0,

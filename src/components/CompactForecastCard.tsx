@@ -240,7 +240,7 @@ export function CompactForecastCard({
                 : 'var(--v-ink)',
             }}
           >
-            {isActiveLayer ? t('비교중', 'Comparing') : t('오버레이', 'Overlay')}
+            {isActiveLayer ? t('비교 중', 'Overlaid') : t('경로 겹쳐 보기', 'Overlay Path')}
           </button>
         )}
 
@@ -270,7 +270,7 @@ export function CompactForecastCard({
           className="op-mono text-[11.5px] px-1.5 py-1 hover:underline cursor-pointer"
           style={{ color: 'var(--op-ink-3)' }}
         >
-          {t('상세 보기 ↗', 'Details ↗')}
+          {t('예측 상세 ↗', 'Details ↗')}
         </button>
       </div>
     </article>

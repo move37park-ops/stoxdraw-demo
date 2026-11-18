@@ -36,7 +36,7 @@ export function OverviewReport({
       >
         <div className="space-y-1">
           <div className="op-mono text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
-            {t('7일 실현변동성 ±1σ 범위', '7D Realized Vol ±1σ Range')} · {baseDate.slice(5)}–{expiryDate.slice(5)}
+            {t('7일 실현변동성 기준 예상 범위 (±1σ)', '7D Realized Vol ±1σ Range')} · {baseDate.slice(5)}–{expiryDate.slice(5)}
           </div>
           <div className="op-mono text-[15px] font-semibold" style={{ color: 'var(--op-ink)' }}>
             ${lowUsd.toLocaleString('en-US')} – ${highUsd.toLocaleString('en-US')}{' '}
@@ -48,8 +48,8 @@ export function OverviewReport({
 
         <p className="text-[12.5px] max-w-[460px]" style={{ color: 'var(--op-ink-2)' }}>
           {t(
-            '경로를 확정 제출하면 가려져 있던 일별 분위수 밴드(P15–P85)와 고티어 중앙 궤적이 즉시 열립니다.',
-            'Lock in your 7D path to unlock crowd quantile bands (P15–P85) and Top-Tier median paths.'
+            '7일 예측 경로를 제출하면 참여자 예측 분포(P15–P85)와 상위 예측자 중앙 경로가 즉시 공개됩니다.',
+            'Submit your 7-day forecast to unlock crowd distribution (P15–P85) and top forecaster median paths.'
           )}
         </p>
       </div>

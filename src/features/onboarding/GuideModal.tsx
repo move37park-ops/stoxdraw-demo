@@ -66,7 +66,7 @@ function GuideChartFrame({
 
       {footerLeft}
       <text x="132" y="176" textAnchor="middle" fill="var(--op-ink-2)" fontSize="10.5" fontWeight="600" fontFamily="var(--font-mono)">
-        D-0
+        D0
       </text>
       <text
         x="352"
@@ -77,7 +77,7 @@ function GuideChartFrame({
         fontWeight="600"
         fontFamily="var(--font-mono)"
       >
-        {t('D+7 만기', 'D+7 Expiry')}
+        {t('D+7 종료', 'D+7 End')}
       </text>
     </svg>
   );
@@ -136,13 +136,13 @@ function StepVisualUnlock({ t }: { t: (ko: string, en: string) => string }) {
       t={t}
       footerLeft={
         <g className="op-anim-band">
-          <line x1="176" y1="172.5" x2="190" y2="172.5" stroke="var(--op-orange)" strokeWidth="2.4" />
-          <text x="195" y="176" fill="var(--op-ink)" fontSize="10" fontFamily="var(--font-mono)">
-            {t('내 경로', 'Mine')}
+          <line x1="170" y1="172.5" x2="184" y2="172.5" stroke="var(--op-orange)" strokeWidth="2.4" />
+          <text x="188" y="176" fill="var(--op-ink)" fontSize="10" fontFamily="var(--font-mono)">
+            {t('내 예측', 'Mine')}
           </text>
-          <line x1="244" y1="172.5" x2="258" y2="172.5" stroke="var(--op-smart)" strokeWidth="2.4" />
-          <text x="263" y="176" fill="var(--op-smart)" fontSize="10" fontFamily="var(--font-mono)">
-            {t('고티어', 'Top-Tier')}
+          <line x1="232" y1="172.5" x2="246" y2="172.5" stroke="var(--op-smart)" strokeWidth="2.4" />
+          <text x="250" y="176" fill="var(--op-smart)" fontSize="10" fontFamily="var(--font-mono)">
+            {t('상위 예측자', 'Top Forecasters')}
           </text>
         </g>
       }
@@ -188,7 +188,7 @@ function StepVisualUnlock({ t }: { t: (ko: string, en: string) => string }) {
       <g className="op-anim-veil">
         <rect x="200" y="24" width="188" height="30" rx="2" fill="var(--op-raised)" stroke="var(--op-line-strong)" />
         <text x="294" y="43" textAnchor="middle" fill="var(--op-ink-2)" fontSize="10.5" fontWeight="600" fontFamily="var(--font-mono)">
-          {t('제출 시 컨센서스 공개', 'Locks -> Unlocks Peers')}
+          {t('제출 시 집단 전망 공개', 'Submit -> Unlock Insights')}
         </text>
       </g>
     </GuideChartFrame>
@@ -207,7 +207,7 @@ function StepVisualSettle({ t }: { t: (ko: string, en: string) => string }) {
           </text>
           <line x1="244" y1="172.5" x2="258" y2="172.5" stroke="var(--op-bull)" strokeWidth="2.4" />
           <text x="263" y="176" fill="var(--op-bull)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)">
-            {t('실제 종가', 'Actual')}
+            {t('실제 가격', 'Actual')}
           </text>
         </g>
       }
@@ -298,28 +298,28 @@ function GuideModalDialog({ onClose }: { onClose: () => void }) {
   const steps = [
     {
       num: '01',
-      title: t('차트 위에 7일 흐름을 직접 그리세요', 'Sketch your 7-day price path directly on the chart'),
+      title: t('차트에 나만의 7일 예측 경로를 그려보세요', 'Draw your 7-day forecast path on the chart'),
       desc: t(
-        '오늘(D-0) 오른쪽 차트를 클릭해 변곡점을 찍고, D+7 만기선까지 선을 이어 완성합니다.',
-        'Click right of D-0 to place pivot anchors and connect your trajectory to the D+7 expiry line.'
+        '오늘(D0) 오른쪽 차트를 클릭해 예측 지점을 추가하고, D+7 종료 지점까지 연결해 완성합니다.',
+        'Click right of D0 to add anchor points and connect your forecast path to the D+7 end line.'
       ),
       visual: <StepVisualDraw t={t} />,
     },
     {
       num: '02',
-      title: t('제출하는 순간, 시장의 시선이 열립니다', 'Lock once to unlock crowd & top-tier views'),
+      title: t('내 예측을 제출하면 다른 전망이 공개됩니다', 'Submit your forecast to unlock crowd insights'),
       desc: t(
-        '제출 전에는 타인 예측이 가려집니다. 1회 확정 즉시 참여자 평균과 고티어 경로를 비교할 수 있습니다.',
-        'Peer forecasts stay hidden beforehand. Submitting one immutable path reveals crowd medians and Top-Tier curves.'
+        '제출 전에는 다른 참여자의 예측 경로가 비공개로 유지됩니다. 예측을 제출하면 참여자 중앙값과 상위 예측자 경로를 비교할 수 있습니다.',
+        'Peer forecasts stay hidden beforehand. Submit your forecast to compare against the crowd median and top forecasters.'
       ),
       visual: <StepVisualUnlock t={t} />,
     },
     {
       num: '03',
-      title: t('실제 종가와 비교해 점수와 티어를 올리세요', 'Settle against actual closes for score & Elo'),
+      title: t('실제 가격과 비교해 예측 점수와 등급을 올리세요', 'See how your forecast performed against actual prices'),
       desc: t(
-        '7일간 실제 BTC 종가 기준으로 100점 정밀도(경로 50 · 형태 25 · 종가 25)와 코호트 LP가 정산됩니다.',
-        'Scored out of 100 (50 path · 25 shape · 25 target) against realized closes for zero-bias cohort LP.'
+        '7일간 실제 BTC 종가 기준으로 예측 점수(경로 50 · 흐름 25 · 목표가 및 방향 25)가 산정되고 평판 점수(LP)가 반영됩니다.',
+        'Scored out of 100 (50 path · 25 shape · 25 price & direction) against actual closes to update your reputation LP.'
       ),
       visual: <StepVisualSettle t={t} />,
     },
@@ -443,7 +443,7 @@ function GuideModalDialog({ onClose }: { onClose: () => void }) {
                 className="op-mono text-[12px] hover:underline cursor-pointer"
                 style={{ color: 'var(--op-ink-3)' }}
               >
-                {t('상세 규칙 →', 'Full Docs →')}
+                {t('평가 및 이용 규칙 →', 'Full Rules →')}
               </button>
             )}
           </div>

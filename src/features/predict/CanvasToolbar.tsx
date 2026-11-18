@@ -139,7 +139,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                   border: '1px solid var(--op-line-strong)',
                 }}
               >
-                {t('블라인드', 'BLIND')}
+                {t('비공개', 'BLIND')}
               </span>
               <span
                 className="op-mono text-[14px] font-semibold flex-shrink-0"
@@ -202,7 +202,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                   borderRadius: '2px',
                 }}
               >
-                {t('자석', 'Snap')} · {snapState.label}
+                {t('자석 맞춤', 'Snap')} · {snapState.label}
               </span>
             )}
           </span>
@@ -216,7 +216,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
               {blindMode
                 ? hoveredPastOffset !== null
                   ? `D-${hoveredPastOffset}`
-                  : 'D-0'
+                  : 'D0'
                 : hoveredPastBar.date.slice(5)}
             </span>
             <span style={{ color: 'var(--op-ink-2)' }}>
@@ -252,14 +252,14 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                 className="inline-block w-3 h-[2px]"
                 style={{ backgroundColor: 'var(--op-smart)' }}
               />
-              {t('고티어', 'Top-Tier')}
+              {t('상위 예측자', 'Top Forecasters')}
             </span>
             <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--op-ink-2)' }}>
               <span
                 className="inline-block w-3 border-t border-dashed"
                 style={{ borderColor: 'var(--op-crowd)' }}
               />
-              {t('시장평균', 'Crowd Avg')}
+              {t('참여자 중앙값', 'Crowd Median')}
             </span>
           </span>
         ) : !readOnly && anchorsCount > 0 && !pathCompleted ? (
@@ -270,7 +270,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             style={{ color: 'var(--op-orange)' }}
           >
             {t(
-              `D+${horizonDays} 만기선 연결 필요`,
+              `D+${horizonDays} 종료 지점까지 연결`,
               `Finish at D+${horizonDays}`
             )}
           </span>
@@ -292,7 +292,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             onClick={onDeleteSelectedAnchor}
             className="op-btn-ghost h-7 px-2 text-[11.5px]"
             style={{ borderColor: 'var(--op-bear)', color: 'var(--op-bear)' }}
-            title={t(`선택한 D+${selectedAnchor.day} 점 삭제 (Delete 키)`, `Delete D+${selectedAnchor.day} anchor (Delete key)`)}
+            title={t(`선택한 D+${selectedAnchor.day} 지점 삭제 (Delete 키)`, `Delete D+${selectedAnchor.day} anchor point (Delete key)`)}
           >
             <Trash2 size={11} aria-hidden="true" />
             <span>{t(`D+${selectedAnchor.day} 삭제`, `Del D+${selectedAnchor.day}`)}</span>
@@ -304,8 +304,8 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             type="button"
             onClick={onClearAnchors}
             className="op-btn-ghost h-7 px-2 text-[11.5px]"
-            title={t('그린 경로 모두 지우기', 'Clear drawn path')}
-            aria-label={t('경로 지우기', 'Clear path')}
+            title={t('그린 예측 경로 모두 지우기', 'Clear drawn path')}
+            aria-label={t('예측 경로 지우기', 'Clear path')}
           >
             <Eraser size={11} aria-hidden="true" />
             <span className="hidden sm:inline">{t('지우기', 'Clear')}</span>
@@ -323,7 +323,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
               color: showConsensus ? 'var(--op-smart)' : 'var(--op-ink-3)',
             }}
           >
-            {t('고티어·평균선', 'Top-Tier / Avg')}
+            {t('상위 예측자·중앙값', 'Top / Median')}
           </button>
         )}
 
@@ -336,7 +336,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             style={{ opacity: showInitialVersion ? 1 : 0.45 }}
           >
             <Layers size={11} aria-hidden="true" />
-            {t('초기본', 'v1 Initial')}
+            {t('최초 제출본', 'Original Forecast')}
           </button>
         )}
 
@@ -368,7 +368,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
               color: chartStyle === 'line' ? 'var(--op-orange)' : 'var(--op-ink-3)',
             }}
           >
-            {t('라인', 'Line')}
+            {t('선 차트', 'Line')}
           </button>
           <button
             ref={el => {
@@ -385,7 +385,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
               color: chartStyle === 'candles' ? 'var(--op-orange)' : 'var(--op-ink-3)',
             }}
           >
-            {t('캔들', 'Candles')}
+            {t('캔들 차트', 'Candles')}
           </button>
         </div>
 
@@ -393,22 +393,22 @@ export const CanvasToolbar = memo(function CanvasToolbar({
         <div
           className="op-seg"
           role="group"
-          aria-label={t('과거 기간 줌 조절', 'History range zoom')}
+          aria-label={t('표시 기간 줌 조절', 'History range zoom')}
         >
           <button
             type="button"
             disabled={lookbackDays >= maxLookbackDays}
             onClick={onZoomOut}
             className="op-seg-btn px-1.5 disabled:opacity-40"
-            title={t('기간 넓히기 (마우스 휠 다운)', 'Widen range (Scroll down)')}
-            aria-label={t('기간 넓히기', 'Zoom out')}
+            title={t('표시 기간 늘리기 (마우스 휠 다운)', 'Zoom out · Widen range (Scroll down)')}
+            aria-label={t('표시 기간 늘리기', 'Zoom out')}
           >
             <Minus size={12} />
           </button>
           <span
             className="px-1.5 inline-flex items-center op-mono text-[11px] border-x border-[var(--op-line)] select-none"
             style={{ color: 'var(--op-ink-2)' }}
-            title={t('차트 위 휠: 기간(7D~240D) 조절 · 가격축 휠/드래그: 세로 스케일', 'Scroll chart: time range (7D–240D) · Scroll or drag price axis: Y scale')}
+            title={t('차트 위 휠: 표시 기간(7D~240D) 조절 · 가격축 휠/드래그: 세로 배율', 'Scroll chart: time range (7D–240D) · Scroll or drag price axis: Y scale')}
           >
             {lookbackDays}D
           </span>
@@ -417,8 +417,8 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             disabled={lookbackDays <= minLookbackDays}
             onClick={onZoomIn}
             className="op-seg-btn px-1.5 disabled:opacity-40"
-            title={t('기간 좁히기 (마우스 휠 업)', 'Narrow range (Scroll up)')}
-            aria-label={t('기간 좁히기', 'Zoom in')}
+            title={t('표시 기간 줄이기 (마우스 휠 업)', 'Zoom in · Narrow range (Scroll up)')}
+            aria-label={t('표시 기간 줄이기', 'Zoom in')}
           >
             <Plus size={12} />
           </button>
@@ -426,8 +426,8 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             type="button"
             onClick={onResetZoom}
             className="op-seg-btn px-1.5"
-            title={t('줌만 초기화 (21D · 그린 경로 유지)', 'Reset zoom only (21D · keeps path)')}
-            aria-label={t('줌 초기화', 'Reset zoom')}
+            title={t('확대·축소 초기화 (21D · 그린 경로 유지)', 'Reset zoom only (21D · keeps path)')}
+            aria-label={t('확대·축소 초기화', 'Reset zoom')}
           >
             <RotateCcw size={12} />
           </button>

@@ -56,9 +56,9 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
       const myAnonUser: User = {
         id: anonId,
         handle: `guest_${cleanSuffix}`,
-        name: '로컬 세션 예측자',
+        name: '게스트 참여자',
         avatarUrl: '',
-        bio: '이 브라우저에 저장된 제출 기록입니다.',
+        bio: '이 브라우저에 저장된 예측 기록입니다.',
         forecastsCount: myAnonList.length,
         completedCount: myAnonList.filter(
           f => deriveForecastStatus(f, currentDateStr) === 'RESOLVED'
@@ -122,14 +122,14 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
     return (
       <div className="p-16 text-center space-y-4">
         <p className="v-heading-16" style={{ color: 'var(--v-ink)' }}>
-          {t('예측자 프로필을 찾을 수 없습니다.', 'Forecaster profile not found.')}
+          {t('예측 기록을 찾을 수 없습니다.', 'Forecaster profile not found.')}
         </p>
         <button
           type="button"
           onClick={() => navigate('/')}
           className="op-btn-primary"
         >
-          {t('예측 화면으로 돌아가기', 'Back to Predict')}
+          {t('예측하기 화면으로 돌아가기', 'Back to Predict')}
         </button>
       </div>
     );
@@ -264,12 +264,12 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between v-caption-mono">
               <span style={{ color: 'var(--v-ink)' }}>
-                {t(`티어 승급 진척도 (${tierInfo.progressPct}%)`, `Tier Progress (${tierInfo.progressPct}%)`)}
+                {t(`다음 등급까지 진행률 (${tierInfo.progressPct}%)`, `Tier Progress (${tierInfo.progressPct}%)`)}
               </span>
               <span style={{ color: tierInfo.accentHex }}>
                 {tierInfo.nextTierElo
-                  ? t(`다음 티어까지 ${tierInfo.nextTierElo - liveElo} LP`, `${tierInfo.nextTierElo - liveElo} LP to next tier`)
-                  : t('최상위 다이아몬드 달성', 'Max Diamond Tier Reached')}
+                  ? t(`다음 등급까지 필요한 ${tierInfo.nextTierElo - liveElo} LP`, `${tierInfo.nextTierElo - liveElo} LP to next tier`)
+                  : t('최고 등급 달성', 'Max Diamond Tier Reached')}
               </span>
             </div>
             <div
@@ -328,7 +328,7 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
 
           <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
             <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
-              {t('정산', 'Settled')}
+              {t('평가 완료', 'Evaluated')}
             </span>
             <p
               className="v-mono text-xl font-semibold tracking-tight mt-2"
@@ -340,7 +340,7 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
 
           <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
             <span className="v-caption" style={{ color: 'var(--v-mute)' }}>
-              {avgScore !== null ? t('평균 점수', 'Avg Score') : t('적중률', 'Hit Rate')}
+              {avgScore !== null ? t('평균 예측 점수', 'Avg Score') : t('방향 적중률', 'Hit Rate')}
             </span>
             <p
               className="v-mono text-xl font-semibold tracking-tight mt-2"
@@ -397,7 +397,7 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
               },
               {
                 id: 'results' as const,
-                label: t(`정산 완료 (${resolvedForecasts.length})`, `Settled (${resolvedForecasts.length})`),
+                label: t(`평가 완료 (${resolvedForecasts.length})`, `Evaluated (${resolvedForecasts.length})`),
               },
             ].map((tab, idx) => {
               const active = activeTab === tab.id;
@@ -447,8 +447,8 @@ export function ProfilePage({ currentDateStr }: ProfilePageProps) {
             <div className="p-16 text-center space-y-4">
               <p className="v-body-sm" style={{ color: 'var(--v-mute)' }}>
                 {activeTab === 'results'
-                  ? t('정산된 예측이 없습니다.', 'No settled forecasts yet.')
-                  : t('아직 예측이 없습니다.', 'No forecasts yet.')}
+                  ? t('평가 완료된 예측이 없습니다.', 'No evaluated forecasts yet.')
+                  : t('아직 예측 기록이 없습니다.', 'No forecasts yet.')}
               </p>
               {isMe && (
                 <button

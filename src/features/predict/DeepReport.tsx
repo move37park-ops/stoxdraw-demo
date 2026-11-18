@@ -131,17 +131,17 @@ export function DeepReport({
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-[15.5px] font-semibold tracking-[-0.015em]" style={{ color: 'var(--op-ink)' }}>
-                {t('집단 포지션 & 핵심 가격대', 'Crowd Positioning & Key Levels')}
+                {t('참여자 전망 및 주요 가격대', 'Crowd Forecast & Key Levels')}
               </h2>
               <span className="op-mono text-[11.5px]" style={{ color: 'var(--op-ink-3)' }}>
-                {t(`표본 ${forecasts.length}명 · ${horizonLen}D`, `${forecasts.length} Forecasters · ${horizonLen}D`)}
+                {t(`예측 참여자 ${forecasts.length}명 · ${horizonLen}D`, `${forecasts.length} Forecasters · ${horizonLen}D`)}
               </span>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[12px] op-mono" style={{ color: 'var(--op-ink-3)' }}>
-                <span>{t(`강세 ${briefing.bullishSharePct}%`, `Bullish ${briefing.bullishSharePct}%`)}</span>
-                <span>{t(`약세 ${bearishSharePct}%`, `Bearish ${bearishSharePct}%`)}</span>
+                <span>{t(`상승 전망 ${briefing.bullishSharePct}%`, `Bullish ${briefing.bullishSharePct}%`)}</span>
+                <span>{t(`하락 전망 ${bearishSharePct}%`, `Bearish ${bearishSharePct}%`)}</span>
               </div>
               <div
                 className="h-2.5 w-full rounded-[2px] overflow-hidden flex gap-1"
@@ -157,8 +157,8 @@ export function DeepReport({
                 />
               </div>
               <div className="flex items-center justify-between text-[11.5px] op-mono" style={{ color: 'var(--op-ink-3)' }}>
-                <span>{t('지지 P15', 'Support P15')} ${Math.round(briefing.supportP15).toLocaleString('en-US')}</span>
-                <span>{t('저항 P85', 'Resistance P85')} ${Math.round(briefing.resistanceP85).toLocaleString('en-US')}</span>
+                <span>{t('분포 하단 P15', '15th Pct P15')} ${Math.round(briefing.supportP15).toLocaleString('en-US')}</span>
+                <span>{t('분포 상단 P85', '85th Pct P85')} ${Math.round(briefing.resistanceP85).toLocaleString('en-US')}</span>
               </div>
             </div>
           </div>
@@ -167,12 +167,12 @@ export function DeepReport({
             <div className="py-2.5 flex flex-wrap items-baseline justify-between gap-2">
               <span className="inline-flex items-center gap-2 font-medium" style={{ color: 'var(--op-ink)' }}>
                 <span className="w-2 h-2 rounded-[1px]" style={{ backgroundColor: 'var(--op-smart)' }} aria-hidden="true" />
-                {t('고티어 그룹', 'Top-Tier Avg')}
+                {t('상위 예측자 중앙 경로', 'Top Forecasters Median')}
               </span>
               <span className="op-mono" style={{ color: 'var(--op-smart)' }}>
                 <strong>${Math.round(briefing.topMedian).toLocaleString('en-US')}</strong> ({formatPct(topMedianPct)})
                 <span className="ml-2 text-[11.5px]" style={{ color: 'var(--op-ink-3)' }}>
-                  · {t('저점 피벗', 'Low')} D+{drawingIntel.smartBottomPivot.day}
+                  · {t('예상 저점', 'Low')} D+{drawingIntel.smartBottomPivot.day}
                 </span>
               </span>
             </div>
@@ -180,12 +180,12 @@ export function DeepReport({
             <div className="py-2.5 flex flex-wrap items-baseline justify-between gap-2">
               <span className="inline-flex items-center gap-2 font-medium" style={{ color: 'var(--op-ink)' }}>
                 <span className="w-2 h-2 rounded-[1px]" style={{ backgroundColor: 'var(--op-crowd)' }} aria-hidden="true" />
-                {t('전체 중앙값', 'Crowd Median')}
+                {t('참여자 중앙값', 'Crowd Median')}
               </span>
               <span className="op-mono" style={{ color: 'var(--op-ink)' }}>
                 <strong>${Math.round(briefing.crowdMedian).toLocaleString('en-US')}</strong> ({formatPct(crowdMedianPct)})
                 <span className="ml-2 text-[11.5px]" style={{ color: 'var(--op-ink-3)' }}>
-                  · {t('눌림 지지', 'Dip')} ${Math.round(briefing.dipCheckpoint.price).toLocaleString('en-US')}
+                  · {t('주요 하락 구간', 'Dip')} ${Math.round(briefing.dipCheckpoint.price).toLocaleString('en-US')}
                 </span>
               </span>
             </div>
@@ -194,12 +194,12 @@ export function DeepReport({
               <div className="py-2.5 flex flex-wrap items-baseline justify-between gap-2">
                 <span className="inline-flex items-center gap-2 font-medium" style={{ color: 'var(--op-ink)' }}>
                   <span className="w-2 h-2 rounded-[1px]" style={{ backgroundColor: 'var(--op-orange)' }} aria-hidden="true" />
-                  {t('내 7일 예측', 'My 7D Path')}
+                  {t('내 예측 경로', 'My Forecast Path')}
                 </span>
                 <span className="op-mono" style={{ color: 'var(--op-ink)' }}>
                   <strong>${Math.round(userTargetPrice).toLocaleString('en-US')}</strong> ({formatPct(userTargetPct * 100)})
                   <span className="ml-2 text-[11.5px]" style={{ color: 'var(--op-orange)' }}>
-                    · {bullRankLabel} · R:R 1:{drawingIntel.userPath.riskRewardRatio.toFixed(1)}
+                    · {bullRankLabel} · {t('변동폭 비', 'Range Ratio')} 1:{drawingIntel.userPath.riskRewardRatio.toFixed(1)}
                   </span>
                 </span>
               </div>
@@ -209,7 +209,7 @@ export function DeepReport({
           <div className="grid grid-cols-3 gap-2 pt-1">
             <div className="p-2.5" style={miniBoxStyle}>
               <div className="text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
-                {t('우세 파동', 'Dominant')}
+                {t('주요 예측 패턴', 'Dominant Pattern')}
               </div>
               <div className="mt-0.5 op-mono text-[12px] font-semibold truncate" style={{ color: 'var(--op-ink)' }}>
                 {drawingIntel.dominantScenario.label} ({drawingIntel.dominantScenario.pct}%)
@@ -218,7 +218,7 @@ export function DeepReport({
 
             <div className="p-2.5" style={miniBoxStyle}>
               <div className="text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
-                {t('최대 분열일', 'Peak Split')}
+                {t('의견 분산 최대', 'Peak Divergence')}
               </div>
               <div className="mt-0.5 op-mono text-[12px] font-semibold truncate" style={{ color: 'var(--op-orange)' }}>
                 D+{maxDispDay} ({maxDispGapPct}%p)
@@ -227,7 +227,7 @@ export function DeepReport({
 
             <div className="p-2.5" style={miniBoxStyle}>
               <div className="text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
-                {t('고티어 괴리', 'Top Spread')}
+                {t('상위 예측자 격차', 'Top Forecaster Spread')}
               </div>
               <div
                 className="mt-0.5 op-mono text-[12px] font-semibold truncate"
@@ -246,7 +246,7 @@ export function DeepReport({
         <section className="lg:col-span-5 p-5 space-y-3" style={boxStyle}>
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-[15px] font-semibold" style={{ color: 'var(--op-ink)' }}>
-              {t(`가격대별 ${horizonLen}일 분포`, `${horizonLen}D Target Distribution`)}
+              {t(`${horizonLen}일 후 예상 가격 분포`, `${horizonLen}D Target Distribution`)}
             </h3>
             {overlaidRivals.length > 0 && (
               <div className="flex flex-wrap items-center gap-1">
@@ -267,7 +267,7 @@ export function DeepReport({
                         type="button"
                         onClick={() => onRemoveOverlay(r.forecast.id)}
                         className="hover:opacity-75 cursor-pointer"
-                        aria-label={t(`${r.authorHandle} 오버레이 제거`, `Remove ${r.authorHandle} overlay`)}
+                        aria-label={t(`${r.authorHandle} 경로 겹쳐 보기 해제`, `Remove ${r.authorHandle} overlay`)}
                       >
                         ×
                       </button>
@@ -324,7 +324,7 @@ export function DeepReport({
                         color: bucket.count > 0 || bucket.touchPct > 0 ? 'var(--op-ink-2)' : 'var(--op-ink-3)',
                       }}
                     >
-                      {t('경유', 'Touch')} {bucket.touchPct}% · {bucket.count > 0 ? `${bucket.sharePct}%` : '0%'}
+                      {t('도달', 'Touch')} {bucket.touchPct}% · {bucket.count > 0 ? `${bucket.sharePct}%` : '0%'}
                     </span>
                   </div>
 
@@ -365,7 +365,7 @@ export function DeepReport({
                         className="px-1 rounded-[2px] text-[10px] font-semibold flex-shrink-0 whitespace-nowrap"
                         style={{ backgroundColor: 'var(--op-smart-soft)', color: 'var(--op-smart)' }}
                       >
-                        {t('고티어', 'TOP TIER')}
+                        {t('상위 예측자', 'TOP')}
                       </span>
                     )}
                     {!isMine && !isSmart && isMedian && (
@@ -373,7 +373,7 @@ export function DeepReport({
                         className="px-1 rounded-[2px] text-[10px] flex-shrink-0 whitespace-nowrap"
                         style={{ backgroundColor: 'var(--op-raised)', color: 'var(--op-ink-2)' }}
                       >
-                        {t('평균', 'AVG')}
+                        {t('중앙값', 'MEDIAN')}
                       </span>
                     )}
                   </div>

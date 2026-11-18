@@ -73,14 +73,14 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
     const evals = rawForecast.evalDates || [];
     if (evals.length <= 7) {
       return [
-        { code: 'D-0', date: rawForecast.baseDate },
+        { code: 'D0', date: rawForecast.baseDate },
         { code: 'D+2', date: evals[1] || rawForecast.baseDate },
         { code: 'D+4', date: evals[3] || rawForecast.baseDate },
         { code: `D+${evals.length || 7}`, date: evals[evals.length - 1] || rawForecast.baseDate },
       ];
     }
     return [
-      { code: 'D-0', date: rawForecast.baseDate },
+      { code: 'D0', date: rawForecast.baseDate },
       { code: 'D+5', date: evals[4] || rawForecast.baseDate },
       { code: 'D+10', date: evals[9] || rawForecast.baseDate },
       { code: `D+${evals.length}`, date: evals[evals.length - 1] || rawForecast.baseDate },
@@ -156,14 +156,14 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
     return (
       <div className="p-16 text-center space-y-4">
         <p className="v-heading-16" style={{ color: 'var(--op-ink)' }}>
-          {t('예측을 찾을 수 없습니다.', 'Forecast not found.')}
+          {t('예측 기록을 찾을 수 없습니다.', 'Forecast record not found.')}
         </p>
         <button
           type="button"
           onClick={() => navigate('/')}
           className="op-btn-primary"
         >
-          {t('예측 화면으로 돌아가기', 'Back to Predict')}
+          {t('예측하기 화면으로 돌아가기', 'Back to Predict')}
         </button>
       </div>
     );
@@ -330,7 +330,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
               }}
             >
               {status === 'RESOLVED'
-                ? t('정산 완료', 'Settled')
+                ? t('평가 완료', 'Evaluated')
                 : status === 'LIVE'
                 ? t('진행 중', 'Live')
                 : status}
@@ -406,7 +406,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
             className="v-btn-primary h-8 px-3 text-xs font-semibold rounded-[2px]"
           >
             <Share2 size={12} />
-            {t('공유 카드', 'Share Card')}
+            {t('예측 경로 공유', 'Share Card')}
           </button>
         </div>
       </section>
@@ -429,8 +429,8 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
           allForecasts={sameRoundForecasts}
           initialVersion={initialVersion}
           headerSubtitle={t(
-            '예측 궤적 · 시장 중앙값 · 실제 일봉 비교',
-            'Forecast Path · Market Median · Actual Closes'
+            '예측 경로 · 참여자 중앙값 · 실제 종가 비교',
+            'Forecast Path · Crowd Median · Actual Closes'
           )}
         />
       </section>
@@ -450,7 +450,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
                 style={{ color: 'var(--v-ink)' }}
               >
                 <ShieldCheck size={14} style={{ color: 'var(--v-bull)' }} />
-                {t('예측 요약 및 채점 성적표', 'Forecast Summary & Scorecard')}
+                {t('예측 요약 및 평가 결과', 'Forecast Summary & Evaluation')}
               </span>
               <span
                 className="v-caption-mono px-2 py-0.5 rounded-[2px] inline-flex items-center gap-1.5"
@@ -474,7 +474,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
             <div className="grid grid-cols-2 divide-x divide-[var(--v-hairline)]">
               <div className="p-4">
                 <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
-                  {t('예측 목표 수익률', 'Target Return')}
+                  {t('예상 변동률', 'Projected Return')}
                 </p>
                 <p
                   className="v-mono text-lg font-bold mt-0.5"
@@ -490,7 +490,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
               </div>
               <div className="p-4">
                 <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
-                  {t('실제 진행 수익률', 'Realized Return')}
+                  {t('실제 변동률', 'Actual Return')}
                 </p>
                 <p
                   className="v-mono text-lg font-bold mt-0.5"
@@ -509,7 +509,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
             <div className="grid grid-cols-2 divide-x divide-[var(--v-hairline)]">
               <div className="p-4">
                 <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
-                  {t('점수', 'Score')}
+                  {t('예측 점수', 'Forecast Score')}
                 </p>
                 <p
                   className="v-mono text-lg font-bold mt-0.5"
@@ -517,15 +517,15 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
                 >
                   {result.score
                     ? t(
-                        `${result.score.total}점 (등급 ${result.score.grade})`,
+                        `${result.score.total}점 (${result.score.grade}등급)`,
                         `${result.score.total} pts (Grade ${result.score.grade})`
                       )
-                    : t('집계 대기 (D-0)', 'Pending Settlement (D-0)')}
+                    : t('평가 대기 (D0)', 'Pending Evaluation (D0)')}
                 </p>
               </div>
               <div className="p-4">
                 <p className="v-caption" style={{ color: 'var(--v-mute)' }}>
-                  {t('평판 LP 변동', 'Reputation LP Delta')}
+                  {t('평판 점수 변동', 'Reputation LP Delta')}
                 </p>
                 <p
                   className="v-mono text-lg font-bold mt-0.5"
@@ -572,7 +572,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
 
                 <div className="p-3 space-y-1">
                   <div className="flex items-center justify-between v-caption-mono text-xs">
-                    <span style={{ color: 'var(--v-mute)' }}>{t('형태 (25)', 'Shape (25)')}</span>
+                    <span style={{ color: 'var(--v-mute)' }}>{t('흐름 (25)', 'Shape (25)')}</span>
                     <strong style={{ color: 'var(--v-ink)' }}>
                       {result.score.directionScore}
                     </strong>
@@ -593,7 +593,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
 
                 <div className="p-3 space-y-1">
                   <div className="flex items-center justify-between v-caption-mono text-xs">
-                    <span style={{ color: 'var(--v-mute)' }}>{t('목표 (25)', 'Target (25)')}</span>
+                    <span style={{ color: 'var(--v-mute)' }}>{t('가격·방향 (25)', 'Price·Dir (25)')}</span>
                     <strong style={{ color: 'var(--v-ink)' }}>
                       {result.score.targetScore}
                     </strong>
@@ -622,10 +622,10 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
           <table className="v-audit-table">
             <thead>
               <tr>
-                <th>{t('구간', 'Day')}</th>
+                <th>{t('일차', 'Day')}</th>
                 <th>{t('일자', 'Date')}</th>
-                <th className="v-numeric">{t('보간 예측가', 'Projected')}</th>
-                <th className="v-numeric">{t('예측 등락', 'Forecast %')}</th>
+                <th className="v-numeric">{t('예측 가격', 'Projected')}</th>
+                <th className="v-numeric">{t('예측 변동률', 'Forecast %')}</th>
                 <th className="v-numeric">{t('실제 종가', 'Actual Close')}</th>
                 <th className="v-numeric">{t('오차율', 'Error %')}</th>
               </tr>
@@ -654,7 +654,7 @@ export function DetailPage({ currentDateStr }: DetailPageProps) {
                   <td className="v-numeric">
                     {row.actualClose !== null
                       ? `$${row.actualClose.toLocaleString('en-US')}`
-                      : t('미도래', 'Pending')}
+                      : t('대기 중', 'Pending')}
                   </td>
                   <td className="v-numeric">
                     {row.absErrorPct !== null

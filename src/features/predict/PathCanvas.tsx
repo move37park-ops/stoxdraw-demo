@@ -418,7 +418,7 @@ export function PathCanvas({
 
   const getSnapPrice = (svgY: number): { price: number; snap: { label: string; price: number } | null } => {
     const candidates: { price: number; label: string }[] = [
-      { price: basePrice, label: t('기준가', 'Anchor') },
+      { price: basePrice, label: t('기준 가격', 'Base Price') },
     ];
     if (historyExtremes) {
       candidates.push(
@@ -1102,7 +1102,7 @@ export function PathCanvas({
           role="region"
           tabIndex={readOnly ? undefined : 0}
           aria-label={t(
-            `BTC/USDT ${horizonDays}일 시계열 인터랙티브 예측 차트. 엔터 또는 스페이스로 경로 작도를 시작할 수 있습니다.`,
+            `BTC/USDT ${horizonDays}일 인터랙티브 예측 차트. 엔터 또는 스페이스로 예측 경로 그리기를 시작할 수 있습니다.`,
             `BTC/USDT ${horizonDays}D Interactive Forecast Chart. Press Enter or Space to start drawing.`
           )}
           viewBox={`0 0 ${W} ${H}`}
@@ -1285,7 +1285,7 @@ export function PathCanvas({
             );
           })}
 
-          {/* D-0 Split Label */}
+          {/* D0 Split Label */}
           {pastBars.length > 0 && (
             <text
               x={splitX}
@@ -1296,7 +1296,7 @@ export function PathCanvas({
               fontWeight="600"
               fontFamily="var(--font-mono)"
             >
-              D-0
+              D0
             </text>
           )}
 
@@ -1730,8 +1730,8 @@ export function PathCanvas({
                 tabIndex={readOnly ? undefined : 0}
                 role={readOnly ? undefined : 'slider'}
                 aria-label={t(
-                  `D+${anchor.day} 변곡점: ${formatAxisLevel(anchor.price)} (${formatPct(pct)})`,
-                  `D+${anchor.day} anchor: ${formatAxisLevel(anchor.price)} (${formatPct(pct)})`
+                  `D+${anchor.day} 예측 지점: ${formatAxisLevel(anchor.price)} (${formatPct(pct)})`,
+                  `D+${anchor.day} anchor point: ${formatAxisLevel(anchor.price)} (${formatPct(pct)})`
                 )}
                 aria-valuenow={Math.round(anchor.price)}
                 className={readOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing focus:outline-none'}
@@ -1803,7 +1803,7 @@ export function PathCanvas({
                 fontWeight="700"
                 fontFamily="var(--font-mono)"
               >
-                {t('목표', 'Target')} {formatPct(finalUserPct)}
+                {t('목표가', 'Target')} {formatPct(finalUserPct)}
               </text>
             </g>
           )}
@@ -1830,7 +1830,7 @@ export function PathCanvas({
                   fontWeight="700"
                   fontFamily="var(--font-mono)"
                 >
-                  {t('실제', 'Actual')} {formatPct(settledPct)}
+                  {t('실제 가격', 'Actual')} {formatPct(settledPct)}
                 </text>
               </g>
             );
@@ -1850,8 +1850,8 @@ export function PathCanvas({
               }}
             >
               {t(
-                `D+1~D+${horizonDays} 클릭으로 경로 작도`,
-                `Click D+1–D+${horizonDays} to plot path`
+                `D+1~D+${horizonDays} 클릭으로 예측 경로 그리기`,
+                `Click D+1–D+${horizonDays} to draw forecast path`
               )}
             </span>
           </div>

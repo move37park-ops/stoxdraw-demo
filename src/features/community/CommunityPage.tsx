@@ -30,8 +30,8 @@ type CommunityTab = 'feed' | 'rankings';
 type FeedFilter = 'all' | 'discussion' | 'resolved' | 'live';
 
 const TOPIC_META: Record<CommunityTopic, { ko: string; en: string }> = {
-  market: { ko: '시황 분석', en: 'Market View' },
-  review: { ko: '복기 메모', en: 'Post-Mortem' },
+  market: { ko: '시장 분석', en: 'Market Analysis' },
+  review: { ko: '예측 결과 리뷰', en: 'Forecast Review' },
   discussion: { ko: '자유 토론', en: 'Discussion' },
 };
 
@@ -286,9 +286,9 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
 
   const filterChips: { id: FeedFilter; label: string }[] = [
     { id: 'all', label: t('전체', 'All') },
-    { id: 'discussion', label: t('시황·토론', 'Ideas') },
-    { id: 'resolved', label: t('만기 복기', 'Settled') },
-    { id: 'live', label: t('이번 라운드', 'Live Round') },
+    { id: 'discussion', label: t('시장 분석·토론', 'Analysis') },
+    { id: 'resolved', label: t('예측 결과 리뷰', 'Evaluated') },
+    { id: 'live', label: t('현재 라운드', 'Current Round') },
   ];
 
   return (
@@ -304,8 +304,8 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
           </h1>
           <p className="v-caption mt-0.5" style={{ color: 'var(--op-ink-2)' }}>
             {t(
-              'Elo 실력 기록이 연동된 관점 토론, 만기 복기 및 라운드 순위입니다.',
-              'Cohort-verified commentary, post-mortem reviews, and live Elo rankings.'
+              '평판 점수(LP)와 연동된 시장 분석, 예측 결과 리뷰, 예측자 순위를 확인하세요.',
+              'Performance-based market analysis, forecast reviews, and live forecaster rankings.'
             )}
           </p>
         </div>
@@ -351,7 +351,7 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
                 color: activeTab === 'feed' ? 'var(--op-orange)' : 'var(--op-ink-2)',
               }}
             >
-              <span>{t('피드 · 토론', 'Feed & Ideas')}</span>
+              <span>{t('분석 · 토론', 'Analysis & Discussion')}</span>
               <span
                 className="op-mono text-[10.5px] px-1.5 py-0.2 rounded-[2px]"
                 style={{
@@ -379,7 +379,7 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
                 color: activeTab === 'rankings' ? 'var(--op-orange)' : 'var(--op-ink-2)',
               }}
             >
-              <span>{t('Elo 랭킹', 'Elo Rankings')}</span>
+              <span>{t('예측자 순위', 'Forecaster Rankings')}</span>
               <span
                 className="op-mono text-[10.5px] px-1.5 py-0.2 rounded-[2px]"
                 style={{
@@ -396,12 +396,12 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
           <span className="text-[11.5px]" style={{ color: 'var(--op-ink-3)' }}>
             {hasSubmittedCurrentRound
               ? t(
-                  '이번 라운드 제출 완료 · 모든 경로와 논거가 열려 있습니다.',
-                  'Round locked in · All live peer paths and rationales are visible.'
+                  '현재 라운드 제출 완료 · 모든 예측 경로와 분석이 공개되었습니다.',
+                  'Round submitted · All live peer forecast paths and rationales are visible.'
                 )
               : t(
-                  '블라인드 보호 · 이번 라운드 목표가·경로는 내 예측 제출 후 공개됩니다.',
-                  'Blind guard · Live targets unlock after you lock your 7D forecast.'
+                  '블라인드 보호 · 내 예측을 제출하면 현재 라운드 목표가와 예측 경로가 공개됩니다.',
+                  'Blind guard · Live targets unlock after you submit your 7-day forecast.'
                 )}
           </span>
         </div>
@@ -465,7 +465,7 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
                 }}
               >
                 <Plus size={12} aria-hidden="true" />
-                {t('관점 글 작성', 'New Post')}
+                {t('분석 글 작성', 'New Analysis')}
               </button>
             </div>
 
@@ -654,7 +654,7 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
                             }}
                           >
                             <span style={{ color: 'var(--op-ink)' }}>
-                              {linkedForecast.baseDate} {t('라운드 정산', 'Settled Round')}
+                              {linkedForecast.baseDate} {t('평가 완료 라운드', 'Evaluated Round')}
                             </span>
                             {linkedResult?.score && (
                               <span className="op-mono font-semibold" style={{ color: 'var(--op-bull)' }}>
@@ -809,8 +809,8 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
                         </span>
                         <span className="text-[12px]" style={{ color: 'var(--op-ink-3)' }}>
                           {t(
-                            '이번 라운드 7D 예측 잠금 · 제출 후 공개',
-                            'Locked 7D path · Hidden until you submit'
+                            '현재 라운드 예측 경로 비공개 · 제출 후 열람 가능',
+                            'Hidden forecast path · Visible after you submit'
                           )}
                         </span>
                       </article>
@@ -865,7 +865,7 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
                               color: isResolved ? 'var(--op-ink-2)' : 'var(--op-orange)',
                             }}
                           >
-                            {isResolved ? t('만기 복기', 'Settled') : t('7D 진행 중', 'Live 7D')}
+                            {isResolved ? t('평가 완료', 'Evaluated') : t('진행 중', 'Live Forecast')}
                           </span>
                         </div>
 
@@ -947,7 +947,7 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
                           onClick={() => navigate(`/f/${fc.id}`)}
                           className="op-btn-ghost h-7 px-2.5 text-[11.5px]"
                         >
-                          {t('상세 · 맞불 작도', 'Inspect / Counter')}
+                          {t('예측 상세', 'Inspect Forecast')}
                           <ArrowUpRight size={12} aria-hidden="true" />
                         </button>
                       </div>
@@ -1024,7 +1024,7 @@ export function CommunityPage({ currentDateStr }: CommunityPageProps) {
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-[13.5px] font-semibold inline-flex items-center gap-1.5" style={{ color: 'var(--op-ink)' }}>
                   <Trophy size={13} style={{ color: 'var(--op-orange)' }} aria-hidden="true" />
-                  {t('Elo 상위 포캐스터', 'Top Elo Forecasters')}
+                  {t('상위 예측자', 'Top Forecasters')}
                 </h2>
                 <button
                   type="button"

@@ -242,7 +242,7 @@ class LocalRepository implements Repository {
           actorName: actor ? actor.name : 'Anonymous Trader',
           forecastId: newForecast.id,
           ticker: newForecast.ticker,
-          message: `님이 회원님의 ${newForecast.ticker} 7일 시나리오에 맞불 작도를 제출했습니다.`,
+          message: `님이 회원님의 ${newForecast.ticker} 7일 시나리오에 반박 예측을 제출했습니다.`,
         });
       }
     }

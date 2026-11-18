@@ -319,12 +319,12 @@ export function LeaderboardPage({ currentDateStr, embedded = false }: Leaderboar
         {!embedded && (
           <div className="px-5 py-4">
             <h1 className="v-display-md" style={{ color: 'var(--v-ink)' }}>
-              {t('리더보드', 'Leaderboard')}
+              {t('예측자 순위', 'Forecaster Rankings')}
             </h1>
             <p className="v-caption mt-0.5" style={{ color: 'var(--v-mute)' }}>
               {t(
-                '7일 예측 경로의 오차율과 방향 적중률을 반영한 참여자 순위입니다.',
-                'Forecaster rankings based on 7-day path accuracy and directional hit rate.'
+                '7일 예측 경로의 오차율과 방향 정확도를 반영한 참여자 평판 순위입니다.',
+                'Forecaster rankings weighted by 7-day forecast path accuracy and directional hit rate.'
               )}
             </p>
           </div>
@@ -407,12 +407,12 @@ export function LeaderboardPage({ currentDateStr, embedded = false }: Leaderboar
               <tr>
                 <th className="w-16">{t('순위', 'Rank')}</th>
                 <th>{t('참여자', 'Forecaster')}</th>
-                <th>{t('등급 · 점수', 'Tier · LP')}</th>
-                <th className="v-numeric">{t('평균 정확도', 'Avg Score')}</th>
-                <th className="v-numeric">{t('방향 적중률', 'Dir Accuracy')}</th>
+                <th>{t('예측자 등급 · LP', 'Tier · LP')}</th>
+                <th className="v-numeric">{t('평균 예측 점수', 'Avg Score')}</th>
+                <th className="v-numeric">{t('방향 정확도', 'Dir Accuracy')}</th>
                 <th className="v-numeric">{t('평균 오차', 'Avg MAE')}</th>
-                <th className="v-numeric">{t('참여 횟수', 'Verified')}</th>
-                <th className="v-numeric">{t('경로 보기', 'Path')}</th>
+                <th className="v-numeric">{t('평가 완료 횟수', 'Evaluated')}</th>
+                <th className="v-numeric">{t('예측 경로', 'Path')}</th>
               </tr>
             </thead>
             <tbody>
@@ -533,11 +533,11 @@ export function LeaderboardPage({ currentDateStr, embedded = false }: Leaderboar
                               color: 'var(--v-mute)',
                             }}
                             title={t(
-                              `정식 랭킹 자격까지 ${PROVISIONAL_MIN_ROUNDS}회 이상 검증 필요`,
-                              `Needs ${PROVISIONAL_MIN_ROUNDS}+ verified rounds for ranked standing`
+                              `평가 완료 예측 ${PROVISIONAL_MIN_ROUNDS}회부터 정식 순위에 반영됩니다`,
+                              `Needs ${PROVISIONAL_MIN_ROUNDS}+ evaluated forecasts for ranked standing`
                             )}
                           >
-                            {t('임시', 'Prov')}
+                            {t('잠정 순위', 'Prov')}
                           </span>
                         )}
                       </td>
@@ -551,7 +551,7 @@ export function LeaderboardPage({ currentDateStr, embedded = false }: Leaderboar
                             }
                             className="v-btn-secondary h-7 px-2.5 text-[12px] rounded-[2px]"
                           >
-                            {t('경로 보기', 'View Path')} <ArrowUpRight size={12} />
+                            {t('예측 상세', 'View Path')} <ArrowUpRight size={12} />
                           </button>
                         ) : (
                           <button
@@ -559,7 +559,7 @@ export function LeaderboardPage({ currentDateStr, embedded = false }: Leaderboar
                             onClick={() => navigate(`/u/${u.handle}`)}
                             className="v-btn-secondary h-7 px-2.5 text-[12px] rounded-[2px]"
                           >
-                            {t('기록 보기', 'Profile')}
+                            {t('예측 기록', 'Profile')}
                           </button>
                         )}
                       </td>

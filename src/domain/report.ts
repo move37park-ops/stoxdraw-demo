@@ -111,7 +111,7 @@ export interface InvestmentBriefingMetrics {
 const SCENARIO_LABELS_BY_LOCALE: Record<'ko' | 'en', Record<ScenarioType, string>> = {
   ko: {
     RALLY: '꾸준한 상승',
-    DIP_RALLY: '조정 후 반등',
+    DIP_RALLY: '하락 후 반등',
     RALLY_FADE: '반등 후 하락',
     SLIDE: '꾸준한 하락',
   },

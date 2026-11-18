@@ -91,10 +91,6 @@ export function PredictPage({ currentDateStr, onDateChange }: PredictPageProps) 
     [allBars, baseDate]
   );
 
-  const prevClose = historyBars.length >= 2 ? historyBars[historyBars.length - 2].close : null;
-  const dayChangePct =
-    prevClose && prevClose > 0 ? ((basePrice - prevClose) / prevClose) * 100 : null;
-
   const targetFutureBars = useMemo(() => {
     const map = new Map(allBars.map(b => [b.date, b]));
     return evalDates
@@ -496,8 +492,8 @@ export function PredictPage({ currentDateStr, onDateChange }: PredictPageProps) 
     const cleanComment =
       effectiveComment.trim() ||
       t(
-        `BTC/USDT 향후 ${horizonDays}일 목표가 $${finalTargetPrice.toLocaleString('en-US')} (${formatPct(finalChangePct)}) 시나리오`,
-        `BTC/USDT ${horizonDays}D scenario targeting $${finalTargetPrice.toLocaleString('en-US')} (${formatPct(finalChangePct)})`
+        `BTC/USDT 향후 ${horizonDays}일 목표가 $${finalTargetPrice.toLocaleString('en-US')} (${formatPct(finalChangePct)}) 예측 경로`,
+        `BTC/USDT ${horizonDays}D forecast path targeting $${finalTargetPrice.toLocaleString('en-US')} (${formatPct(finalChangePct)})`
       );
 
     const created = repository.createForecast({
@@ -523,8 +519,8 @@ export function PredictPage({ currentDateStr, onDateChange }: PredictPageProps) 
     });
     setJustSubmittedBanner(
       t(
-        '예측이 영구 확정되었습니다. 아래에서 집단 분석 리포트를 확인해 보세요.',
-        'Forecast permanently locked. Explore the crowd intelligence report below.'
+        '예측이 제출되었습니다(수정 불가). 아래에서 집단 전망 리포트를 확인해 보세요.',
+        'Forecast submitted and locked. Explore the crowd insights report below.'
       )
     );
   };
@@ -633,70 +629,65 @@ export function PredictPage({ currentDateStr, onDateChange }: PredictPageProps) 
           className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 pb-2.5 mb-3"
           style={{ borderBottom: '1px solid var(--op-line)' }}
         >
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <img
-                src="/btc-logo.png"
-                alt=""
-                width={20}
-                height={20}
-                className="w-5 h-5 rounded-full flex-shrink-0 object-contain"
-                aria-hidden="true"
-              />
-              <h1
-                className="text-[15.5px] font-semibold tracking-tight"
-                style={{ color: 'var(--op-ink)' }}
-              >
-                BTC/USDT
-              </h1>
-              <span
-                className="op-mono text-[10.5px] font-medium px-1.5 py-0.5 rounded-[2px]"
-                style={{
-                  backgroundColor: 'var(--op-panel)',
-                  border: '1px solid var(--op-line-strong)',
-                  color: 'var(--op-ink-2)',
-                }}
-              >
-                7D
-              </span>
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <img
+                  src="/btc-logo.png"
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="w-5 h-5 rounded-full flex-shrink-0 object-contain"
+                  aria-hidden="true"
+                />
+                <h1
+                  className="text-[15.5px] font-semibold tracking-tight"
+                  style={{ color: 'var(--op-ink)' }}
+                >
+                  BTC/USDT
+                </h1>
+              </div>
+
+              <div className="flex items-baseline gap-2 op-mono">
+                <span
+                  className="text-[15.5px] font-semibold"
+                  style={{ color: 'var(--op-ink)' }}
+                >
+                  ${basePrice.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-baseline gap-2 op-mono">
-              <span
-                className="text-[15.5px] font-semibold"
-                style={{ color: 'var(--op-ink)' }}
-              >
-                ${basePrice.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+            <p className="text-[12px] leading-snug" style={{ color: 'var(--op-ink-2)' }}>
+              <span className="font-medium" style={{ color: 'var(--op-ink)' }}>
+                {t('실전 예측', 'Live Forecast')}
               </span>
-              {dayChangePct !== null && (
-                <span
-                  className="text-[12px] font-medium"
-                  style={{ color: dayChangePct >= 0 ? 'var(--op-bull)' : 'var(--op-bear)' }}
-                >
-                  {formatPct(dayChangePct)} <span style={{ color: 'var(--op-ink-3)' }}>24h</span>
-                </span>
+              <span className="mx-1.5" style={{ color: 'var(--op-ink-3)' }}>·</span>
+              {t(
+                '예측 경로 제출 시 집단 전망이 공개되며, 7일 예측 종료 후 평가 결과에 따라 평판 점수(LP)가 반영됩니다.',
+                'Submit a 7-day forecast to unlock crowd insights and update your reputation LP at evaluation.'
               )}
-            </div>
+            </p>
           </div>
 
           <dl className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] flex-shrink-0">
             <div className="flex items-center gap-1.5">
-              <dt style={{ color: 'var(--op-ink-3)' }}>{t('만기', 'Expiry')}</dt>
+              <dt style={{ color: 'var(--op-ink-3)' }}>{t('예측 종료', 'Forecast End')}</dt>
               <dd className="op-mono font-medium" style={{ color: 'var(--op-ink)' }}>
                 {expiryDate.slice(5)}
               </dd>
             </div>
             <div className="flex items-center gap-1.5">
-              <dt style={{ color: 'var(--op-ink-3)' }}>{t('마감', 'Lock')}</dt>
+              <dt style={{ color: 'var(--op-ink-3)' }}>{t('제출 마감', 'Submission Lock')}</dt>
               <dd className="op-mono font-medium" style={{ color: 'var(--op-ink)' }}>
                 <RoundCountdown cutoffAt={round.cutoffAt} />
               </dd>
             </div>
             <div className="flex items-center gap-1.5">
-              <dt style={{ color: 'var(--op-ink-3)' }}>{t('참여', 'Active')}</dt>
+              <dt style={{ color: 'var(--op-ink-3)' }}>{t('예측 참여자', 'Forecasters')}</dt>
               <dd className="op-mono font-medium" style={{ color: 'var(--op-ink)' }}>
                 {t(`${liveForecasts.length}명`, `${liveForecasts.length}`)}
               </dd>

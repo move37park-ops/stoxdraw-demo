@@ -39,10 +39,13 @@ const KO_TO_EN_EXACT: Record<string, string> = {
 
   // Scenario & regime labels
   '꾸준한 상승': 'Steady Rally',
+  '하락 후 반등': 'Dip & Rally',
   '조정 후 반등': 'Dip & Rally',
   '반등 후 하락': 'Rally & Fade',
   '꾸준한 하락': 'Steady Slide',
+  '눌림 후 돌파': 'Pullback Breakout',
   '눌림목 돌파': 'Pullback Breakout',
+  '고점 후 하락': 'Peak & Pullback',
   '고점 후 조정': 'Peak & Pullback',
   '상승 우세': 'Bullish Tilt',
   '조정·눌림 우세': 'Pullback Tilt',
@@ -54,12 +57,15 @@ const KO_TO_EN_EXACT: Record<string, string> = {
   '역발상 예측': 'Contrarian Call',
   '컨센서스 이탈': 'Off-Consensus',
 
-  // Demo clock steps
+  // Simulation timeline steps
   '오늘': 'Today',
   '2일 뒤': '+2D',
   '4일 뒤': '+4D',
+  '예측 종료': '+7D End',
   '7일 만기': '+7D Final',
-  '예측 입력': 'Forecast Input',
+  '예측 입력': 'Draw Forecast',
+  '중간 확인': 'Mid Track',
+  '평가 완료': 'Evaluated',
   '초반 추적': 'Early Track',
   '중반 추적': 'Mid Track',
   '만기 정산': 'Final Settle',
@@ -74,54 +80,85 @@ const KO_TO_EN_EXACT: Record<string, string> = {
 
   // Market levels
   '상단 저항선': 'Resistance Wall',
+  '상위 예측자': 'Top Forecasters',
   '고수 평균선': 'Top-Tier Avg',
   '단기 지지선': 'Short-Term Support',
+  '상단 매물대 저항선 (Orderbook Wall)': 'Resistance Wall (Orderbook)',
   '상단 매물대 저항 (Orderbook Wall)': 'Resistance Wall (Orderbook)',
+  '상위 예측자 중앙 경로 (1,500 LP 이상 / 상위 25%)': 'Top Forecasters Target (1,500+ LP / Top 25%)',
   '상위 1% 고수 평균 목표선 (Top Tier)': 'Top 1% Forecaster Target',
   '단기 지지 구간 (20D EMA Support)': 'Short-Term Support (20D EMA)',
+  '기준 가격': 'Base Price',
   '기준가': 'Anchor',
 
   // PathCanvas UI
   '비트코인, 시장은 어디를 보고 있을까요?': 'Where does the market see Bitcoin heading?',
   '7일 뒤 비트코인, 시장은 어디를 보고 있을까요?': 'Where does the market see Bitcoin in 7 days?',
+  '예측 경로 · 참여자 중앙값 · 실제 종가 비교': 'Forecast Path · Crowd Median · Actual Closes',
   '예측 궤적 · 시장 중앙값 · 실제 일봉 비교': 'Forecast Path · Market Median · Actual Closes',
+  '상위 예측자·중앙값': 'Top / Median',
   '고수·평균선': 'Top / Avg',
+  '최초 제출본': 'Original Forecast',
+  '최초안 (v1)': 'v1 Initial',
   '초기본': 'v1 Initial',
+  '선 차트': 'Line',
   '라인': 'Line',
+  '캔들 차트': 'Candles',
   '캔들': 'Candles',
   '시간축 줌 및 초기화': 'Time axis zoom and reset',
+  '표시 기간 늘리기': 'Zoom out',
   '기간 넓히기 (축소 · 차트 스크롤 다운)': 'Widen range (Zoom out · Scroll down)',
   '기간 축소': 'Zoom out',
-  '차트 위에서 마우스 휠 스크롤로 기간(10D~240D)을 자유롭게 조절할 수 있습니다':
+  '차트 위에서 마우스 휠 스크롤로 기간(7D~240D)을 자유롭게 조절할 수 있습니다':
     'Scroll mouse wheel on the chart to adjust visible history (7D-240D)',
+  '표시 기간 줄이기': 'Zoom in',
   '기간 좁히기 (확대 · 차트 스크롤 업)': 'Narrow range (Zoom in · Scroll up)',
   '기간 확대': 'Zoom in',
+  '확대·축소 초기화': 'Reset zoom',
   '줌 초기화 (21D)': 'Reset zoom (21D)',
   '줌(21D) 및 경로 초기화': 'Reset zoom (21D) and path',
   '초기화': 'Reset',
+  '참여자 중앙값': 'Crowd Median',
   '시장평균': 'Crowd Avg',
+  '오늘(D0) 오른쪽 차트 영역을 클릭해 예측 경로를 그리세요':
+    'Click right of Today (D0) to draw your forecast path',
   '오늘(D-0) 오른쪽 차트 영역을 클릭해 예상 경로를 그리세요':
     'Click the future chart area to the right of Today (D-0) to plot your path',
+  'D+7 종료 지점까지 연결하거나 우측 예시를 선택하세요':
+    'Connect through the D+7 end point or pick a preset on the right',
   '만기선(D+7)까지 연결하거나 우측 시나리오를 선택하세요':
     'Connect through the D+7 expiry line or pick a preset on the right',
+  'D+7 종료 지점을 클릭해 완성': 'Click the D+7 end point to complete',
   'D+7 만기선을 클릭해 완성': 'Click the D+7 expiry line to complete',
 
   // DeepReport UI
-  '포지션 배분 & 핵심 가격대': 'Position Allocation & Key Levels',
+  '참여자 전망 및 주요 가격대': 'Crowd Forecast & Key Levels',
+  '참여자 성향 & 핵심 가격대': 'Crowd Positioning & Key Levels',
+  '집단 포지션 & 핵심 가격대': 'Crowd Positioning & Key Levels',
+  '상위 예측자 중앙 경로': 'Top Forecasters Median',
   '고티어 그룹 평균': 'Top-Tier Cohort Avg',
   '상위 10% 고수 평균': 'Top-Tier Cohort Avg',
+  '주요 하락 구간': 'Key Pullback Zone',
   '집단 눌림목 지지선': 'Consensus Dip Support',
+  '미입력 (차트 클릭 또는 상단 예시 선택)': 'Not entered (click chart or pick a preset)',
   '미입력 (차트 클릭 또는 상단 시나리오 선택)': 'Not entered (click chart or pick a scenario)',
+  '예시 경로 불러오기': 'Load Preset Path',
   '샘플 경로 불러오기': 'Load Sample Path',
+  '7일 집단 전망 해설': '7D Crowd Forecast Commentary',
   '7일 집단 경로 해설': '7D Consensus Path Commentary',
   '세부 지표': 'Detailed Metrics',
+  '주요 예측 패턴': 'Dominant Pattern',
+  '우세 패턴': 'Dominant',
   '우세 파동 시나리오': 'Dominant Pattern',
-  '집단 변곡점 구간': 'Cohort Pivot Window',
+  '집단 변곡점 구간': 'Crowd Pivot Window',
+  '의견 분산 최대': 'Peak Divergence',
+  '최대 의견차': 'Peak Split',
   '최대 의견 분열일': 'Peak Divergence Day',
+  '상위 예측자 격차': 'Top Forecaster Spread',
+  '고티어 격차': 'Top Spread',
   '고티어 vs 일반 괴리': 'Top-Tier vs Crowd Spread',
   '상위 10% vs 일반 괴리': 'Top-Tier vs Crowd Spread',
   '참여 표본 · 내 기대 손익비': 'Cohort Size · My Expected R:R',
-  '참여자 중앙값': 'Crowd Median',
   '고티어 목표가': 'Top-Tier Target',
   '상위 10% 목표가': 'Top-Tier Target',
   '차트 데이터가 충분하지 않습니다.': 'Not enough chart data available.',
@@ -129,54 +166,88 @@ const KO_TO_EN_EXACT: Record<string, string> = {
   '고티어 그룹': 'Top-Tier Cohort',
   '상위 10% 고수': 'Top-Tier Cohort',
   '참여자 평균': 'Crowd Average',
+  '예측 분포 범위 (P15–P85)': 'Forecast Distribution (P15-P85)',
   '예측 구간 (P15–P85)': 'Range (P15-P85)',
   '클릭 시 목표가 반영': 'Click to apply target price',
   '나': 'ME',
   '고티어': 'TOP TIER',
   '상위10%': 'TOP TIER',
+  '중앙값': 'MEDIAN',
   '평균': 'AVG',
 
   // OverviewReport UI
+  '7일 예측 경로를 제출하면 참여자 예측 분포(P15–P85)와 상위 예측자 중앙 경로가 즉시 공개됩니다.':
+    'Submit your 7-day forecast to unlock crowd distribution (P15–P85) and top forecaster median paths.',
+  '7일 경로를 제출하면 숨겨진 참여자 분포 밴드(P15–P85)와 고티어 평균 경로가 즉시 공개됩니다.':
+    'Lock in your 7D path to unlock crowd quantile bands (P15–P85) and Top-Tier median paths.',
   '7일 예상 경로를 제출하면 고티어 궤적과 분위수 리포트가 열립니다.':
     'Submit your 7D forecast path to unlock Top-Tier trajectories and quantile distribution intelligence.',
 
   // CompactForecastCard
+  '경로 겹쳐 보기': 'Overlay Path',
+  '비교 중': 'Comparing',
   '비교중': 'Overlaid',
+  '차트 비교': 'Overlay',
   '오버레이': 'Overlay',
   '예측 ↗': 'Predict ↗',
   '추천': 'Like',
+  '예측 상세 ↗': 'Details ↗',
   '상세 보기 ↗': 'View Details ↗',
 
   // DetailPage
+  '예측 기록을 찾을 수 없습니다.': 'Forecast record not found.',
   '예측을 찾을 수 없습니다.': 'Forecast not found.',
+  '예측하기 화면으로 돌아가기': 'Back to Predict',
   '예측 화면으로 돌아가기': 'Back to Predict',
   '뒤로': 'Back',
   '정산 완료': 'Settled',
   '진행 중': 'Live',
+  '예측 경로 공유': 'Share Card',
   '공유 카드': 'Share Card',
+  '예측 요약 및 평가 결과': 'Forecast Summary & Evaluation',
+  '예측 요약 및 채점 결과': 'Forecast Summary & Scorecard',
   '예측 요약 및 채점 성적표': 'Forecast Summary & Scorecard',
+  '예상 변동률': 'Projected Return',
+  '목표 수익률': 'Target Return',
   '예측 목표 수익률': 'Forecast Target Return',
+  '실제 변동률': 'Actual Return',
+  '실제 수익률': 'Realized Return',
   '실제 진행 수익률': 'Actual Return',
+  '예측 점수': 'Forecast Score',
   '점수': 'Score',
+  '평가 대기 (D0)': 'Pending Evaluation (D0)',
+  '정산 대기 (D-0)': 'Pending Settlement (D-0)',
   '집계 대기 (D-0)': 'Pending (D-0)',
+  '평판 점수 변동': 'Reputation LP Delta',
   '평판 LP 변동': 'Reputation LP Delta',
   '경로 (50)': 'Path (50)',
+  '흐름 (25)': 'Shape (25)',
   '형태 (25)': 'Shape (25)',
+  '가격·방향 (25)': 'Price·Dir (25)',
+  '종가 (25)': 'Target (25)',
   '목표 (25)': 'Target (25)',
   '수정 이력': 'Revision History',
   '제출 순서 기록': 'Submission Log',
   '최초 제출': 'Initial',
   '수정본': 'Revision',
+  '일차': 'Day',
   '구간': 'Day',
   '일자': 'Date',
+  '예측 가격': 'Projected',
+  '예측가': 'Projected',
   '보간 예측가': 'Projected Price',
+  '예측 변동률': 'Forecast %',
   '예측 등락': 'Projected %',
   '실제 종가': 'Actual Close',
   '오차율': 'Abs Error',
+  '대기 중': 'Pending',
   '미도래': 'Pending',
 
   // Profile / Seed defaults
+  '게스트 참여자': 'Guest Forecaster',
+  '로컬 게스트': 'Local Session Forecaster',
   '로컬 세션 예측자': 'Local Session Forecaster',
+  '이 브라우저에 저장된 예측 기록입니다.': 'Forecast records stored locally in this browser.',
   '이 브라우저에 저장된 제출 기록입니다.': 'Submissions saved in this browser session.',
   '구글 애널리스트': 'Google Analyst',
   '카카오 애널리스트': 'Kakao Analyst',
@@ -310,15 +381,15 @@ const KO_TO_EN_PATTERNS: Array<{ pattern: RegExp; replace: (...args: string[]) =
     replace: (_, d) => `Split D+${d}`,
   },
   {
-    pattern: /^(.+) 오버레이 제거$/,
+    pattern: /^(.+) (?:경로 겹쳐 보기 해제|차트 비교 해제|오버레이 제거)$/,
     replace: (_, h) => `Remove ${h} overlay`,
   },
   {
-    pattern: /^가격대별 (\d+)일 경유 · 만기 분포$/,
-    replace: (_, d) => `${d}D Path Touch & Expiry Distribution`,
+    pattern: /^(?:\d+일 후 예상 가격 분포|가격대별 (\d+)일 (?:경유 · 만기 )?분포)$/,
+    replace: (_, d) => `${d ?? '7'}D Target Distribution`,
   },
   {
-    pattern: /^경유 (\d+)% · (\d+)%$/,
+    pattern: /^(?:도달|경유) (\d+)% · (\d+)%$/,
     replace: (_, touch, share) => `Touch ${touch}% · ${share}%`,
   },
   // Split fragment suffixes
@@ -488,23 +559,33 @@ const DATA_KO_TO_EN: Record<string, string> = {
   // Seed user profiles & session names
   '구글 애널리스트': 'Google Analyst',
   '카카오 애널리스트': 'Kakao Analyst',
+  '게스트 참여자': 'Guest Forecaster',
+  '로컬 게스트': 'Local Session Forecaster',
   '로컬 세션 예측자': 'Local Session Forecaster',
   '5거래일 주가 경로 예측 및 Elo 정산 기록입니다.':
     'Live multi-day price path forecasts and Elo rating ledger.',
+  'BTC/USDT 7일 가격 예측 및 평판 점수(LP) 기록입니다.':
+    'Live 7D BTC/USDT price path forecasts and reputation LP ledger.',
   'BTC/USDT 7일 가격 경로 예측 및 Elo 정산 기록입니다.':
     'Live 7D BTC/USDT price path forecasts and Elo rating ledger.',
+  '이 브라우저에 저장된 예측 기록입니다.':
+    'Forecast records stored locally in this browser.',
   '이 브라우저에 저장된 제출 기록입니다.':
     'Forecast submissions stored locally in this browser session.',
   'BTC/USDT 7일 변동성 정규화 경로 모델링 및 파생상품 감마 전환점 추적 (Diamond Tier).':
     '7D volatility-normalized BTC/USDT trajectory modeling and derivatives gamma inflection tracking (Diamond Tier).',
+  '현물 ETF 순유입 사이클과 온체인 장기 보유자 물량 소화 기반 7일 예측 경로 분석.':
+    '7D forecast path modeling grounded in spot ETF net-flow cycles and long-term on-chain holder absorption.',
   '현물 ETF 순유입 사이클과 온체인 장기 보유자 물량 소화 기반 7일 추세 작도.':
     '7D trend path modeling grounded in spot ETF net-flow cycles and long-term on-chain holder absorption.',
-  '무기한 선물 펀딩비 과열 해소 구간 포착 및 스윙 전환 구간 전문 포캐스터.':
+  '무기한 선물 펀딩비 과열 해소 구간 포착 및 스윙 전환 구간 전문 트레이더.':
     'Swing-inflection forecaster specializing in perpetual funding-rate resets and deleveraging windows.',
   '글로벌 유동성 지표(M2) 및 달러 인덱스 역상관 기반 비트코인 중기 시나리오.':
     'Medium-horizon Bitcoin scenario modeling built around global M2 liquidity and DXY inverse correlation.',
   '주요 매물대 지지·저항 리테스트 구간 중심의 보수적 리스크 관리.':
     'Conservative risk management focused on key supply-demand support and resistance retests.',
+  '블라인드 연습으로 차트 예측 경로 그리기를 연습 중인 크립토 트레이더.':
+    'Crypto trader practicing chart forecast path drawing in Blind Practice.',
   '리플레이 랩으로 차트 추세 작도를 훈련 중인 크립토 트레이더.':
     'Crypto trader sharpening chart trajectory forecasting in the replay lab.',
 
@@ -689,13 +770,13 @@ export function localizeDataText(raw: string | null | undefined, locale: Locale)
     const exact = DATA_KO_TO_EN[trimmed] ?? KO_TO_EN_EXACT[trimmed];
     if (exact !== undefined) return exact;
 
-    // Dynamic auto-generated comment: "BTC/USDT 향후 7일 목표가 $79,541 (+4.80%) 시나리오"
+    // Dynamic auto-generated comment: "BTC/USDT 향후 7일 목표가 $79,541 (+4.80%) 예측 경로"
     const koScenario = trimmed.match(
-      /^([A-Z0-9/]+) 향후 (\d+)일 목표가 (\$[\d,]+(?:\.\d+)?) \(([^)]+)\) 시나리오$/
+      /^([A-Z0-9/]+) 향후 (\d+)일 목표가 (\$[\d,]+(?:\.\d+)?) \(([^)]+)\) (?:예측 경로|시나리오)$/
     );
     if (koScenario) {
       const [, ticker, days, price, pct] = koScenario;
-      return `${ticker} ${days}D scenario targeting ${price} (${pct})`;
+      return `${ticker} ${days}D forecast path targeting ${price} (${pct})`;
     }
 
     // Dynamic revision prefix: "[v2 수정] ..."
@@ -706,7 +787,7 @@ export function localizeDataText(raw: string | null | undefined, locale: Locale)
     }
 
     // Dynamic notifications stored in KO
-    const koReply = trimmed.match(/^님이 회원님의 ([A-Z0-9/]+) (\d+)일 시나리오에 맞불 작도를 제출했습니다\.$/);
+    const koReply = trimmed.match(/^님이 회원님의 ([A-Z0-9/]+) (\d+)일 시나리오에 반박 예측을 제출했습니다\.$/);
     if (koReply) {
       return ` submitted a counter-trajectory to your ${koReply[1]} ${koReply[2]}D scenario.`;
     }
@@ -731,13 +812,13 @@ export function localizeDataText(raw: string | null | undefined, locale: Locale)
       return `As of ${koRandomReveal[1]} · Actual D+7 Close ${koRandomReveal[2]} (${koRandomReveal[3]})`;
     }
     const koRandomHint = trimmed.match(
-      /^(\d{4}-\d{2}-\d{2}) 종가\((\$[\d,]+)\) 기준 실전 캔들·거래량 구간입니다\.$/
+      /^(\d{4}-\d{2}-\d{2}) 종가\((\$[\d,]+)\) 기준 과거 일봉·거래량 구간입니다\.$/
     );
     if (koRandomHint) {
       return `Historical BTC daily OHLCV regime as of ${koRandomHint[1]} (${koRandomHint[2]}).`;
     }
     const koRandomTakeaway = trimmed.match(
-      /^(\d{4}-\d{2}-\d{2}) 이후 7거래일간 (\$[\d,]+)에서 (\$[\d,]+)\(([^)]+)\)로 마감했습니다\.$/
+      /^(\d{4}-\d{2}-\d{2}) 이후 7일간 (\$[\d,]+)에서 (\$[\d,]+)\(([^)]+)\)로 변동했습니다\.$/
     );
     if (koRandomTakeaway) {
       return `Over 7 days from ${koRandomTakeaway[1]}, BTC moved from ${koRandomTakeaway[2]} to ${koRandomTakeaway[3]} (${koRandomTakeaway[4]}).`;
@@ -768,21 +849,21 @@ export function localizeDataText(raw: string | null | undefined, locale: Locale)
     /^Historical BTC daily OHLCV regime as of (\d{4}-\d{2}-\d{2}) \((\$[\d,]+)\)\.$/
   );
   if (enRandomHint) {
-    return `${enRandomHint[1]} 종가(${enRandomHint[2]}) 기준 실전 캔들·거래량 구간입니다.`;
+    return `${enRandomHint[1]} 종가(${enRandomHint[2]}) 기준 과거 일봉·거래량 구간입니다.`;
   }
   const enRandomTakeaway = trimmed.match(
     /^Over 7 days from (\d{4}-\d{2}-\d{2}), BTC moved from (\$[\d,]+) to (\$[\d,]+) \(([^)]+)\)\.$/
   );
   if (enRandomTakeaway) {
-    return `${enRandomTakeaway[1]} 이후 7거래일간 ${enRandomTakeaway[2]}에서 ${enRandomTakeaway[3]}(${enRandomTakeaway[4]})로 마감했습니다.`;
+    return `${enRandomTakeaway[1]} 이후 7일간 ${enRandomTakeaway[2]}에서 ${enRandomTakeaway[3]}(${enRandomTakeaway[4]})로 변동했습니다.`;
   }
 
   const enScenario = trimmed.match(
-    /^([A-Z0-9/]+) (\d+)D (?:target|scenario targeting) (\$[\d,]+(?:\.\d+)?) \(([^)]+)\)(?: scenario)?$/
+    /^([A-Z0-9/]+) (\d+)D (?:target|scenario targeting|forecast path targeting) (\$[\d,]+(?:\.\d+)?) \(([^)]+)\)(?: scenario)?$/
   );
   if (enScenario) {
     const [, ticker, days, price, pct] = enScenario;
-    return `${ticker} 향후 ${days}일 목표가 ${price} (${pct}) 시나리오`;
+    return `${ticker} 향후 ${days}일 목표가 ${price} (${pct}) 예측 경로`;
   }
 
   const enRevision = trimmed.match(/^\[v(\d+)\s*Revised\]\s*(.+)$/);

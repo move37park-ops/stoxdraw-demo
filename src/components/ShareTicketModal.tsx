@@ -75,7 +75,7 @@ export function ShareTicketModal({
       `Orange Paths · ${forecast.ticker} ${horizonDays}D Forecast`
     ),
     t(
-      `예측자: @${authorHandle} (${tierLabel} · ${authorElo} LP)`,
+      `참여자: @${authorHandle} (${tierLabel} · ${authorElo} LP)`,
       `Forecaster: @${authorHandle} (${tierLabel} · ${authorElo} LP)`
     ),
     t(
@@ -84,8 +84,8 @@ export function ShareTicketModal({
     ),
     eloDeltaLp !== undefined && scoreTotal !== undefined
       ? t(
-          `정산 점수: ${scoreTotal.toFixed(1)}점 (${scoreGrade}등급) · ${formatSignedLp(eloDeltaLp)}`,
-          `Settlement Score: ${scoreTotal.toFixed(1)} pts (Grade ${scoreGrade}) · ${formatSignedLp(eloDeltaLp)}`
+          `예측 점수: ${scoreTotal.toFixed(1)}점 (${scoreGrade}등급) · ${formatSignedLp(eloDeltaLp)}`,
+          `Forecast Score: ${scoreTotal.toFixed(1)} pts (Grade ${scoreGrade}) · ${formatSignedLp(eloDeltaLp)}`
         )
       : divergencePct !== null
       ? t(
@@ -190,7 +190,7 @@ export function ShareTicketModal({
 
     ctx.fillStyle = '#a1a1aa';
     ctx.font = '500 13px "Geist", "Pretendard Variable", "Pretendard", sans-serif';
-    ctx.fillText(t(`D+${horizonDays} 목표 수익률`, `D+${horizonDays} Target Return`), leftX, 256);
+    ctx.fillText(t(`D+${horizonDays} 예상 변동률`, `D+${horizonDays} Projected Return`), leftX, 256);
 
     const accentColor = isBull ? '#2fbf71' : '#f0506e';
     ctx.fillStyle = accentColor;
@@ -214,7 +214,7 @@ export function ShareTicketModal({
     ctx.fillStyle = '#a1a1aa';
     ctx.font = '500 13px "Geist", "Pretendard Variable", sans-serif';
     if (scoreTotal !== undefined) {
-      ctx.fillText(t(`${horizonDays}일 채점 결과`, `${horizonDays}D Settlement Score`), leftX + 20, 420);
+      ctx.fillText(t(`${horizonDays}일 예측 평가 결과`, `${horizonDays}D Evaluation Score`), leftX + 20, 420);
       ctx.fillStyle = '#f5f5f5';
       ctx.font = '600 22px "Geist", "Pretendard Variable", sans-serif';
       ctx.fillText(
@@ -240,7 +240,7 @@ export function ShareTicketModal({
               `Avg ${formatPct(crowdChangePct)} vs ${formatPct(divergencePct!)}p`
             )
           : t(
-              `예측 지점 ${forecast.anchors?.length ?? 3}개 · ${horizonDays}일 경로`,
+              `예측 지점 ${forecast.anchors?.length ?? 3}개 · ${horizonDays}일 예측 경로`,
               `${forecast.anchors?.length ?? 3} anchor points · ${horizonDays}D path`
             );
       ctx.fillText(crowdText, leftX + 20, 454);
@@ -254,8 +254,8 @@ export function ShareTicketModal({
         ? `${localizedComment.slice(0, 52)}...`
         : localizedComment ||
           t(
-            `차트 위에 직접 그린 ${horizonDays}일 가격 시나리오`,
-            `Custom ${horizonDays}D price scenario drawn on chart`
+            `차트 위에 직접 그린 ${horizonDays}일 가격 예측 경로`,
+            `Custom ${horizonDays}D forecast path drawn on chart`
           );
     ctx.fillText(`"${shortComment}"`, leftX, 535);
 
@@ -399,10 +399,10 @@ export function ShareTicketModal({
       ctx.fillText(`D-${pastIntervals}`, chartX + 36, chartY + chartH - 16);
       ctx.textAlign = 'center';
       ctx.fillStyle = '#a1a1aa';
-      ctx.fillText('D-0', splitX, chartY + chartH - 16);
+      ctx.fillText('D0', splitX, chartY + chartH - 16);
     } else {
       ctx.textAlign = 'left';
-      ctx.fillText('D-0 ANCHOR', chartX + 36, chartY + chartH - 16);
+      ctx.fillText('D0 BASE', chartX + 36, chartY + chartH - 16);
     }
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ff7a1a';
@@ -554,8 +554,8 @@ export function ShareTicketModal({
             </h2>
             <p className="text-[12px]" style={{ color: 'var(--op-ink-3)' }}>
               {t(
-                `${horizonDays}일 예측 경로와 티어 정보가 담긴 검증 이미지입니다.`,
-                `Verified share image featuring your ${horizonDays}D path and tier badge.`
+                `${horizonDays}일 예측 경로와 예측자 등급 정보가 담긴 공유 이미지입니다.`,
+                `Share card featuring your ${horizonDays}-day forecast path and forecaster tier.`
               )}
             </p>
           </div>

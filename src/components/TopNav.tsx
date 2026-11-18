@@ -85,8 +85,8 @@ export function TopNav({
     location.pathname.startsWith('/f/');
 
   const navItems = [
-    { to: '/', label: t('예측', 'Predict'), isActive: isPredictActive },
-    { to: '/practice', label: t('훈련', 'Practice'), isActive: isPracticeActive },
+    { to: '/', label: t('예측하기', 'Predict'), isActive: isPredictActive },
+    { to: '/practice', label: t('연습하기', 'Practice'), isActive: isPracticeActive },
     { to: '/community', label: t('커뮤니티', 'Community'), isActive: isCommunityActive },
     { to: '/me', label: t('내 기록', 'My Record'), isActive: isMeActive },
   ];
@@ -190,7 +190,7 @@ export function TopNav({
               title={t('이용 가이드 보기', 'View Guide')}
             >
               <HelpCircle size={14} style={{ color: 'var(--op-orange)' }} />
-              <span className="hidden sm:inline">{t('가이드', 'Guide')}</span>
+              <span className="hidden sm:inline">{t('이용 가이드', 'Guide')}</span>
             </button>
 
             <button

@@ -12,14 +12,13 @@ const STEP_CODE_EN: Record<string, string> = {
   '오늘': 'Today',
   '2일 뒤': '+2D',
   '4일 뒤': '+4D',
-  '7일 만기': '+7D Final',
+  '예측 종료': '+7D End',
 };
 
 const STEP_LABEL_EN: Record<string, string> = {
-  '예측 입력': 'Forecast Input',
-  '초반 추적': 'Early Track',
-  '중반 추적': 'Mid Track',
-  '만기 정산': 'Final Settle',
+  '예측 입력': 'Draw Forecast',
+  '중간 확인': 'Mid Track',
+  '평가 완료': 'Evaluated',
 };
 
 export function Footer({ currentDateStr, onDateChange }: FooterProps) {
@@ -49,15 +48,15 @@ export function Footer({ currentDateStr, onDateChange }: FooterProps) {
             className="hover:text-[var(--op-ink)] transition-colors"
             style={{ color: 'var(--op-ink-2)' }}
           >
-            {t('상세 규칙 (Docs)', 'Docs')}
+            {t('평가 및 이용 규칙', 'Docs')}
           </Link>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="op-mono text-[11px]" style={{ color: 'var(--op-ink-3)' }}>
-            {t('시점', 'Clock')}
+            {t('시뮬레이션 시점', 'Preview Timeline')}
           </span>
-          <div className="op-seg" role="group" aria-label={t('결과 미리보기 시점 선택', 'Select preview time')}>
+          <div className="op-seg" role="group" aria-label={t('평가 결과 시뮬레이션 시점 선택', 'Select preview timeline')}>
             {STUDIO_TIME_STEPS.map(step => {
               const active = step.date === currentDateStr;
               const codeText = locale === 'en' ? (STEP_CODE_EN[step.code] ?? step.code) : step.code;

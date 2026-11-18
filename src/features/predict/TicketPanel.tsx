@@ -42,9 +42,9 @@ interface TicketPanelProps {
 }
 
 const SCENARIO_TABS: { id: TrajectoryPresetId; ko: string; en: string }[] = [
-  { id: 'pullback_bounce', ko: '조정 후 반등', en: 'Dip & Rally' },
-  { id: 'breakout', ko: '눌림목 돌파', en: 'Pullback Breakout' },
-  { id: 'bear_slide', ko: '고점 후 조정', en: 'Peak & Pullback' },
+  { id: 'pullback_bounce', ko: '하락 후 반등', en: 'Dip & Rally' },
+  { id: 'breakout', ko: '눌림 후 돌파', en: 'Pullback Breakout' },
+  { id: 'bear_slide', ko: '고점 후 하락', en: 'Peak & Pullback' },
 ];
 
 export function TicketPanel({
@@ -181,7 +181,7 @@ export function TicketPanel({
               opacity: isLockedReadOnly ? 0.65 : 1,
             }}
             role="group"
-            aria-label={t('대표 7일 시나리오 선택', 'Select 7D scenario preset')}
+            aria-label={t('예측 경로 예시 선택', 'Select forecast path preset')}
           >
             <span
               aria-hidden="true"
@@ -261,7 +261,7 @@ export function TicketPanel({
                 <span className="text-[11.5px] text-right" style={{ color: 'var(--op-ink-3)' }}>
                   {sortedAnchors.length === 0
                     ? t('차트 클릭 또는 상단 예시 선택', 'Click chart or pick a preset')
-                    : t(`D+${horizonDays} 만기선까지 연결`, `Connect to D+${horizonDays} line`)}
+                    : t(`D+${horizonDays} 종료 지점까지 연결`, `Connect to D+${horizonDays} end point`)}
                 </span>
               </>
             )}
@@ -279,8 +279,8 @@ export function TicketPanel({
             }}
           >
             {t(
-              `D+${horizonDays} 만기선까지 경로를 완성하면 예상 파동, 최저 변곡점, 예상 LP 범위가 자동 계산됩니다.`,
-              `Complete your path to D+${horizonDays} to compute pattern type, trough pivot, and expected LP stakes.`
+              `D+${horizonDays} 종료 지점까지 예측 경로를 완성하면 예상 가격 흐름, 최저 가격, 예상 변동폭과 예상 LP가 계산됩니다.`,
+              `Complete your path to D+${horizonDays} to compute price pattern, forecast low, and expected LP change.`
             )}
           </div>
         ) : (
@@ -310,13 +310,13 @@ export function TicketPanel({
               }}
             >
               <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <span style={{ color: 'var(--op-ink-3)' }}>{t('예상 파동 유형', 'Expected Pattern')}</span>
+                <span style={{ color: 'var(--op-ink-3)' }}>{t('예상 가격 흐름', 'Forecast Pattern')}</span>
                 <span className="font-medium" style={{ color: 'var(--op-ink)' }}>
                   {pathAnalysis ? pathAnalysis.scenarioLabel : '-'}
                 </span>
               </div>
               <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <span style={{ color: 'var(--op-ink-3)' }}>{t('경로 최저 변곡점', 'Path Trough Pivot')}</span>
+                <span style={{ color: 'var(--op-ink-3)' }}>{t('예상 최저 가격', 'Forecast Low')}</span>
                 <span className="op-mono" style={{ color: 'var(--op-ink-2)' }}>
                   {troughPoint
                     ? `$${Math.round(troughPoint.price).toLocaleString('en-US')} (D+${troughPoint.day})`
@@ -324,7 +324,7 @@ export function TicketPanel({
                 </span>
               </div>
               <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <span style={{ color: 'var(--op-ink-3)' }}>{t('손익비 · LP 범위', 'R:R · LP Range')}</span>
+                <span style={{ color: 'var(--op-ink-3)' }}>{t('목표/저점 비 · 예상 LP', 'Path Ratio · Est. LP')}</span>
                 <span className="op-mono" style={{ color: 'var(--op-ink)' }}>
                   {pathAnalysis
                     ? `1 : ${pathAnalysis.riskRewardRatio.toFixed(1)} · +${eloProjection.expectedWinLp}/${eloProjection.expectedLossLp} LP`
@@ -345,7 +345,7 @@ export function TicketPanel({
             }}
           >
             <span style={{ color: 'var(--op-ink-2)' }}>
-              {t(`중간 채점 (${settledCount}/${horizonDays}일)`, `Live Score (${settledCount}/${horizonDays}D)`)}
+              {t(`현재 예측 점수 (${settledCount}/${horizonDays}일)`, `Current Score (${settledCount}/${horizonDays}D)`)}
             </span>
             <span style={{ color: 'var(--op-bull)' }}>
               {t(
@@ -371,7 +371,7 @@ export function TicketPanel({
         )}
       </div>
 
-      {/* 7. Bottom CTA & Post-Submit Immutable Receipt */}
+      {/* 7. Bottom CTA & Post-Submit Receipt */}
       <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--op-line)' }}>
         {!isSubmitted && !isRoundOpen ? (
           <div className="space-y-1.5">
@@ -384,8 +384,8 @@ export function TicketPanel({
               }}
             >
               {t(
-                `현재 라운드가 마감(${roundStatus})되어 신규 제출이 불가합니다.`,
-                `Round is ${roundStatus}; new forecast submissions are locked.`
+                `현재 라운드는 ${roundStatus === 'RESOLVED' ? '평가 완료' : '진행 중'} 상태이므로 신규 제출할 수 없습니다.`,
+                `Round is ${roundStatus}; new forecast submissions are closed.`
               )}
             </div>
             {onResetToToday && (
@@ -394,7 +394,7 @@ export function TicketPanel({
                 onClick={onResetToToday}
                 className="op-btn-primary w-full h-10 text-[13px]"
               >
-                {t('오픈 라운드(오늘)로 돌아가기', 'Return to Open Round (Today)')}
+                {t('진행 중인 라운드(오늘)로 돌아가기', 'Return to Live Round (Today)')}
               </button>
             )}
           </div>
@@ -409,10 +409,10 @@ export function TicketPanel({
           >
             <span className="inline-flex items-center gap-1.5 font-semibold">
               <Lock size={13} />
-              {t('예측 제출 확정 · 수정 불가', 'Forecast Locked · Immutable')}
+              {t('제출 후 수정 불가', 'Locked Forecast')}
             </span>
             <span className="op-mono text-[10.5px]" style={{ color: 'var(--op-ink-3)' }}>
-              {t('1일 1회 제출', '1-Shot Lock')}
+              {t('라운드당 1회 제출', 'One Submission per Round')}
             </span>
           </div>
         ) : showConfirmSubmit ? (
@@ -425,8 +425,8 @@ export function TicketPanel({
           >
             <p className="text-[11.5px] leading-relaxed" style={{ color: 'var(--op-ink-2)' }}>
               {t(
-                '제출 후 경로 수정·취소가 불가하며 즉시 집단 컨센서스 밴드가 열립니다. 확정하시겠습니까?',
-                'Once locked, your trajectory cannot be edited and market consensus unlocks immediately. Confirm lock?'
+                '제출 후에는 예측 경로를 수정하거나 취소할 수 없으며 집단 전망 리포트가 즉시 공개됩니다. 확정하시겠습니까?',
+                'Once submitted, your forecast path cannot be edited and crowd insights unlock immediately. Confirm submission?'
               )}
             </p>
             <div className="grid grid-cols-2 gap-1.5">
@@ -446,7 +446,7 @@ export function TicketPanel({
                 className="op-btn-primary h-8 text-[12px]"
               >
                 <Lock size={12} />
-                {t('최종 확정 제출', 'Confirm Lock')}
+                {t('예측 확정하기', 'Confirm Submission')}
               </button>
             </div>
           </div>
@@ -459,11 +459,11 @@ export function TicketPanel({
           >
             {!pathCompleted ? (
               <span>
-                {t(`${horizonDays}일 경로를 완성해 주세요`, `Complete ${horizonDays}D path to submit`)}
+                {t(`${horizonDays}일 예측 경로를 완성해 주세요`, `Complete ${horizonDays}-day path to submit`)}
               </span>
             ) : (
               <span>
-                {t(`${horizonDays}일 예측 제출하기`, `Submit ${horizonDays}D Forecast`)}
+                {t(`${horizonDays}일 예측 제출하기`, `Submit ${horizonDays}-Day Forecast`)}
               </span>
             )}
           </button>
@@ -485,7 +485,7 @@ export function TicketPanel({
               className="op-btn-ghost h-8 text-[12px]"
             >
               <ShieldCheck size={12} />
-              {t('상세 보기', 'View Details')}
+              {t('예측 상세', 'View Details')}
             </button>
           </div>
         )}
